@@ -1,6 +1,9 @@
 # Rusty Alarm Clock
 An alarm clock using an ESP32-C3 written with Rust and Embassy
 
+# WIP
+This project is still a work in progress
+
 ## Components Used
 - ESP32-C3 Mini
 - IRLZ44N Logic-Level MOSFET
