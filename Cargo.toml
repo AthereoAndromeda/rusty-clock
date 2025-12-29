@@ -77,6 +77,7 @@ static_cell      = "2.1.1"
 ds3231 = { version = "0.3.0", features = [ "defmt", "async"] }
 chrono = { version = "0.4.42", default-features = false }
 heapless = { version = "0.9.1", features = ["defmt"] }
+thiserror = { version = "2.0.17", default-features = false }
 
 
 [profile.dev]

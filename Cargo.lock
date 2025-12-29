@@ -1537,6 +1537,7 @@ dependencies = [
  "heapless 0.9.1",
  "smoltcp",
  "static_cell",
+ "thiserror",
  "trouble-host",
 ]
 
