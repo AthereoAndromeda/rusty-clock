@@ -1,17 +1,32 @@
 use chrono::{Datelike, Timelike};
-use ds3231::DS3231;
+use defmt::{error, info};
+use ds3231::{DS3231, DS3231Error};
 use embassy_time::Timer;
-use heapless::format;
+use esp_hal::gpio::{Input, Output};
 
-use crate::{I2cAsync, RTC_I2C_ADDR};
+use crate::{I2cAsync, RTC, RTC_I2C_ADDR};
 
-#[embassy_executor::task]
-pub async fn init_ds3231(i2c: I2cAsync) {
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum RtcError {
+    #[error("I2c Error: {0}")]
+    I2cError(#[from] esp_hal::i2c::master::Error),
+    #[error("Error configuring RTC: {0:?}")]
+    DS3231Error(DS3231Error<esp_hal::i2c::master::Error>),
+}
+
+impl From<DS3231Error<esp_hal::i2c::master::Error>> for RtcError {
+    fn from(value: DS3231Error<esp_hal::i2c::master::Error>) -> Self {
+        Self::DS3231Error(value)
+    }
+}
+
+/// Initialize the DS3231 Instance and return RTC
+pub async fn init_rtc(i2c: I2cAsync) -> Result<RTC, RtcError> {
     use ds3231::{
-        Alarm1Config, Alarm2Config, Config, DS3231, InterruptControl, Oscillator,
-        SquareWaveFrequency, TimeRepresentation,
+        Alarm1Config, Config, DS3231, InterruptControl, Oscillator, SquareWaveFrequency,
+        TimeRepresentation,
     };
-    // Create configuration
+
     let config = Config {
         time_representation: TimeRepresentation::TwentyFourHour,
         square_wave_frequency: SquareWaveFrequency::Hz1,
@@ -20,50 +35,56 @@ pub async fn init_ds3231(i2c: I2cAsync) {
         oscillator_enable: Oscillator::Enabled,
     };
 
-    // Initialize device
-    let mut rtc = DS3231::new(i2c, 0x68);
+    let mut rtc = DS3231::new(i2c, RTC_I2C_ADDR);
+    rtc.configure(&config).await?;
 
-    // Configure asynchronously
-    rtc.configure(&config).await.unwrap();
-    // rtc.set_datetime(
-    //     &NaiveDate::from_ymd_opt(2025, 12, 22)
-    //         .unwrap()
-    //         .and_hms_opt(0, 16, 0)
-    //         .unwrap(),
-    // )
-    // .await
-    // .unwrap();
+    // Hardcoded values for now
+    let alarm1_config = Alarm1Config::AtTime {
+        hours: 8,
+        minutes: 0,
+        seconds: 0,
+        is_pm: None,
+    };
 
-    let alarm2 = Alarm2Config::EveryMinute;
-    rtc.set_alarm2(&alarm2).await.unwrap();
+    rtc.set_alarm1(&alarm1_config).await?;
 
-    loop {
-        // Get current date/time asynchronously
-        let datetime = rtc.datetime().await.unwrap();
-        let time = datetime.time();
-        let (hour, minute, second) = (time.hour(), time.minute(), time.second());
-
-        let time_display = format!(10; "{}:{}:{}", hour, minute, second).unwrap();
-        // let s = time_display.as_str();
-        defmt::info!("{}", time_display);
-        Timer::after_secs(1).await;
-        // let a: i32 = datetime.time().into()
+    // Clear any existing alarm flags
+    match rtc.status().await {
+        Ok(mut status) => {
+            status.set_alarm1_flag(false);
+            status.set_alarm2_flag(false);
+            match rtc.set_status(status).await {
+                Ok(_) => info!("Alarm flags cleared"),
+                Err(_) => error!("Failed to clear alarm flags"),
+            }
+        }
+        Err(_) => error!("Failed to read status"),
     }
 
-    // Set alarms asynchronously
-    // let alarm1 = Alarm1Config::AtTime {
-    //     hours: 9,
-    //     minutes: 30,
-    //     seconds: 0,
-    //     is_pm: None,
-    // };
-    // rtc.set_alarm1(&alarm1).await.unwrap();
+    // Enable Alarm 1 interrupt
+    match rtc.control().await {
+        Ok(mut control) => {
+            control.set_alarm1_interrupt_enable(true);
+            control.set_alarm2_interrupt_enable(false);
+            match rtc.set_control(control).await {
+                Ok(_) => info!("Alarm 1 interrupt enabled"),
+                Err(_) => error!("Failed to enable alarm interrupt"),
+            }
+        }
+        Err(_) => error!("Failed to read control register"),
+    }
+
+    info!("Starting time monitoring...");
+    info!("Current time will be displayed every 100ms when it changes");
+    info!("Alarm status will be shown alongside the time");
+    info!("SQW/INT pin level will also be monitored");
+
+    Ok(rtc)
 }
 
 #[embassy_executor::task]
-pub async fn get_time(i2c: I2cAsync) {
-    let mut rtc = DS3231::new(i2c, RTC_I2C_ADDR);
-
+// pub async fn get_time(i2c: I2cAsync) {
+pub async fn get_time(mut rtc: DS3231<I2cAsync>) {
     loop {
         let datetime = rtc.datetime().await.unwrap();
         let date = datetime.date();
@@ -72,7 +93,7 @@ pub async fn get_time(i2c: I2cAsync) {
         let time = datetime.time();
         let (hour, minute, second) = (time.hour(), time.minute(), time.second());
         defmt::info!(
-            "{}-{}-{} | {}:{}:{}",
+            "{}-{}-{} | {:02}:{:02}:{:02}",
             year,
             month,
             day,
@@ -82,4 +103,13 @@ pub async fn get_time(i2c: I2cAsync) {
         );
         Timer::after_secs(1).await;
     }
+}
+
+#[embassy_executor::task]
+pub async fn listen_for_alarm(mut buzzer_output: Output<'static>, mut alarm_input: Input<'static>) {
+    defmt::info!("Waiting for alarm...");
+    alarm_input.wait_for_falling_edge().await;
+    defmt::info!("Received!");
+
+    buzzer_output.set_high();
 }
