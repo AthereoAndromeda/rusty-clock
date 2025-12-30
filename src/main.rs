@@ -6,8 +6,10 @@
 #![no_std]
 #![no_main]
 
+mod bt;
 mod rtc_ds3231;
 
+use bt_hci::controller::ExternalController;
 use embassy_executor::Spawner;
 use esp_backtrace as _;
 #[cfg(target_arch = "riscv32")]
@@ -18,6 +20,7 @@ use esp_hal::{
     timer::timg::TimerGroup,
 };
 use esp_println as _;
+use esp_radio::ble::controller::BleConnector;
 
 use crate::rtc_ds3231::RtcDS3231;
 
@@ -27,11 +30,17 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 #[esp_rtos::main]
 async fn main(spawner: Spawner) {
+    esp_alloc::heap_allocator!(size: 72 * 1024);
     let peripherals = esp_hal::init(esp_hal::Config::default());
 
+    #[cfg(target_arch = "riscv32")]
     let sw_int = SoftwareInterruptControl::new(peripherals.SW_INTERRUPT);
     let timg0 = TimerGroup::new(peripherals.TIMG0);
-    esp_rtos::start(timg0.timer0, sw_int.software_interrupt0);
+    esp_rtos::start(
+        timg0.timer0,
+        #[cfg(target_arch = "riscv32")]
+        sw_int.software_interrupt0,
+    );
 
     let i2c: I2cAsync = I2c::new(peripherals.I2C0, i2c::master::Config::default())
         .expect("I2C Failed to Initialize!")
@@ -60,10 +69,22 @@ async fn main(spawner: Spawner) {
 
     let rtc: RtcDS3231 = rtc_ds3231::init_rtc(i2c).await.unwrap();
 
+    // Init Bluetooth
+    let radio = esp_radio::init().unwrap();
+    let bluetooth = peripherals.BT;
+    let connector = BleConnector::new(&radio, bluetooth, Default::default()).unwrap();
+    let controller: ExternalController<_, 20> = ExternalController::new(connector);
+
+    bt::ble_bas_peripheral::run(controller).await;
+    // bt::ble_bas_central::run(controller).await;
+    // bt::ble_l2cap_peripheral::run(controller).await;
+
     #[cfg(debug_assertions)]
     spawner.spawn(rtc_ds3231::get_time(rtc)).unwrap();
 
     spawner
         .spawn(rtc_ds3231::listen_for_alarm(buzzer_output, alarm_input))
         .unwrap();
+
+    // sleep::enter_deep(rtc_cntl, p)
 }
