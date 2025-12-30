@@ -34,7 +34,7 @@ async fn main(spawner: Spawner) {
     esp_rtos::start(timg0.timer0, sw_int.software_interrupt0);
 
     let i2c: I2cAsync = I2c::new(peripherals.I2C0, i2c::master::Config::default())
-        .unwrap()
+        .expect("I2C Failed to Initialize!")
         .with_sda(peripherals.GPIO1)
         .with_scl(peripherals.GPIO2)
         .into_async();

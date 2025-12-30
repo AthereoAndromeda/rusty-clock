@@ -9,12 +9,14 @@ use crate::I2cAsync;
 pub(crate) type RtcDS3231 = DS3231<I2cAsync>;
 pub(crate) const RTC_I2C_ADDR: u8 = 0x68;
 
+type EspHalI2cErr = esp_hal::i2c::master::Error;
+
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum RtcError {
     #[error("I2c Error: {0}")]
-    I2cError(#[from] esp_hal::i2c::master::Error),
+    I2cError(#[from] EspHalI2cErr),
     #[error("Error configuring RTC: {0:?}")]
-    DS3231Error(DS3231Error<esp_hal::i2c::master::Error>),
+    DS3231Error(DS3231Error<EspHalI2cErr>),
 }
 
 impl From<DS3231Error<esp_hal::i2c::master::Error>> for RtcError {
