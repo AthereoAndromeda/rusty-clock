@@ -108,9 +108,17 @@ pub async fn get_time(mut rtc: DS3231<I2cAsync>) {
 
 #[embassy_executor::task]
 pub async fn listen_for_alarm(mut buzzer_output: Output<'static>, mut alarm_input: Input<'static>) {
-    defmt::info!("Waiting for alarm...");
+    info!("Waiting for alarm...");
     alarm_input.wait_for_falling_edge().await;
-    defmt::info!("Received!");
 
+    info!("Received!");
     buzzer_output.set_high();
+
+    #[cfg(debug_assertions)]
+    {
+        // Stop it from bleeding my ears while devving
+        Timer::after_secs(10).await;
+        buzzer_output.set_low();
+        info!("Buzzer set low");
+    }
 }
