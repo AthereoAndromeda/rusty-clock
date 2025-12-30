@@ -7,7 +7,6 @@
 #![no_main]
 
 mod rtc_ds3231;
-mod sleep;
 
 use embassy_executor::Spawner;
 use esp_backtrace as _;

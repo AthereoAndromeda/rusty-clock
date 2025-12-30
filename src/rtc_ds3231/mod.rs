@@ -1,5 +1,5 @@
 use chrono::{Datelike, Timelike};
-use defmt::{error, info};
+use defmt::info;
 use ds3231::{DS3231, DS3231Error};
 use embassy_time::Timer;
 use esp_hal::gpio::{Input, Output};
