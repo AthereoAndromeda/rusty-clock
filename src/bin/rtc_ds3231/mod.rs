@@ -4,7 +4,10 @@ use ds3231::{DS3231, DS3231Error};
 use embassy_time::Timer;
 use esp_hal::gpio::{Input, Output};
 
-use crate::{I2cAsync, RTC, RTC_I2C_ADDR};
+use crate::I2cAsync;
+
+pub(crate) type RtcDS3231 = DS3231<I2cAsync>;
+pub(crate) const RTC_I2C_ADDR: u8 = 0x68;
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum RtcError {
@@ -21,7 +24,7 @@ impl From<DS3231Error<esp_hal::i2c::master::Error>> for RtcError {
 }
 
 /// Initialize the DS3231 Instance and return RTC
-pub async fn init_rtc(i2c: I2cAsync) -> Result<RTC, RtcError> {
+pub async fn init_rtc(i2c: I2cAsync) -> Result<RtcDS3231, RtcError> {
     use ds3231::{
         Alarm1Config, Config, DS3231, InterruptControl, Oscillator, SquareWaveFrequency,
         TimeRepresentation,
@@ -39,45 +42,43 @@ pub async fn init_rtc(i2c: I2cAsync) -> Result<RTC, RtcError> {
     rtc.configure(&config).await?;
 
     // Hardcoded values for now
-    let alarm1_config = Alarm1Config::AtTime {
-        hours: 8,
-        minutes: 0,
-        seconds: 0,
-        is_pm: None,
+    let alarm1_config = if cfg!(debug_assertions) {
+        Alarm1Config::AtSeconds { seconds: 30 }
+    } else {
+        Alarm1Config::AtTime {
+            hours: 8,
+            minutes: 0,
+            seconds: 0,
+            is_pm: None,
+        }
     };
 
     rtc.set_alarm1(&alarm1_config).await?;
 
-    // Clear any existing alarm flags
-    match rtc.status().await {
-        Ok(mut status) => {
-            status.set_alarm1_flag(false);
-            status.set_alarm2_flag(false);
-            match rtc.set_status(status).await {
-                Ok(_) => info!("Alarm flags cleared"),
-                Err(_) => error!("Failed to clear alarm flags"),
-            }
-        }
-        Err(_) => error!("Failed to read status"),
-    }
+    let mut status = rtc.status().await?;
+    status.set_alarm1_flag(false);
+    status.set_alarm2_flag(false);
+    rtc.set_status(status).await?;
+
+    #[cfg(debug_assertions)]
+    info!("Alarm flags cleared");
 
     // Enable Alarm 1 interrupt
-    match rtc.control().await {
-        Ok(mut control) => {
-            control.set_alarm1_interrupt_enable(true);
-            control.set_alarm2_interrupt_enable(false);
-            match rtc.set_control(control).await {
-                Ok(_) => info!("Alarm 1 interrupt enabled"),
-                Err(_) => error!("Failed to enable alarm interrupt"),
-            }
-        }
-        Err(_) => error!("Failed to read control register"),
-    }
+    let mut control = rtc.control().await?;
+    control.set_alarm1_interrupt_enable(true);
+    control.set_alarm2_interrupt_enable(false);
+    rtc.set_control(control).await?;
 
-    info!("Starting time monitoring...");
-    info!("Current time will be displayed every 100ms when it changes");
-    info!("Alarm status will be shown alongside the time");
-    info!("SQW/INT pin level will also be monitored");
+    #[cfg(debug_assertions)]
+    info!("Alarm 1 interrupt enabled");
+
+    #[cfg(debug_assertions)]
+    {
+        info!("Starting time monitoring...");
+        info!("Current time will be displayed every 100ms when it changes");
+        info!("Alarm status will be shown alongside the time");
+        info!("SQW/INT pin level will also be monitored");
+    }
 
     Ok(rtc)
 }
