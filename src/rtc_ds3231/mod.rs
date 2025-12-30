@@ -2,7 +2,10 @@ use chrono::{Datelike, Timelike};
 use defmt::info;
 use ds3231::{DS3231, DS3231Error};
 use embassy_time::Timer;
-use esp_hal::gpio::{Input, Output};
+use esp_hal::{
+    gpio::{DriveStrength, Input, InputConfig, Level, Output, OutputConfig, Pull},
+    peripherals,
+};
 
 use crate::I2cAsync;
 
@@ -109,7 +112,25 @@ pub async fn get_time(mut rtc: DS3231<I2cAsync>) {
 }
 
 #[embassy_executor::task]
-pub async fn listen_for_alarm(mut buzzer_output: Output<'static>, mut alarm_input: Input<'static>) {
+pub async fn listen_for_alarm(
+    output_pin: peripherals::GPIO5<'static>,
+    alarm_pin: peripherals::GPIO6<'static>,
+) {
+    info!("Initializing Alarm...");
+    let mut alarm_input = Input::new(alarm_pin, InputConfig::default().with_pull(Pull::None));
+
+    let mut buzzer_output = Output::new(
+        output_pin,
+        Level::High,
+        OutputConfig::default().with_drive_strength(DriveStrength::_5mA),
+    );
+    // Beep 3 times
+    for i in 1..=5 {
+        esp_hal::delay::Delay::new().delay_millis(200 * i);
+        buzzer_output.toggle();
+    }
+    buzzer_output.set_low();
+
     info!("Waiting for alarm...");
     alarm_input.wait_for_falling_edge().await;
 

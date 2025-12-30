@@ -1,24 +1,52 @@
-use defmt::{info, warn};
+use defmt::{error, info, warn};
 use embassy_futures::join::join;
 use embassy_futures::select::select;
 use embassy_time::Timer;
+use esp_hal::peripherals;
+use esp_radio::ble::controller::BleConnector;
 use trouble_host::prelude::*;
 
-/// Max number of connections
-const CONNECTIONS_MAX: usize = 1;
+use crate::{MyController, RADIO_INIT, StackType};
 
-/// Max number of L2CAP channels.
-const L2CAP_CHANNELS_MAX: usize = 2; // Signal + att
+/// Must be ran before ble_tasks
+pub fn init_ble(wifi: peripherals::WIFI, bt: peripherals::BT<'static>) -> MyController {
+    let radio_init: &'static mut esp_radio::Controller<'static> =
+        RADIO_INIT.init(esp_radio::init().expect("Failed to init radio"));
 
-// GATT Server definition
+    let (mut _wifi_controller, _interfaces) =
+        esp_radio::wifi::new(&radio_init, wifi, Default::default())
+            .expect("Failed to initialize Wi-Fi controller");
+
+    // find more examples https://github.com/embassy-rs/trouble/tree/main/examples/esp32
+    let transport = BleConnector::new(radio_init, bt, Default::default()).unwrap();
+    let ble_controller: MyController = ExternalController::<_, 20>::new(transport);
+
+    ble_controller
+}
+
+#[embassy_executor::task]
+/// Background dunner for bluetooth
+///
+/// # Warning
+/// Must be ran in the background for BLE to work!
+pub(crate) async fn ble_runner(mut runner: Runner<'static, MyController, DefaultPacketPool>) {
+    runner.run().await.unwrap();
+}
+
 #[gatt_server]
-struct Server {
+/// Our GATT Server
+///
+/// It has fields for
+/// - Battery
+/// - TimeService
+pub(crate) struct Server {
     battery_service: BatteryService,
+    time_service: TimeService,
 }
 
 /// Battery service
 #[gatt_service(uuid = service::BATTERY)]
-struct BatteryService {
+pub(crate) struct BatteryService {
     /// Battery Level
     #[descriptor(uuid = descriptors::VALID_RANGE, read, value = [0, 100])]
     #[descriptor(uuid = descriptors::MEASUREMENT_DESCRIPTION, name = "hello", read, value = "Battery Level")]
@@ -28,73 +56,40 @@ struct BatteryService {
     status: bool,
 }
 
-/// Run the BLE stack.
-pub async fn run<C>(controller: C)
-where
-    C: Controller,
-{
-    // Using a fixed "random" address can be useful for testing. In real scenarios, one would
-    // use e.g. the MAC 6 byte array as the address (how to get that varies by the platform).
-    let address: Address = Address::random([0xff, 0x8f, 0x1a, 0x05, 0xe4, 0xff]);
-    info!("Our address = {}", address.addr);
-
-    let mut resources: HostResources<DefaultPacketPool, CONNECTIONS_MAX, L2CAP_CHANNELS_MAX> =
-        HostResources::new();
-    let stack = trouble_host::new(controller, &mut resources).set_random_address(address);
-    let Host {
-        mut peripheral,
-        runner,
-        ..
-    } = stack.build();
-
-    info!("Starting advertising and GATT service");
-    let server = Server::new_with_config(GapConfig::Peripheral(PeripheralConfig {
-        name: "TrouBLE",
-        appearance: &appearance::power_device::GENERIC_POWER_DEVICE,
-    }))
-    .unwrap();
-
-    let _ = join(ble_task(runner), async {
-        loop {
-            match advertise("Trouble Example", &mut peripheral, &server).await {
-                Ok(conn) => {
-                    // set up tasks when the connection is established to a central, so they don't run when no one is connected.
-                    let a = gatt_events_task(&server, &conn);
-                    let b = custom_task(&server, &conn, &stack);
-                    // run until any task ends (usually because the connection has been closed),
-                    // then return to advertising state.
-                    select(a, b).await;
-                }
-                Err(e) => {
-                    let e = defmt::Debug2Format(&e);
-                    panic!("[adv] error: {:?}", e);
-                }
-            }
-        }
-    })
-    .await;
+/// Time Service
+#[gatt_service(uuid = service::DEVICE_TIME)]
+pub(crate) struct TimeService {
+    /// Time
+    #[descriptor(uuid = descriptors::VALID_RANGE, read, value = [0, 100])]
+    #[descriptor(uuid = descriptors::MEASUREMENT_DESCRIPTION, name = "time", read, value = "Time!")]
+    #[characteristic(uuid = characteristic::DEVICE_TIME, read, notify, value = 10)]
+    level: u8,
+    #[characteristic(uuid = "308813df-5dd4-1f87-ec11-cdb001100000", write, read, notify)]
+    status: bool,
 }
 
-/// This is a background task that is required to run forever alongside any other BLE tasks.
-///
-/// ## Alternative
-///
-/// If you didn't require this to be generic for your application, you could statically spawn this with i.e.
-///
-/// ```rust,ignore
-///
-/// #[embassy_executor::task]
-/// async fn ble_task(mut runner: Runner<'static, SoftdeviceController<'static>>) {
-///     runner.run().await;
-/// }
-///
-/// spawner.must_spawn(ble_task(runner));
-/// ```
-async fn ble_task<C: Controller, P: PacketPool>(mut runner: Runner<'_, C, P>) {
+#[embassy_executor::task]
+pub(crate) async fn runthis(
+    mut peripheral: Peripheral<'static, MyController, DefaultPacketPool>,
+    server: Server<'static>,
+    stack: &'static StackType,
+) {
+    info!("Starting advertising and GATT service");
     loop {
-        if let Err(e) = runner.run().await {
-            let e = defmt::Debug2Format(&e);
-            panic!("[ble_task] error: {:?}", e);
+        match advertise("Trouble Example", &mut peripheral, &server).await {
+            Ok(conn) => {
+                // set up tasks when the connection is established to a central, so they don't run when no one is connected.
+                let a = gatt_events_task(&server, &conn);
+                let b = custom_task(&server, &conn, &stack);
+
+                // run until any task ends (usually because the connection has been closed),
+                // then return to advertising state.
+                select(a, b).await;
+            }
+            Err(e) => {
+                let e = defmt::Debug2Format(&e);
+                panic!("[adv] error: {:?}", e);
+            }
         }
     }
 }
@@ -184,18 +179,36 @@ async fn custom_task<C: Controller, P: PacketPool>(
 ) {
     let mut tick: u8 = 0;
     let level = server.battery_service.level;
+    let time_lvl = server.time_service.level;
+    let mut time = 0;
+
     loop {
         tick = tick.wrapping_add(1);
-        info!("[custom_task] notifying connection of tick {}", tick);
-        if level.notify(conn, &tick).await.is_err() {
-            info!("[custom_task] error notifying connection");
-            break;
+        info!("Tick is: {}", tick);
+        let f1 = async {
+            info!("[custom_task:batt] notifying connection of tick {}", tick);
+            if level.notify(conn, &tick).await.is_err() {
+                error!("[custom_task] error notifying connection");
+                // break;
+            };
         };
+
+        let f2 = async {
+            info!("[custom_task:batt] notifying connection of time 129");
+            if time_lvl.notify(conn, &time).await.is_err() {
+                error!("[custom_task:time] error notif");
+                // break;
+            }
+        };
+
+        info!("Notifying connection of time and tick concurrently");
+        join(f1, f2).await;
+
         // read RSSI (Received Signal Strength Indicator) of the connection.
         if let Ok(rssi) = conn.raw().rssi(stack).await {
             info!("[custom_task] RSSI: {:?}", rssi);
         } else {
-            info!("[custom_task] error getting RSSI");
+            error!("[custom_task] error getting RSSI");
             break;
         };
         Timer::after_secs(2).await;
