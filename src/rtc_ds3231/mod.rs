@@ -1,13 +1,18 @@
-use chrono::{Datelike, Timelike};
+pub mod rtc_time;
+pub use rtc_time::*;
+
 use defmt::info;
-use ds3231::{DS3231, DS3231Error};
+use ds3231::{
+    Alarm1Config, Config, DS3231, DS3231Error, InterruptControl, Oscillator, SquareWaveFrequency,
+    TimeRepresentation,
+};
 use embassy_time::Timer;
 use esp_hal::{
     gpio::{DriveStrength, Input, InputConfig, Level, Output, OutputConfig, Pull},
     peripherals,
 };
 
-use crate::I2cAsync;
+use crate::{EPOCH_SIGNAL, I2cAsync, TIME_SIGNAL};
 
 pub(crate) type RtcDS3231 = DS3231<I2cAsync>;
 pub(crate) const RTC_I2C_ADDR: u8 = 0x68;
@@ -30,11 +35,6 @@ impl From<DS3231Error<esp_hal::i2c::master::Error>> for RtcError {
 
 /// Initialize the DS3231 Instance and return RTC
 pub async fn init_rtc(i2c: I2cAsync) -> Result<RtcDS3231, RtcError> {
-    use ds3231::{
-        Alarm1Config, Config, DS3231, InterruptControl, Oscillator, SquareWaveFrequency,
-        TimeRepresentation,
-    };
-
     let config = Config {
         time_representation: TimeRepresentation::TwentyFourHour,
         square_wave_frequency: SquareWaveFrequency::Hz1,
@@ -77,36 +77,37 @@ pub async fn init_rtc(i2c: I2cAsync) -> Result<RtcDS3231, RtcError> {
     #[cfg(debug_assertions)]
     info!("Alarm 1 interrupt enabled");
 
-    #[cfg(debug_assertions)]
-    {
-        info!("Starting time monitoring...");
-        info!("Current time will be displayed every 100ms when it changes");
-        info!("Alarm status will be shown alongside the time");
-        info!("SQW/INT pin level will also be monitored");
-    }
+    // #[cfg(debug_assertions)]
+    // {
+    //     info!("Starting time monitoring...");
+    //     info!("Current time will be displayed every 100ms when it changes");
+    //     info!("Alarm status will be shown alongside the time");
+    //     info!("SQW/INT pin level will also be monitored");
+    // }
 
     Ok(rtc)
 }
 
 #[embassy_executor::task]
 /// Gets the time and prints every second
-pub async fn get_time(mut rtc: DS3231<I2cAsync>) {
+pub async fn get_time(rtc: &'static mut RtcDS3231) {
     loop {
         let datetime = rtc.datetime().await.unwrap();
-        let date = datetime.date();
-        let (year, month, day) = (date.year(), date.month(), date.day());
+        TIME_SIGNAL.signal(datetime.into());
+        EPOCH_SIGNAL.signal(datetime.and_utc().timestamp());
 
-        let time = datetime.time();
-        let (hour, minute, second) = (time.hour(), time.minute(), time.second());
+        let datetime: RtcTime = datetime.into();
+        #[cfg(debug_assertions)]
         defmt::info!(
             "{}-{}-{} | {:02}:{:02}:{:02}",
-            year,
-            month,
-            day,
-            hour,
-            minute,
-            second
+            datetime.year,
+            datetime.month,
+            datetime.day,
+            datetime.hour,
+            datetime.minute,
+            datetime.second
         );
+
         Timer::after_secs(1).await;
     }
 }
@@ -116,7 +117,7 @@ pub async fn listen_for_alarm(
     output_pin: peripherals::GPIO5<'static>,
     alarm_pin: peripherals::GPIO6<'static>,
 ) {
-    info!("Initializing Alarm...");
+    info!("Initializing Alarm Listener...");
     let mut alarm_input = Input::new(alarm_pin, InputConfig::default().with_pull(Pull::None));
 
     let mut buzzer_output = Output::new(
@@ -124,11 +125,16 @@ pub async fn listen_for_alarm(
         Level::High,
         OutputConfig::default().with_drive_strength(DriveStrength::_5mA),
     );
+
+    // Some time to initialize
+    Timer::after_millis(500).await;
+
     // Beep 3 times
-    for i in 1..=5 {
-        esp_hal::delay::Delay::new().delay_millis(200 * i);
+    for _ in 0..3 {
+        esp_hal::delay::Delay::new().delay_millis(300);
         buzzer_output.toggle();
     }
+
     buzzer_output.set_low();
 
     info!("Waiting for alarm...");
@@ -140,7 +146,7 @@ pub async fn listen_for_alarm(
     #[cfg(debug_assertions)]
     {
         // Stop it from bleeding my ears while devving
-        Timer::after_secs(10).await;
+        Timer::after_secs(30).await;
         buzzer_output.set_low();
         info!("Buzzer set low");
     }

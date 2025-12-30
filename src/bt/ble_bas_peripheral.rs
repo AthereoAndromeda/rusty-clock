@@ -1,12 +1,11 @@
 use defmt::{error, info, warn};
-use embassy_futures::join::join;
-use embassy_futures::select::select;
+use embassy_futures::{join, select::select3};
 use embassy_time::Timer;
 use esp_hal::peripherals;
 use esp_radio::ble::controller::BleConnector;
 use trouble_host::prelude::*;
 
-use crate::{MyController, RADIO_INIT, StackType};
+use crate::{EPOCH_SIGNAL, MyController, RADIO_INIT, StackType, TIME_SIGNAL};
 
 /// Must be ran before ble_tasks
 pub fn init_ble(wifi: peripherals::WIFI, bt: peripherals::BT<'static>) -> MyController {
@@ -29,7 +28,7 @@ pub fn init_ble(wifi: peripherals::WIFI, bt: peripherals::BT<'static>) -> MyCont
 ///
 /// # Warning
 /// Must be ran in the background for BLE to work!
-pub(crate) async fn ble_runner(mut runner: Runner<'static, MyController, DefaultPacketPool>) {
+pub async fn ble_runner(mut runner: Runner<'static, MyController, DefaultPacketPool>) {
     runner.run().await.unwrap();
 }
 
@@ -66,10 +65,14 @@ pub(crate) struct TimeService {
     level: u8,
     #[characteristic(uuid = "308813df-5dd4-1f87-ec11-cdb001100000", write, read, notify)]
     status: bool,
+
+    #[descriptor(uuid = descriptors::MEASUREMENT_DESCRIPTION, name = "epoch", read, value = "EPOCj!")]
+    #[characteristic(uuid = characteristic::DEVICE_TIME, write, read, notify)]
+    epoch: i64,
 }
 
 #[embassy_executor::task]
-pub(crate) async fn runthis(
+pub async fn run_peripheral(
     mut peripheral: Peripheral<'static, MyController, DefaultPacketPool>,
     server: Server<'static>,
     stack: &'static StackType,
@@ -81,10 +84,12 @@ pub(crate) async fn runthis(
                 // set up tasks when the connection is established to a central, so they don't run when no one is connected.
                 let a = gatt_events_task(&server, &conn);
                 let b = custom_task(&server, &conn, &stack);
+                let c = time_task::<MyController, _>(&server, &conn);
 
                 // run until any task ends (usually because the connection has been closed),
                 // then return to advertising state.
-                select(a, b).await;
+                // select(a, b).await;
+                select3(a, b, c).await;
             }
             Err(e) => {
                 let e = defmt::Debug2Format(&e);
@@ -179,30 +184,15 @@ async fn custom_task<C: Controller, P: PacketPool>(
 ) {
     let mut tick: u8 = 0;
     let level = server.battery_service.level;
-    let time_lvl = server.time_service.level;
-    let mut time = 0;
 
     loop {
         tick = tick.wrapping_add(1);
-        info!("Tick is: {}", tick);
-        let f1 = async {
-            info!("[custom_task:batt] notifying connection of tick {}", tick);
-            if level.notify(conn, &tick).await.is_err() {
-                error!("[custom_task] error notifying connection");
-                // break;
-            };
+        // info!("Tick is: {}", tick);
+        info!("[custom_task] notifying connection of tick {}", tick);
+        if level.notify(conn, &tick).await.is_err() {
+            error!("[custom_task] error notifying connection");
+            break;
         };
-
-        let f2 = async {
-            info!("[custom_task:batt] notifying connection of time 129");
-            if time_lvl.notify(conn, &time).await.is_err() {
-                error!("[custom_task:time] error notif");
-                // break;
-            }
-        };
-
-        info!("Notifying connection of time and tick concurrently");
-        join(f1, f2).await;
 
         // read RSSI (Received Signal Strength Indicator) of the connection.
         if let Ok(rssi) = conn.raw().rssi(stack).await {
@@ -212,5 +202,35 @@ async fn custom_task<C: Controller, P: PacketPool>(
             break;
         };
         Timer::after_secs(2).await;
+    }
+}
+
+async fn time_task<C: Controller, P: PacketPool>(
+    server: &Server<'_>,
+    conn: &GattConnection<'_, '_, P>,
+) {
+    let time_char = server.time_service.level;
+    let epoch_char = server.time_service.epoch;
+
+    loop {
+        let time = TIME_SIGNAL.wait().await;
+        let epoch = EPOCH_SIGNAL.wait().await;
+
+        let fut1 = async {
+            info!("[time_task] notifying connection of time {}", time);
+            if time_char.notify(conn, &time.second).await.is_err() {
+                error!("[time_task] error notifying connection");
+            };
+        };
+
+        let fut2 = async {
+            info!("[time_task] notifying connection of epoch {}", epoch);
+            if epoch_char.notify(conn, &epoch).await.is_err() {
+                error!("[time_task] error notifying connection");
+            };
+        };
+
+        join::join(fut1, fut2).await;
+        Timer::after_secs(1).await;
     }
 }

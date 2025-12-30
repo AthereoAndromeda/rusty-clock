@@ -30,30 +30,43 @@ use trouble_host::{
 };
 
 use crate::{
-    bt::ble_bas_peripheral::{Server, ble_runner, init_ble, runthis},
-    rtc_ds3231::RtcDS3231,
+    bt::ble_bas_peripheral::{Server, ble_runner, init_ble},
+    rtc_ds3231::{RtcDS3231, RtcTime},
 };
 
 // Found via `espflash`
-pub const MAC_ADDR: &'static str = "10:20:ba:91:bb:b4";
+// pub const MAC_ADDR: &'static str = "10:20:ba:91:bb:b4";
+pub const MAC_ADDR: &'static [u8; 6] = &[0x10, 0x20, 0xba, 0x91, 0xbb, 0xb4];
 
 pub type I2cAsync = I2c<'static, esp_hal::Async>;
 
 pub type MyController = ExternalController<BleConnector<'static>, 20>;
+pub type MyResources = HostResources<DefaultPacketPool, CONNECTIONS_MAX, L2CAP_CHANNELS_MAX>;
 pub type StackType =
     Stack<'static, ExternalController<BleConnector<'static>, 20>, DefaultPacketPool>;
 
 pub static RADIO_INIT: StaticCell<esp_radio::Controller<'static>> = StaticCell::new();
 
-pub static HOST_RESOURCES: StaticCell<
-    HostResources<DefaultPacketPool, CONNECTIONS_MAX, L2CAP_CHANNELS_MAX>,
-> = StaticCell::new();
+pub static HOST_RESOURCES: StaticCell<MyResources> = StaticCell::new();
 
 /// Max number of connections
 pub const CONNECTIONS_MAX: usize = 1;
 
 /// Max number of L2CAP channels.
 pub const L2CAP_CHANNELS_MAX: usize = 3; // Signal + att + CoC
+
+pub static RTC_DS3231: StaticCell<RtcDS3231> = StaticCell::new();
+
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel::Channel;
+
+pub static TIME_CH: Channel<CriticalSectionRawMutex, RtcTime, 1> = Channel::new();
+
+use embassy_sync::signal::Signal;
+
+pub static TIME_SIGNAL: Signal<CriticalSectionRawMutex, RtcTime> = Signal::new();
+
+pub static EPOCH_SIGNAL: Signal<CriticalSectionRawMutex, i64> = Signal::new();
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
@@ -85,12 +98,12 @@ async fn main(spawner: Spawner) {
         .into_async();
 
     defmt::info!("Init Alarm...");
-
     let rtc: RtcDS3231 = rtc_ds3231::init_rtc(i2c).await.unwrap();
+    let rtc: &mut RtcDS3231 = RTC_DS3231.init(rtc);
 
     // Using a fixed "random" address can be useful for testing. In real scenarios, one would
     // use e.g. the MAC 6 byte array as the address (how to get that varies by the platform).
-    let address: Address = Address::random([0xff, 0x8f, 0x1a, 0x05, 0xe4, 0xff]);
+    let address: Address = Address::random(MAC_ADDR.clone());
     info!("Our address = {}", address.addr);
 
     static STACK: StaticCell<StackType> = StaticCell::new();
@@ -101,7 +114,7 @@ async fn main(spawner: Spawner) {
         L2CAP_CHANNELS_MAX,
     > = HOST_RESOURCES.init(HostResources::new());
 
-    let ble_controller = init_ble(peripherals.WIFI, peripherals.BT);
+    let ble_controller: MyController = init_ble(peripherals.WIFI, peripherals.BT);
     info!("Initialized Bluetooth!");
 
     let stack: &'static mut StackType =
@@ -121,11 +134,12 @@ async fn main(spawner: Spawner) {
     spawner.must_spawn(ble_runner(runner));
 
     spawner
-        .spawn(runthis(peripheral, server, stack))
-        .expect("Failed to runthis");
+        .spawn(bt::run_peripheral(peripheral, server, stack))
+        .expect("Failed to run bluetooth peripheral");
 
-    #[cfg(debug_assertions)]
-    spawner.spawn(rtc_ds3231::get_time(rtc)).unwrap();
+    spawner
+        .spawn(rtc_ds3231::get_time(rtc))
+        .expect("Unable to get time");
 
     spawner
         .spawn(rtc_ds3231::listen_for_alarm(
