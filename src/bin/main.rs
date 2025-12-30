@@ -75,10 +75,11 @@ async fn main(spawner: Spawner) {
     esp_hal::delay::Delay::new().delay_millis(300);
     buzzer_output.toggle();
 
-    // rtc.alarm2_hour()
     let rtc: RTC = rtc::init_rtc(i2c).await.unwrap();
 
+    #[cfg(debug_assertions)]
     spawner.spawn(rtc::get_time(rtc)).unwrap();
+
     spawner
         .spawn(rtc::listen_for_alarm(buzzer_output, alarm_input))
         .unwrap();

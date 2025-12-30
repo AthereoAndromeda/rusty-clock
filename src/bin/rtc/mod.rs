@@ -83,7 +83,7 @@ pub async fn init_rtc(i2c: I2cAsync) -> Result<RTC, RtcError> {
 }
 
 #[embassy_executor::task]
-// pub async fn get_time(i2c: I2cAsync) {
+/// Gets the time and prints every second
 pub async fn get_time(mut rtc: DS3231<I2cAsync>) {
     loop {
         let datetime = rtc.datetime().await.unwrap();
