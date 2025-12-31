@@ -32,6 +32,7 @@ embassy-net = { version = "0.7.0", features = [
   "medium-ethernet",
   "tcp",
   "udp",
+  "mdns"
 ] }
 embedded-io = { version = "0.7.1", features = ["defmt"] }
 embedded-io-async = { version = "0.7.0", features = ["defmt"] }
@@ -69,6 +70,7 @@ smoltcp = { version = "0.12.0", default-features = false, features = [
   "socket-raw",
   "socket-tcp",
   "socket-udp",
+  "socket-mdns",
 ] }
 trouble-host = { version = "0.5.0", features = ["gatt"] }
 
@@ -79,6 +81,9 @@ chrono = { version = "0.4.42", default-features = false }
 heapless = { version = "0.9.1", features = ["defmt"] }
 thiserror = { version = "2.0.17", default-features = false }
 embassy-futures = { version = "0.1.2", features = ["defmt"] }
+sntpc = { version = "0.7.0", default-features = false, features = ["defmt", "embassy-socket"] }
+jiff = { version = "0.2.17", default-features = false }
+futures = { version = "0.3.31", default-features = false }
 
 
 [profile.dev]

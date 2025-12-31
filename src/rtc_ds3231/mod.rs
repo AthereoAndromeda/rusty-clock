@@ -1,18 +1,19 @@
 pub mod rtc_time;
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 pub use rtc_time::*;
 
-use defmt::info;
+use defmt::{info, warn};
 use ds3231::{
     Alarm1Config, Config, DS3231, DS3231Error, InterruptControl, Oscillator, SquareWaveFrequency,
     TimeRepresentation,
 };
-use embassy_time::Timer;
+use embassy_time::{Duration, Timer, WithTimeout};
 use esp_hal::{
     gpio::{DriveStrength, Input, InputConfig, Level, Output, OutputConfig, Pull},
     peripherals,
 };
 
-use crate::{EPOCH_SIGNAL, I2cAsync, TIME_SIGNAL};
+use crate::{EPOCH_SIGNAL, I2cAsync, NTP_SIGNAL, TIME_SIGNAL};
 
 pub(crate) type RtcDS3231 = DS3231<I2cAsync>;
 pub(crate) const RTC_I2C_ADDR: u8 = 0x68;
@@ -77,26 +78,19 @@ pub async fn init_rtc(i2c: I2cAsync) -> Result<RtcDS3231, RtcError> {
     #[cfg(debug_assertions)]
     info!("Alarm 1 interrupt enabled");
 
-    // #[cfg(debug_assertions)]
-    // {
-    //     info!("Starting time monitoring...");
-    //     info!("Current time will be displayed every 100ms when it changes");
-    //     info!("Alarm status will be shown alongside the time");
-    //     info!("SQW/INT pin level will also be monitored");
-    // }
-
     Ok(rtc)
 }
 
 #[embassy_executor::task]
-/// Gets the time and prints every second
-pub async fn get_time(rtc: &'static mut RtcDS3231) {
+pub async fn run(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) {
     loop {
-        let datetime = rtc.datetime().await.unwrap();
+        let datetime = rtc_mutex.lock().await.datetime().await.unwrap();
+
         TIME_SIGNAL.signal(datetime.into());
         EPOCH_SIGNAL.signal(datetime.and_utc().timestamp());
 
         let datetime: RtcTime = datetime.into();
+
         #[cfg(debug_assertions)]
         defmt::info!(
             "{}-{}-{} | {:02}:{:02}:{:02}",
@@ -113,16 +107,42 @@ pub async fn get_time(rtc: &'static mut RtcDS3231) {
 }
 
 #[embassy_executor::task]
+
+pub async fn update_rtc(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) {
+    let signal = NTP_SIGNAL
+        .wait()
+        .with_timeout(Duration::from_secs(60 * 3))
+        .await;
+
+    match signal {
+        Ok(ntp) => {
+            info!("Setting RTC Datetime to NTP...");
+            let datetime = chrono::DateTime::from_timestamp_secs(ntp)
+                .unwrap()
+                .naive_utc();
+            let mut rtc = rtc_mutex.lock().await;
+
+            rtc.set_datetime(&datetime).await.unwrap();
+            info!("Succesfully Set RTC Datetime!");
+        }
+        Err(e) => {
+            warn!("Failed to get NTP Service: {:?}", e);
+        }
+    }
+}
+
+#[embassy_executor::task]
 pub async fn listen_for_alarm(
     output_pin: peripherals::GPIO5<'static>,
     alarm_pin: peripherals::GPIO6<'static>,
 ) {
     info!("Initializing Alarm Listener...");
-    let mut alarm_input = Input::new(alarm_pin, InputConfig::default().with_pull(Pull::None));
+    let mut alarm_input = Input::new(alarm_pin, InputConfig::default().with_pull(Pull::Up));
 
     let mut buzzer_output = Output::new(
         output_pin,
         Level::High,
+        // Possibly changw to Pull::Down to remove need for resistor
         OutputConfig::default().with_drive_strength(DriveStrength::_5mA),
     );
 
@@ -140,13 +160,13 @@ pub async fn listen_for_alarm(
     info!("Waiting for alarm...");
     alarm_input.wait_for_falling_edge().await;
 
-    info!("Received!");
+    info!("DS3231 Interrupt Received!");
     buzzer_output.set_high();
 
     #[cfg(debug_assertions)]
     {
         // Stop it from bleeding my ears while devving
-        Timer::after_secs(30).await;
+        Timer::after_secs(10).await;
         buzzer_output.set_low();
         info!("Buzzer set low");
     }

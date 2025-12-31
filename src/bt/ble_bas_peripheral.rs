@@ -2,25 +2,33 @@ use defmt::{error, info, warn};
 use embassy_futures::{join, select::select3};
 use embassy_time::Timer;
 use esp_hal::peripherals;
-use esp_radio::ble::controller::BleConnector;
+use esp_radio::{
+    ble::controller::BleConnector,
+    wifi::{Interfaces, WifiController},
+};
+use static_cell::StaticCell;
 use trouble_host::prelude::*;
 
-use crate::{EPOCH_SIGNAL, MyController, RADIO_INIT, StackType, TIME_SIGNAL};
+pub static RADIO_INIT: StaticCell<esp_radio::Controller<'static>> = StaticCell::new();
+
+use crate::{BleController, BleStack, EPOCH_SIGNAL, TIME_SIGNAL};
 
 /// Must be ran before ble_tasks
-pub fn init_ble(wifi: peripherals::WIFI, bt: peripherals::BT<'static>) -> MyController {
+pub fn init_wireless(
+    wifi: peripherals::WIFI<'static>,
+    bt: peripherals::BT<'static>,
+) -> (WifiController<'static>, Interfaces<'static>, BleController) {
     let radio_init: &'static mut esp_radio::Controller<'static> =
-        RADIO_INIT.init(esp_radio::init().expect("Failed to init radio"));
+        RADIO_INIT.init(esp_radio::init().expect("Failed to init Wifi/BLE controller"));
 
-    let (mut _wifi_controller, _interfaces) =
-        esp_radio::wifi::new(&radio_init, wifi, Default::default())
-            .expect("Failed to initialize Wi-Fi controller");
+    let (wifi_controller, interfaces) = esp_radio::wifi::new(radio_init, wifi, Default::default())
+        .expect("Failed to initialize Wi-Fi controller");
 
     // find more examples https://github.com/embassy-rs/trouble/tree/main/examples/esp32
     let transport = BleConnector::new(radio_init, bt, Default::default()).unwrap();
-    let ble_controller: MyController = ExternalController::<_, 20>::new(transport);
+    let ble_controller: BleController = ExternalController::<_, 20>::new(transport);
 
-    ble_controller
+    (wifi_controller, interfaces, ble_controller)
 }
 
 #[embassy_executor::task]
@@ -28,7 +36,9 @@ pub fn init_ble(wifi: peripherals::WIFI, bt: peripherals::BT<'static>) -> MyCont
 ///
 /// # Warning
 /// Must be ran in the background for BLE to work!
-pub async fn ble_runner(mut runner: Runner<'static, MyController, DefaultPacketPool>) {
+pub async fn ble_runner_task(
+    mut runner: trouble_host::prelude::Runner<'static, BleController, DefaultPacketPool>,
+) {
     runner.run().await.unwrap();
 }
 
@@ -73,9 +83,9 @@ pub(crate) struct TimeService {
 
 #[embassy_executor::task]
 pub async fn run_peripheral(
-    mut peripheral: Peripheral<'static, MyController, DefaultPacketPool>,
+    mut peripheral: Peripheral<'static, BleController, DefaultPacketPool>,
     server: Server<'static>,
-    stack: &'static StackType,
+    stack: &'static BleStack,
 ) {
     info!("Starting advertising and GATT service");
     loop {
@@ -84,7 +94,7 @@ pub async fn run_peripheral(
                 // set up tasks when the connection is established to a central, so they don't run when no one is connected.
                 let a = gatt_events_task(&server, &conn);
                 let b = custom_task(&server, &conn, &stack);
-                let c = time_task::<MyController, _>(&server, &conn);
+                let c = time_task::<BleController, _>(&server, &conn);
 
                 // run until any task ends (usually because the connection has been closed),
                 // then return to advertising state.
