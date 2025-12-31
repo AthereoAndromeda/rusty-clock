@@ -1,35 +1,12 @@
 use defmt::{error, info, warn};
 use embassy_futures::{join, select::select3};
 use embassy_time::Timer;
-use esp_hal::peripherals;
-use esp_radio::{
-    ble::controller::BleConnector,
-    wifi::{Interfaces, WifiController},
-};
 use static_cell::StaticCell;
 use trouble_host::prelude::*;
 
 pub static RADIO_INIT: StaticCell<esp_radio::Controller<'static>> = StaticCell::new();
 
 use crate::{BleController, BleStack, EPOCH_SIGNAL, TIME_SIGNAL};
-
-/// Must be ran before ble_tasks
-pub fn init_wireless(
-    wifi: peripherals::WIFI<'static>,
-    bt: peripherals::BT<'static>,
-) -> (WifiController<'static>, Interfaces<'static>, BleController) {
-    let radio_init: &'static mut esp_radio::Controller<'static> =
-        RADIO_INIT.init(esp_radio::init().expect("Failed to init Wifi/BLE controller"));
-
-    let (wifi_controller, interfaces) = esp_radio::wifi::new(radio_init, wifi, Default::default())
-        .expect("Failed to initialize Wi-Fi controller");
-
-    // find more examples https://github.com/embassy-rs/trouble/tree/main/examples/esp32
-    let transport = BleConnector::new(radio_init, bt, Default::default()).unwrap();
-    let ble_controller: BleController = ExternalController::<_, 20>::new(transport);
-
-    (wifi_controller, interfaces, ble_controller)
-}
 
 #[embassy_executor::task]
 /// Background dunner for bluetooth

@@ -48,11 +48,12 @@ pub async fn init_rtc(i2c: I2cAsync) -> Result<RtcDS3231, RtcError> {
     rtc.configure(&config).await?;
 
     // Hardcoded values for now
+    // NOTE: Time stored in RTC is in UTC, adjust to your timezone
     let alarm1_config = if cfg!(debug_assertions) {
         Alarm1Config::AtSeconds { seconds: 30 }
     } else {
         Alarm1Config::AtTime {
-            hours: 8,
+            hours: 0,
             minutes: 0,
             seconds: 0,
             is_pm: None,
@@ -82,6 +83,9 @@ pub async fn init_rtc(i2c: I2cAsync) -> Result<RtcDS3231, RtcError> {
 }
 
 #[embassy_executor::task]
+/// Runner for DS3231
+///
+/// Keeps the time
 pub async fn run(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) {
     loop {
         let datetime = rtc_mutex.lock().await.datetime().await.unwrap();
@@ -89,26 +93,41 @@ pub async fn run(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) 
         TIME_SIGNAL.signal(datetime.into());
         EPOCH_SIGNAL.signal(datetime.and_utc().timestamp());
 
-        let datetime: RtcTime = datetime.into();
-
         #[cfg(debug_assertions)]
-        defmt::info!(
-            "{}-{}-{} | {:02}:{:02}:{:02}",
-            datetime.year,
-            datetime.month,
-            datetime.day,
-            datetime.hour,
-            datetime.minute,
-            datetime.second
-        );
+        {
+            use jiff::tz::{Offset, TimeZone};
+
+            use crate::TZ_OFFSET;
+
+            let ts = datetime.and_utc().timestamp();
+            let ts = jiff::Timestamp::from_second(ts).unwrap();
+
+            // WARN: IANA Timezones don't seem to work
+            // let datetime = ts
+            //     // .in_tz(IANA_TZ)
+            //     .expect("IANA_TZ should be a valid timezone!");
+
+            let offset = TZ_OFFSET.parse::<i8>().expect("Should be a valid number");
+            let datetime = ts.to_zoned(TimeZone::fixed(Offset::constant(offset)));
+
+            defmt::info!(
+                "{}-{}-{} | {:02}:{:02}:{:02}",
+                datetime.year(),
+                datetime.month(),
+                datetime.day(),
+                datetime.hour(),
+                datetime.minute(),
+                datetime.second()
+            );
+        }
 
         Timer::after_secs(1).await;
     }
 }
 
 #[embassy_executor::task]
-
-pub async fn update_rtc(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) {
+/// Waits and Listens for an NTP signal. Exits after 3 minutes
+pub async fn update_rtc_timestamp(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) {
     let signal = NTP_SIGNAL
         .wait()
         .with_timeout(Duration::from_secs(60 * 3))
@@ -120,9 +139,15 @@ pub async fn update_rtc(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS
             let datetime = chrono::DateTime::from_timestamp_secs(ntp)
                 .unwrap()
                 .naive_utc();
-            let mut rtc = rtc_mutex.lock().await;
 
-            rtc.set_datetime(&datetime).await.unwrap();
+            rtc_mutex
+                .lock()
+                .await
+                .set_datetime(&datetime)
+                .await
+                .unwrap();
+
+            // rtc.set_datetime(&datetime).await.unwrap();
             info!("Succesfully Set RTC Datetime!");
         }
         Err(e) => {
