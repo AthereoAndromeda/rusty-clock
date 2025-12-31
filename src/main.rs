@@ -62,7 +62,7 @@ use crate::{
             ble_bas_peripheral::{Server, ble_runner_task},
         },
         init_wireless,
-        wifi::{connection, get_net_stack, net_runner_task, sntp::fetch_sntp},
+        wifi::{connect_to_wifi, get_net_stack, net_runner_task, sntp::fetch_sntp},
     },
 };
 
@@ -159,7 +159,7 @@ async fn main(spawner: Spawner) {
     info!("Running Embassy spawners");
     spawner.must_spawn(ble_runner_task(ble_runner));
     spawner.must_spawn(net_runner_task(net_runner));
-    spawner.must_spawn(connection(wifi_controller));
+    spawner.must_spawn(connect_to_wifi(wifi_controller));
 
     spawner.must_spawn(bt::run_peripheral(ble_peripheral, gatt_server, ble_stack));
     spawner.must_spawn(fetch_sntp(net_stack, rtc));

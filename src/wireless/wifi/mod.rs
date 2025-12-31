@@ -40,7 +40,7 @@ pub async fn net_runner_task(mut runner: embassy_net::Runner<'static, WifiDevice
 
 #[embassy_executor::task]
 /// Connect to Wi-Fi
-pub async fn connection(mut controller: WifiController<'static>) {
+pub async fn connect_to_wifi(mut controller: WifiController<'static>) {
     println!("start connection task");
     println!("Device capabilities: {:?}", controller.capabilities());
     loop {

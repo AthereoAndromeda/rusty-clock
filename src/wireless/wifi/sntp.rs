@@ -3,7 +3,7 @@ use core::net::{IpAddr, SocketAddr};
 use defmt::{info, warn};
 use embassy_net::udp::{PacketMetadata, UdpSocket};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
-use embassy_time::Timer;
+use embassy_time::{Duration, Timer, WithTimeout};
 use sntpc::NtpContext;
 
 use crate::{NTP_SERVER_ADDR, NTP_SIGNAL, rtc_ds3231::RtcDS3231};
@@ -51,31 +51,48 @@ pub async fn fetch_sntp(
     // 123 is SNTP port
     udp_socket.bind(123).unwrap();
 
-    info!("Waiting for Network Link...");
-    loop {
-        if net_stack.is_link_up() {
-            info!("Network Link is Up!");
-            break;
+    info!("[sntp] Waiting for Network Link...");
+    match net_stack
+        .wait_link_up()
+        .with_timeout(Duration::from_secs(180))
+        .await
+    {
+        Ok(_) => {
+            info!("[sntp] Network Link is Up!");
         }
-        Timer::after_millis(500).await;
-    }
-
-    info!("Waiting to get IP address...");
-    loop {
-        if let Some(config) = net_stack.config_v4() {
-            info!("Got IP: {}", config.address);
-            break;
+        Err(_) => {
+            warn!("[sntp] Network Link Timed Out!");
+            return;
         }
-        Timer::after_millis(500).await;
-    }
+    };
 
+    info!("[sntp] Waiting to get IP address...");
+    match net_stack
+        .wait_config_up()
+        .with_timeout(Duration::from_secs(180))
+        .await
+    {
+        Ok(_) => {
+            let config = net_stack
+                .config_v4()
+                .expect("Should be here since we waited for config");
+            info!("[sntp] Got IP: {}", config.address);
+        }
+        Err(_) => {
+            warn!("[sntp] DHCP IP Address Request Timed Out!");
+            return;
+        }
+    };
+
+    // TODO: Retry and connect to multiple NTP servers
     let ntp_addrs = net_stack
         .dns_query(NTP_SERVER_ADDR, smoltcp::wire::DnsQueryType::A)
         .await
         .unwrap();
 
     if ntp_addrs.is_empty() {
-        panic!("Failed to resolve DNS. Empty result");
+        warn!("[sntp] Failed to resolve DNS! Falling back to stored RTC time");
+        return;
     }
 
     info!("[sntp] Sending SNTP Request...");
@@ -99,7 +116,7 @@ pub async fn fetch_sntp(
     info!("[sntp] Received a response!");
     match result {
         Ok(time) => {
-            info!("Response: {:?}", time);
+            info!("[sntp] Response: {:?}", time);
             let jt = jiff::Timestamp::from_second(time.sec() as i64)
                 .unwrap()
                 .checked_add(
@@ -116,17 +133,18 @@ pub async fn fetch_sntp(
             #[cfg(debug_assertions)]
             {
                 // Create a Jiff Timestamp from seconds and nanoseconds
-
                 use crate::EPOCH_SIGNAL;
                 let jtf = jt.timestamp().as_second();
                 let rtc_time = EPOCH_SIGNAL.wait().await;
-                info!("ntp: {}", jtf);
-                info!("rtc: {}", rtc_time);
-                info!("Difference: {}", jtf - rtc_time);
+                info!("[sntp] ntp: {}", jtf);
+                info!("[sntp] rtc: {}", rtc_time);
+                info!("[sntp] Difference: {}", jtf - rtc_time);
             }
         }
         Err(e) => {
-            warn!("Failed to get NTP Time!: {:?}", e);
+            warn!("[sntp] Failed to get NTP Time!: {:?}", e);
         }
     }
+
+    info!("[sntp] Task Complete!")
 }

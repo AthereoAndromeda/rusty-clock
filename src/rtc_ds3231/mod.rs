@@ -67,8 +67,7 @@ pub async fn init_rtc(i2c: I2cAsync) -> Result<RtcDS3231, RtcError> {
     status.set_alarm2_flag(false);
     rtc.set_status(status).await?;
 
-    #[cfg(debug_assertions)]
-    info!("Alarm flags cleared");
+    info!("[rtc:init] Alarm flags cleared");
 
     // Enable Alarm 1 interrupt
     let mut control = rtc.control().await?;
@@ -76,8 +75,7 @@ pub async fn init_rtc(i2c: I2cAsync) -> Result<RtcDS3231, RtcError> {
     control.set_alarm2_interrupt_enable(false);
     rtc.set_control(control).await?;
 
-    #[cfg(debug_assertions)]
-    info!("Alarm 1 interrupt enabled");
+    info!("[rtc:init] Alarm 1 interrupt enabled");
 
     Ok(rtc)
 }
@@ -111,13 +109,14 @@ pub async fn run(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) 
             let datetime = ts.to_zoned(TimeZone::fixed(Offset::constant(offset)));
 
             defmt::info!(
-                "{}-{}-{} | {:02}:{:02}:{:02}",
+                "{}-{}-{} | {:02}:{:02}:{:02} ({:02}:00)",
                 datetime.year(),
                 datetime.month(),
                 datetime.day(),
                 datetime.hour(),
                 datetime.minute(),
-                datetime.second()
+                datetime.second(),
+                offset
             );
         }
 
@@ -135,7 +134,7 @@ pub async fn update_rtc_timestamp(rtc_mutex: &'static Mutex<CriticalSectionRawMu
 
     match signal {
         Ok(ntp) => {
-            info!("Setting RTC Datetime to NTP...");
+            info!("[rtc:update-timestamp] Setting RTC Datetime to NTP...");
             let datetime = chrono::DateTime::from_timestamp_secs(ntp)
                 .unwrap()
                 .naive_utc();
@@ -148,14 +147,15 @@ pub async fn update_rtc_timestamp(rtc_mutex: &'static Mutex<CriticalSectionRawMu
                 .unwrap();
 
             // rtc.set_datetime(&datetime).await.unwrap();
-            info!("Succesfully Set RTC Datetime!");
+            info!("[rtc:update-timestamp] Succesfully Set RTC Datetime!");
         }
         Err(e) => {
-            warn!("Failed to get NTP Service: {:?}", e);
+            warn!("[rtc:update-timestamp] Failed to get NTP Service: {:?}", e);
         }
     }
 }
 
+// TODO: Move to GPIO mod
 #[embassy_executor::task]
 pub async fn listen_for_alarm(
     output_pin: peripherals::GPIO5<'static>,
