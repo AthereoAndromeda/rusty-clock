@@ -8,7 +8,7 @@ This project is still a work in progress
 - Uses external RTC to keep time and to set alarms
 - Connects to (S)NTP to correct RTC time
 - [WIP] Remote control via Bluetooth
-- [Planned] Remote control via Web Server
+- [WIP] Remote control via Web Server
 - [Planned] 16x2 LCD Screen
 - [Planned] Deep Sleep
 
@@ -18,7 +18,10 @@ This project is still a work in progress
 - Breadboard Power Supply
 - IRLZ44N Logic-Level MOSFET
 - 3-12V Active Buzzer
+- Flyback diode
 - A10K Potentiometer
+- A bunch of resistors and wires (ofc)
+
 
 # Learning Resources
 <details>
@@ -28,6 +31,7 @@ This project is still a work in progress
   So here are the quick links
   </summary>
 
+
   Honestly it's a lot of going back and forth between `docs.rs` and the
   GitHub examples of the various crates. It's not uncommon for me
   to have at least 30+ tabs open. I went back and forth between:
@@ -36,6 +40,7 @@ This project is still a work in progress
   - [Example project](https://github.com/claudiomattera/esp32c3-embassy): A similar project
   - [esp-hal examples](https://github.com/esp-rs/esp-hal/tree/main/examples): By far the most useful and informative
   - [embassy_sync](https://docs.embassy.dev/embassy-sync/git/default/index.html)
+  - [impl Rust for ESP32](https://esp32.implrust.com/)
 
   ## Wifi & BLE
   - [esp-radio docs](https://docs.espressif.com/projects/rust/esp-radio/0.16.0/esp32c2/esp_radio/index.html#feature-flags)
@@ -53,11 +58,14 @@ This project is still a work in progress
   - [esp-hal sntpc example](https://github.com/esp-rs/esp-hal/blob/9e4c652d1aa1d1cbc8f2483c93b7d98d0ba1bcb6/examples/wifi/embassy_sntp/src/main.rs#L140C1-L140C81): Also a single line (assuming you setup Stack correctly)
   - ~~[smoltcp DNS example](https://github.com/smoltcp-rs/smoltcp/blob/main/examples/dns.rs)~~: Not that useful in my case
 
-  ### NTP (Network Time Protocol)
+  ### (S)NTP (Simple Network Time Protocol)
   Sync our alaram clock to correct time
   - [esp-hal sntpc embassy](https://github.com/esp-rs/esp-hal/blob/main/examples/wifi/embassy_sntp/src/main.rs#L158)
   - [sntpc docs](https://docs.rs/sntpc/latest/sntpc/)
   - [sntpc embassy example](https://github.com/vpetrigo/sntpc/blob/master/examples/embassy-net/src/main.rs): Example uses std but useful for learning how to implement traits
+
+  ## Web Server
+  - [picoserve embassy example](https://github.com/sammhicks/picoserve/blob/development/examples/embassy/hello_world/src/main.rs)
 
   ## DS3231
   Our nifty external RTC module
