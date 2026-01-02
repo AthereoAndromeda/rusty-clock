@@ -1,9 +1,9 @@
 pub mod sntp;
 pub mod web_server;
 
-pub const MAX_NET_SOCKETS: usize = 5;
+pub const MAX_NET_SOCKETS: usize = 8;
 
-use defmt::{info, println};
+use defmt::{info, println, warn};
 use embassy_net::StackResources;
 use embassy_time::Timer;
 use esp_hal::rng::Rng;
@@ -82,9 +82,9 @@ pub async fn connect_to_wifi(mut controller: WifiController<'static>) {
         println!("About to connect...");
 
         match controller.connect_async().await {
-            Ok(_) => println!("Wifi connected!"),
+            Ok(_) => info!("Wifi connected!"),
             Err(e) => {
-                println!("Failed to connect to wifi: {:?}", e);
+                warn!("Failed to connect to wifi: {:?}", e);
                 Timer::after_millis(5000).await
             }
         }

@@ -5,6 +5,7 @@
 
 #![no_std]
 #![no_main]
+#![feature(impl_trait_in_assoc_type)]
 
 mod rtc_ds3231;
 mod wireless;
@@ -63,8 +64,12 @@ use crate::{
         },
         init_wireless,
         wifi::{
-            connect_to_wifi, get_net_stack, net_runner_task, sntp::fetch_sntp,
-            web_server::serve_webpage,
+            connect_to_wifi,
+            get_net_stack,
+            net_runner_task,
+            sntp::fetch_sntp,
+            web_server::{WEB_TASK_POOL_SIZE, init_web, web_task},
+            // web_server::serve_webpage,
         },
     },
 };
@@ -160,15 +165,12 @@ async fn main(spawner: Spawner) {
     info!("Initialized Wireless!");
 
     info!("Running Embassy spawners");
-    // spawner.must_spawn(ble_runner_task(ble_runner));
+    spawner.must_spawn(ble_runner_task(ble_runner));
     spawner.must_spawn(net_runner_task(net_runner));
     spawner.must_spawn(connect_to_wifi(wifi_controller));
 
-    // spawner.must_spawn(bt::run_peripheral(ble_peripheral, gatt_server, ble_stack));
+    spawner.must_spawn(bt::run_peripheral(ble_peripheral, gatt_server, ble_stack));
     spawner.must_spawn(fetch_sntp(net_stack, rtc));
-    spawner
-        .spawn(serve_webpage(net_stack))
-        .unwrap_or_else(|_| error!("Failed to run webpage"));
 
     spawner.must_spawn(rtc_ds3231::run(rtc));
     spawner.must_spawn(rtc_ds3231::update_rtc_timestamp(rtc));
@@ -179,6 +181,12 @@ async fn main(spawner: Spawner) {
             peripherals.GPIO6,
         ))
         .unwrap_or_else(|_| error!("Failed to listen for alarm"));
+
+    let (app, conf) = init_web();
+
+    for task_id in 0..WEB_TASK_POOL_SIZE {
+        spawner.must_spawn(web_task(task_id, net_stack, app, conf));
+    }
 
     info!("All Systems Go!");
     info!("Running.... ");
