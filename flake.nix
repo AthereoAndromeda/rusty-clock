@@ -22,7 +22,7 @@
         fenix-pkgs = fenix.packages.${system};
         toolchain = fenix-pkgs.fromToolchainFile {
           file = ./rust-toolchain.toml;
-          sha256 = "sha256-sqSWJDUxc+zaz1nBWMAJKTAGBuGWP25GCftIOlCEAtA=";
+          sha256 = "sha256-6TyaSUC4DKEco87OQSScp+HB/Z6B7qMBMHHIoohxYhI=";
         };
       in {
         devShells.default = pkgs.mkShell {
