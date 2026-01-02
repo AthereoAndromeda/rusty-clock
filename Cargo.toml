@@ -84,6 +84,7 @@ embassy-futures = { version = "0.1.2", features = ["defmt"] }
 sntpc = { version = "0.7.0", default-features = false, features = ["defmt", "embassy-socket"] }
 jiff = { version = "0.2.17", default-features = false , features = ["tzdb-bundle-always"]}
 futures = { version = "0.3.31", default-features = false }
+picoserve = { version = "0.17.1", features = ["defmt", "embassy"] }
 
 
 [profile.dev]

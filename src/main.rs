@@ -36,7 +36,7 @@ pub const MAC_ADDR: [u8; 6] = [0x10, 0x20, 0xba, 0x91, 0xbb, 0xb4];
 pub type I2cAsync = I2c<'static, esp_hal::Async>;
 
 /// Max number of connections
-pub const CONNECTIONS_MAX: usize = 1;
+pub const CONNECTIONS_MAX: usize = 2;
 
 /// Max number of L2CAP channels.
 pub const L2CAP_CHANNELS_MAX: usize = 3; // Signal + att + CoC
@@ -50,7 +50,7 @@ pub static RTC_DS3231: StaticCell<Mutex<CriticalSectionRawMutex, RtcDS3231>> = S
 use embassy_sync::channel::Channel;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 
-pub static TIME_CH: Channel<CriticalSectionRawMutex, RtcTime, 1> = Channel::new();
+// pub static TIME_CH: Channel<CriticalSectionRawMutex, RtcTime, 1> = Channel::new();
 
 use embassy_sync::signal::Signal;
 
@@ -62,7 +62,10 @@ use crate::{
             ble_bas_peripheral::{Server, ble_runner_task},
         },
         init_wireless,
-        wifi::{connect_to_wifi, get_net_stack, net_runner_task, sntp::fetch_sntp},
+        wifi::{
+            connect_to_wifi, get_net_stack, net_runner_task, sntp::fetch_sntp,
+            web_server::serve_webpage,
+        },
     },
 };
 
@@ -157,12 +160,15 @@ async fn main(spawner: Spawner) {
     info!("Initialized Wireless!");
 
     info!("Running Embassy spawners");
-    spawner.must_spawn(ble_runner_task(ble_runner));
+    // spawner.must_spawn(ble_runner_task(ble_runner));
     spawner.must_spawn(net_runner_task(net_runner));
     spawner.must_spawn(connect_to_wifi(wifi_controller));
 
-    spawner.must_spawn(bt::run_peripheral(ble_peripheral, gatt_server, ble_stack));
+    // spawner.must_spawn(bt::run_peripheral(ble_peripheral, gatt_server, ble_stack));
     spawner.must_spawn(fetch_sntp(net_stack, rtc));
+    spawner
+        .spawn(serve_webpage(net_stack))
+        .unwrap_or_else(|_| error!("Failed to run webpage"));
 
     spawner.must_spawn(rtc_ds3231::run(rtc));
     spawner.must_spawn(rtc_ds3231::update_rtc_timestamp(rtc));

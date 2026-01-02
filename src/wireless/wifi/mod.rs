@@ -1,4 +1,7 @@
 pub mod sntp;
+pub mod web_server;
+
+pub const MAX_NET_SOCKETS: usize = 5;
 
 use defmt::{info, println};
 use embassy_net::StackResources;
@@ -28,7 +31,10 @@ pub fn get_net_stack(
     embassy_net::new(
         wifi_interface_station,
         embassy_config,
-        mk_static!(StackResources<3>, StackResources::<3>::new()),
+        mk_static!(
+            StackResources<MAX_NET_SOCKETS>,
+            StackResources::<MAX_NET_SOCKETS>::new()
+        ),
         seed,
     )
 }
