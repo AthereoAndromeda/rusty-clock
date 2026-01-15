@@ -7,7 +7,7 @@ use trouble_host::prelude::*;
 
 pub static RADIO_INIT: StaticCell<esp_radio::Controller<'static>> = StaticCell::new();
 
-use crate::{BleController, BleStack, TIME_SIGNAL, rtc_ds3231::rtc_time::RtcTime};
+use crate::{BleStack, TIME_SIGNAL, bt::BleController, rtc_ds3231::rtc_time::RtcTime};
 
 #[embassy_executor::task]
 /// Background dunner for bluetooth

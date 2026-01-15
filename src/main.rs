@@ -13,7 +13,7 @@
 mod rtc_ds3231;
 mod wireless;
 
-use bt_hci::{controller::ExternalController, uuid::appearance};
+use bt_hci::uuid::appearance;
 use defmt::{error, info};
 use embassy_executor::Spawner;
 use esp_backtrace as _;
@@ -25,11 +25,9 @@ use esp_hal::{
     timer::timg::TimerGroup,
 };
 use esp_println as _;
-use esp_radio::ble::controller::BleConnector;
 use trouble_host::{
     Address, HostResources,
     gap::{GapConfig, PeripheralConfig},
-    prelude::DefaultPacketPool,
 };
 
 // Found via `espflash`
@@ -37,16 +35,6 @@ use trouble_host::{
 pub const MAC_ADDR: [u8; 6] = [0x10, 0x20, 0xba, 0x91, 0xbb, 0xb4];
 
 pub type I2cAsync = I2c<'static, esp_hal::Async>;
-
-/// Max number of connections for Bluetooth
-pub const BLE_CONNECTIONS_MAX: usize = 2;
-
-/// Max number of L2CAP channels.
-pub const L2CAP_CHANNELS_MAX: usize = 3; // Signal + att + CoC
-pub type BleController = ExternalController<BleConnector<'static>, 20>;
-pub type BleResources = HostResources<DefaultPacketPool, BLE_CONNECTIONS_MAX, L2CAP_CHANNELS_MAX>;
-pub type BleStack =
-    trouble_host::Stack<'static, ExternalController<BleConnector<'static>, 20>, DefaultPacketPool>;
 
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex, lazy_lock::LazyLock, mutex::Mutex,
@@ -58,7 +46,7 @@ use crate::{
     rtc_ds3231::{RTC_DS3231, RtcDS3231, rtc_time::RtcTime},
     wireless::{
         bt::{
-            self,
+            self, BleResources, BleStack,
             ble_bas_peripheral::{Server, ble_runner_task},
         },
         init_wireless,

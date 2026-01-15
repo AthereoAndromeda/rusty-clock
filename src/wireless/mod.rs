@@ -5,7 +5,7 @@ use esp_radio::{
     wifi::{Interfaces, WifiController},
 };
 
-use crate::{BleController, wireless::bt::ble_bas_peripheral::RADIO_INIT};
+use crate::{bt::BleController, wireless::bt::ble_bas_peripheral::RADIO_INIT};
 
 pub mod bt;
 pub mod wifi;
@@ -22,7 +22,7 @@ pub fn init_wireless(
 
     // find more examples https://github.com/embassy-rs/trouble/tree/main/examples/esp32
     let transport = BleConnector::new(radio_init, bt, Default::default()).unwrap();
-    let ble_controller: BleController = ExternalController::<_, 20>::new(transport);
+    let ble_controller: BleController = ExternalController::new(transport);
 
     (wifi_controller, interfaces, ble_controller)
 }
