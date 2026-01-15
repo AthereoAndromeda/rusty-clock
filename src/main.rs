@@ -75,9 +75,6 @@ use crate::{
 
 pub static TIME_SIGNAL: Signal<CriticalSectionRawMutex, RtcTime> = Signal::new();
 
-/// Fires once NTP gets a valid time
-pub static NTP_ONESHOT: Signal<CriticalSectionRawMutex, i64> = Signal::new();
-
 // TIP: Set these in .env if using direnv
 pub const SSID: &str = env!("SSID");
 pub const PASSWORD: &str = env!("PASSWORD");
@@ -176,7 +173,6 @@ async fn main(spawner: Spawner) {
     spawner.must_spawn(fetch_sntp(net_stack, rtc));
 
     spawner.must_spawn(rtc_ds3231::run(rtc));
-    spawner.must_spawn(rtc_ds3231::update_rtc_timestamp(rtc));
 
     spawner
         .spawn(rtc_ds3231::listen_for_alarm(

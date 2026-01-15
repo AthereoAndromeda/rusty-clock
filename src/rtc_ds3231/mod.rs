@@ -4,13 +4,13 @@ pub use error::*;
 pub mod alarm;
 use alarm::*;
 
-use defmt::{info, warn};
+use defmt::info;
 use ds3231::{
     Alarm1Config, Config, DS3231, InterruptControl, Oscillator, SquareWaveFrequency,
     TimeRepresentation,
 };
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
-use embassy_time::{Duration, Timer, WithTimeout};
+use embassy_time::Timer;
 use esp_hal::{
     gpio::{DriveStrength, Input, InputConfig, Level, Output, OutputConfig, Pull},
     peripherals,
@@ -18,7 +18,7 @@ use esp_hal::{
 use static_cell::StaticCell;
 
 use crate::{
-    I2cAsync, NTP_ONESHOT, TIME_SIGNAL,
+    I2cAsync, TIME_SIGNAL,
     wireless::wifi::web_server::{ALARM_REQUEST, ALARM_SIGNAL, SET_ALARM},
 };
 
@@ -132,36 +132,6 @@ pub async fn run(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) 
         }
 
         Timer::after_secs(1).await;
-    }
-}
-
-#[embassy_executor::task]
-/// Waits and Listens for an NTP signal. Exits after 3 minutes
-pub async fn update_rtc_timestamp(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) {
-    let signal = NTP_ONESHOT
-        .wait()
-        .with_timeout(Duration::from_secs(60 * 3))
-        .await;
-
-    match signal {
-        Ok(ntp) => {
-            info!("[rtc:update-timestamp] Setting RTC Datetime to NTP...");
-            let datetime = chrono::DateTime::from_timestamp_secs(ntp)
-                .unwrap()
-                .naive_utc();
-
-            rtc_mutex
-                .lock()
-                .await
-                .set_datetime(&datetime)
-                .await
-                .unwrap();
-
-            info!("[rtc:update-timestamp] Succesfully Set RTC Datetime!");
-        }
-        Err(e) => {
-            warn!("[rtc:update-timestamp] Failed to get NTP Service: {:?}", e);
-        }
     }
 }
 

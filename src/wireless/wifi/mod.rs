@@ -49,6 +49,7 @@ pub async fn net_runner_task(mut runner: embassy_net::Runner<'static, WifiDevice
 pub async fn connect_to_wifi(mut controller: WifiController<'static>) {
     println!("start connection task");
     println!("Device capabilities: {:?}", controller.capabilities());
+
     loop {
         match esp_radio::wifi::sta_state() {
             WifiStaState::Connected => {
@@ -58,12 +59,14 @@ pub async fn connect_to_wifi(mut controller: WifiController<'static>) {
             }
             _ => {}
         }
+
         if !matches!(controller.is_started(), Ok(true)) {
             let station_config = ModeConfig::Client(
                 ClientConfig::default()
                     .with_ssid(SSID.into())
                     .with_password(PASSWORD.into()),
             );
+
             controller.set_config(&station_config).unwrap();
             println!("Starting wifi");
             controller.start_async().await.unwrap();
@@ -75,6 +78,7 @@ pub async fn connect_to_wifi(mut controller: WifiController<'static>) {
                 .scan_with_config_async(scan_config)
                 .await
                 .unwrap();
+
             for ap in result {
                 println!("{:?}", ap);
             }
@@ -91,44 +95,44 @@ pub async fn connect_to_wifi(mut controller: WifiController<'static>) {
     }
 }
 
-#[embassy_executor::task]
-async fn get_webpage() {
+// #[embassy_executor::task]
+// async fn get_webpage() {
 
-    // let mut socket = TcpSocket::new(net_stack, &mut rx_buffer, &mut tx_buffer);
+// let mut socket = TcpSocket::new(net_stack, &mut rx_buffer, &mut tx_buffer);
 
-    // socket.set_timeout(Some(embassy_time::Duration::from_secs(10)));
+// socket.set_timeout(Some(embassy_time::Duration::from_secs(10)));
 
-    // let remote_endpoint = (Ipv4Addr::new(142, 250, 185, 115), 123);
+// let remote_endpoint = (Ipv4Addr::new(142, 250, 185, 115), 123);
 
-    // println!("connecting...");
-    // let r = socket.connect(remote_endpoint).await;
-    // if let Err(e) = r {
-    //     println!("connect error: {:?}", e);
-    //     continue;
-    // }
-    // println!("connected!");
-    // let mut buf = [0; 1024];
-    // loop {
-    //     // use embedded_io_async::Write;
-    //     let r = socket
-    //         .write/*_all*/(b"GET / HTTP/1.0\r\nHost: www.mobile-j.de\r\n\r\n")
-    //         .await;
-    //     if let Err(e) = r {
-    //         println!("write error: {:?}", e);
-    //         break;
-    //     }
-    //     let n = match socket.read(&mut buf).await {
-    //         Ok(0) => {
-    //             println!("read EOF");
-    //             break;
-    //         }
-    //         Ok(n) => n,
-    //         Err(e) => {
-    //             println!("read error: {:?}", e);
-    //             break;
-    //         }
-    //     };
-    //     println!("{}", core::str::from_utf8(&buf[..n]).unwrap());
-    // }
-    // Timer::after_millis(3000).await;
-}
+// println!("connecting...");
+// let r = socket.connect(remote_endpoint).await;
+// if let Err(e) = r {
+//     println!("connect error: {:?}", e);
+//     continue;
+// }
+// println!("connected!");
+// let mut buf = [0; 1024];
+// loop {
+//     // use embedded_io_async::Write;
+//     let r = socket
+//         .write/*_all*/(b"GET / HTTP/1.0\r\nHost: www.mobile-j.de\r\n\r\n")
+//         .await;
+//     if let Err(e) = r {
+//         println!("write error: {:?}", e);
+//         break;
+//     }
+//     let n = match socket.read(&mut buf).await {
+//         Ok(0) => {
+//             println!("read EOF");
+//             break;
+//         }
+//         Ok(n) => n,
+//         Err(e) => {
+//             println!("read error: {:?}", e);
+//             break;
+//         }
+//     };
+//     println!("{}", core::str::from_utf8(&buf[..n]).unwrap());
+// }
+// Timer::after_millis(3000).await;
+// }

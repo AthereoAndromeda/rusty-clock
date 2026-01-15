@@ -6,7 +6,7 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use embassy_time::{Duration, WithTimeout};
 use sntpc::NtpContext;
 
-use crate::{NTP_ONESHOT, NTP_SERVER_ADDR, rtc_ds3231::RtcDS3231};
+use crate::{NTP_SERVER_ADDR, rtc_ds3231::RtcDS3231};
 
 #[derive(Copy, Clone)]
 /// Time in us
@@ -117,31 +117,23 @@ pub async fn fetch_sntp(
     match result {
         Ok(time) => {
             info!("[sntp] Response: {:?}", time);
-            let jt = jiff::Timestamp::from_second(time.sec() as i64)
-                .unwrap()
-                .checked_add(
-                    jiff::Span::new()
-                        .nanoseconds((time.seconds_fraction as i64 * 1_000_000_000) >> 32),
-                )
-                .unwrap()
-                .to_zoned(jiff::tz::TimeZone::fixed(
-                    jiff::tz::Offset::from_hours(8).unwrap(),
-                ));
-
-            NTP_ONESHOT.signal(jt.timestamp().as_second());
+            info!("[rtc:update-timestamp] Setting RTC Datetime to NTP...");
 
             #[cfg(debug_assertions)]
             {
-                // Create a Jiff Timestamp from seconds and nanoseconds
-
                 use crate::TIME_SIGNAL;
-                let jtf = jt.timestamp().as_second();
-                // let rtc_time = EPOCH_SIGNAL.wait().await;
-                let rtc_time = TIME_SIGNAL.wait().await.and_utc().timestamp();
-                info!("[sntp] ntp: {}", jtf);
-                info!("[sntp] rtc: {}", rtc_time);
-                info!("[sntp] Difference: {}", jtf - rtc_time);
+                use defmt::debug;
+                let rtc_time = TIME_SIGNAL.wait().await.and_utc().timestamp() as u32;
+                debug!("[sntp] ntp: {}", time.seconds);
+                debug!("[sntp] rtc: {}", rtc_time);
+                debug!("[sntp] Difference: {}", time.seconds - rtc_time);
             }
+
+            let datetime = chrono::DateTime::from_timestamp_secs(time.seconds as i64)
+                .unwrap()
+                .naive_utc();
+            rtc.lock().await.set_datetime(&datetime).await.unwrap();
+            info!("[rtc:update-timestamp] Succesfully Set RTC Datetime!");
         }
         Err(e) => {
             warn!("[sntp] Failed to get NTP Time!: {:?}", e);
