@@ -5,7 +5,10 @@
 
 #![no_std]
 #![no_main]
+// NIGHTLY: Required for Picoserve
 #![feature(impl_trait_in_assoc_type)]
+// NIGHTLY: Required for `static_cell::make_static!`
+#![feature(type_alias_impl_trait)]
 
 mod rtc_ds3231;
 mod wireless;
@@ -23,7 +26,6 @@ use esp_hal::{
 };
 use esp_println as _;
 use esp_radio::ble::controller::BleConnector;
-use static_cell::StaticCell;
 use trouble_host::{
     Address, HostResources,
     gap::{GapConfig, PeripheralConfig},
@@ -36,27 +38,24 @@ pub const MAC_ADDR: [u8; 6] = [0x10, 0x20, 0xba, 0x91, 0xbb, 0xb4];
 
 pub type I2cAsync = I2c<'static, esp_hal::Async>;
 
-/// Max number of connections
-pub const CONNECTIONS_MAX: usize = 2;
+/// Max number of connections for Bluetooth
+pub const BLE_CONNECTIONS_MAX: usize = 2;
 
 /// Max number of L2CAP channels.
 pub const L2CAP_CHANNELS_MAX: usize = 3; // Signal + att + CoC
 pub type BleController = ExternalController<BleConnector<'static>, 20>;
-pub type BleResources = HostResources<DefaultPacketPool, CONNECTIONS_MAX, L2CAP_CHANNELS_MAX>;
+pub type BleResources = HostResources<DefaultPacketPool, BLE_CONNECTIONS_MAX, L2CAP_CHANNELS_MAX>;
 pub type BleStack =
     trouble_host::Stack<'static, ExternalController<BleConnector<'static>, 20>, DefaultPacketPool>;
 
-pub static RTC_DS3231: StaticCell<Mutex<CriticalSectionRawMutex, RtcDS3231>> = StaticCell::new();
-
-use embassy_sync::channel::Channel;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
-
-// pub static TIME_CH: Channel<CriticalSectionRawMutex, RtcTime, 1> = Channel::new();
+use embassy_sync::{
+    blocking_mutex::raw::CriticalSectionRawMutex, lazy_lock::LazyLock, mutex::Mutex,
+};
 
 use embassy_sync::signal::Signal;
 
 use crate::{
-    rtc_ds3231::{RtcDS3231, RtcTime},
+    rtc_ds3231::{RTC_DS3231, RtcDS3231, RtcTime},
     wireless::{
         bt::{
             self,
@@ -79,13 +78,19 @@ pub static TIME_SIGNAL: Signal<CriticalSectionRawMutex, RtcTime> = Signal::new()
 pub static EPOCH_SIGNAL: Signal<CriticalSectionRawMutex, i64> = Signal::new();
 
 /// Fires once NTP gets a valid time
-pub static NTP_SIGNAL: Signal<CriticalSectionRawMutex, i64> = Signal::new();
+pub static NTP_ONESHOT: Signal<CriticalSectionRawMutex, i64> = Signal::new();
 
 // TIP: Set these in .env if using direnv
 pub const SSID: &str = env!("SSID");
 pub const PASSWORD: &str = env!("PASSWORD");
-// pub const IANA_TZ: &str = env!("IANA_TZ");
-pub const TZ_OFFSET: &str = env!("TZ_OFFSET");
+
+// NOTE: Using TZ_OFFSET since IANA Timezones adds unnecessary weight
+pub static TZ_OFFSET: LazyLock<i8> = LazyLock::new(|| {
+    option_env!("TZ_OFFSET")
+        .unwrap_or("0")
+        .parse::<i8>()
+        .expect("Must be a valid i8!")
+});
 
 pub const NTP_SERVER_ADDR: &str = "pool.ntp.org";
 
@@ -125,8 +130,8 @@ async fn main(spawner: Spawner) {
     info!("Initializing I2C...");
     let i2c: I2cAsync = I2c::new(peripherals.I2C0, i2c::master::Config::default())
         .expect("I2C Failed to Initialize!")
-        .with_sda(peripherals.GPIO1) // Might change later since these are for UART
-        .with_scl(peripherals.GPIO2)
+        .with_sda(peripherals.GPIO2) // Might change later since these are for UART
+        .with_scl(peripherals.GPIO3)
         .into_async();
 
     defmt::info!("Init Alarm...");
@@ -148,7 +153,7 @@ async fn main(spawner: Spawner) {
     // let (ble_stack, ble_runner) = get_ble_stack();
 
     let ble_resources = mk_static!(BleResources, HostResources::new());
-    let ble_stack = mk_static!(
+    let ble_stack: &'static mut BleStack = mk_static!(
         BleStack,
         trouble_host::new(ble_controller, ble_resources).set_random_address(address)
     );

@@ -48,6 +48,7 @@ impl From<chrono::NaiveDateTime> for RtcTime {
         }
     }
 }
+
 impl From<RtcTime> for chrono::NaiveDateTime {
     fn from(value: RtcTime) -> Self {
         let date = NaiveDate::from_ymd_opt(value.year.into(), value.month.into(), value.day.into())
