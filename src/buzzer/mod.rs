@@ -15,6 +15,7 @@ pub enum BuzzerState {
 }
 
 pub static BUZZER_SIGNAL: Signal<CriticalSectionRawMutex, BuzzerState> = Signal::new();
+pub static TIMER_SIGNAL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
 
 #[embassy_executor::task]
 pub async fn run(output: &'static BuzzerOutput) {
@@ -34,6 +35,23 @@ pub async fn run(output: &'static BuzzerOutput) {
         }
 
         BUZZER_SIGNAL.reset();
+    }
+}
+
+#[embassy_executor::task]
+pub async fn listen_for_timer() {
+    info!("[buzzer:listen_for_timer] Listening for timer");
+    loop {
+        let secs = TIMER_SIGNAL.wait().await;
+        TIMER_SIGNAL.reset();
+
+        Timer::after_secs(secs as u64).await;
+        BUZZER_SIGNAL.signal(BuzzerState::On);
+
+        // WARNING: Could potentially turn off the prematurely buzzer if
+        // an alarm goes off between the interval of waiting
+        Timer::after_secs(30).await;
+        BUZZER_SIGNAL.signal(BuzzerState::Off);
     }
 }
 

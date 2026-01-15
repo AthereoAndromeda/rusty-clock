@@ -1,5 +1,3 @@
-use core::time::Duration;
-
 use defmt::println;
 use ds3231::Alarm1Config;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
@@ -11,7 +9,7 @@ use serde::Deserialize;
 
 use crate::{
     TIME_SIGNAL, TZ_OFFSET,
-    buzzer::{BUZZER_SIGNAL, BuzzerState},
+    buzzer::{BUZZER_SIGNAL, BuzzerState, TIMER_SIGNAL},
 };
 
 pub static ALARM_REQUEST: Signal<CriticalSectionRawMutex, bool> = Signal::new();
@@ -88,7 +86,7 @@ pub(super) async fn set_alarm(
 }
 
 pub(super) async fn set_timer(sec: i32) -> impl IntoResponse {
-    // TIMER_SIGNAL
+    TIMER_SIGNAL.signal(sec);
 }
 
 pub(super) async fn toggle_buzzer() -> impl IntoResponse {

@@ -182,6 +182,7 @@ async fn main(spawner: Spawner) {
 
     spawner.must_spawn(buzzer::run(buzz));
     spawner.must_spawn(buzzer::listen_for_button(peripherals.GPIO7));
+    spawner.must_spawn(buzzer::listen_for_timer());
 
     let (app, conf) = init_web();
 
