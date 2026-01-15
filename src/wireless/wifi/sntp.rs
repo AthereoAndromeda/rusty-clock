@@ -3,10 +3,10 @@ use core::net::{IpAddr, SocketAddr};
 use defmt::{info, warn};
 use embassy_net::udp::{PacketMetadata, UdpSocket};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
-use embassy_time::{Duration, Timer, WithTimeout};
+use embassy_time::{Duration, WithTimeout};
 use sntpc::NtpContext;
 
-use crate::{NTP_SERVER_ADDR, NTP_SIGNAL, rtc_ds3231::RtcDS3231};
+use crate::{NTP_ONESHOT, NTP_SERVER_ADDR, rtc_ds3231::RtcDS3231};
 
 #[derive(Copy, Clone)]
 /// Time in us
@@ -128,14 +128,16 @@ pub async fn fetch_sntp(
                     jiff::tz::Offset::from_hours(8).unwrap(),
                 ));
 
-            NTP_SIGNAL.signal(jt.timestamp().as_second());
+            NTP_ONESHOT.signal(jt.timestamp().as_second());
 
             #[cfg(debug_assertions)]
             {
                 // Create a Jiff Timestamp from seconds and nanoseconds
-                use crate::EPOCH_SIGNAL;
+
+                use crate::TIME_SIGNAL;
                 let jtf = jt.timestamp().as_second();
-                let rtc_time = EPOCH_SIGNAL.wait().await;
+                // let rtc_time = EPOCH_SIGNAL.wait().await;
+                let rtc_time = TIME_SIGNAL.wait().await.and_utc().timestamp();
                 info!("[sntp] ntp: {}", jtf);
                 info!("[sntp] rtc: {}", rtc_time);
                 info!("[sntp] Difference: {}", jtf - rtc_time);

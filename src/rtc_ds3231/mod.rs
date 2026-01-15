@@ -1,6 +1,5 @@
-pub mod rtc_time;
-pub use rtc_time::*;
 pub mod error;
+pub mod rtc_time;
 pub use error::*;
 pub mod alarm;
 use alarm::*;
@@ -19,7 +18,7 @@ use esp_hal::{
 use static_cell::StaticCell;
 
 use crate::{
-    EPOCH_SIGNAL, I2cAsync, NTP_ONESHOT, TIME_SIGNAL,
+    I2cAsync, NTP_ONESHOT, TIME_SIGNAL,
     wireless::wifi::web_server::{ALARM_REQUEST, ALARM_SIGNAL, SET_ALARM},
 };
 
@@ -95,7 +94,6 @@ pub async fn run(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) 
         };
 
         TIME_SIGNAL.signal(datetime.into());
-        EPOCH_SIGNAL.signal(datetime.and_utc().timestamp());
 
         // Listen for alarm requests by web server or GATT
         if ALARM_REQUEST.signaled() {

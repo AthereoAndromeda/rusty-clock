@@ -10,7 +10,7 @@ use picoserve::{
 };
 use serde::Deserialize;
 
-use crate::{EPOCH_SIGNAL, TIME_SIGNAL};
+use crate::TIME_SIGNAL;
 
 pub static ALARM_REQUEST: Signal<CriticalSectionRawMutex, bool> = Signal::new();
 pub static ALARM_SIGNAL: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
@@ -33,8 +33,10 @@ Paths:
 }
 
 async fn get_epoch() -> impl IntoResponse {
-    let time = EPOCH_SIGNAL.wait().await;
-    DebugValue(time)
+    let rtc_time = &TIME_SIGNAL.wait().await;
+    let epoch = rtc_time.and_utc().timestamp();
+
+    DebugValue(epoch)
 }
 
 async fn get_time() -> impl IntoResponse {

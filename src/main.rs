@@ -55,7 +55,7 @@ use embassy_sync::{
 use embassy_sync::signal::Signal;
 
 use crate::{
-    rtc_ds3231::{RTC_DS3231, RtcDS3231, RtcTime},
+    rtc_ds3231::{RTC_DS3231, RtcDS3231, rtc_time::RtcTime},
     wireless::{
         bt::{
             self,
@@ -74,8 +74,6 @@ use crate::{
 };
 
 pub static TIME_SIGNAL: Signal<CriticalSectionRawMutex, RtcTime> = Signal::new();
-
-pub static EPOCH_SIGNAL: Signal<CriticalSectionRawMutex, i64> = Signal::new();
 
 /// Fires once NTP gets a valid time
 pub static NTP_ONESHOT: Signal<CriticalSectionRawMutex, i64> = Signal::new();

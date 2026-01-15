@@ -1,3 +1,4 @@
+use chrono::Timelike;
 use defmt::{error, info, warn};
 use embassy_futures::{join, select::select3};
 use embassy_time::Timer;
@@ -6,7 +7,7 @@ use trouble_host::prelude::*;
 
 pub static RADIO_INIT: StaticCell<esp_radio::Controller<'static>> = StaticCell::new();
 
-use crate::{BleController, BleStack, EPOCH_SIGNAL, TIME_SIGNAL};
+use crate::{BleController, BleStack, TIME_SIGNAL, rtc_ds3231::rtc_time::RtcTime};
 
 #[embassy_executor::task]
 /// Background dunner for bluetooth
@@ -201,11 +202,13 @@ async fn time_task<C: Controller, P: PacketPool>(
 
     loop {
         let time = TIME_SIGNAL.wait().await;
-        let epoch = EPOCH_SIGNAL.wait().await;
+        let epoch = time.and_utc().timestamp();
+        let sec = time.second() as u8;
+        let rtc_time: RtcTime = time.into();
 
         let fut1 = async {
-            info!("[time_task] notifying connection of time {}", time);
-            if time_char.notify(conn, &time.second).await.is_err() {
+            info!("[time_task] notifying connection of time {}", rtc_time);
+            if time_char.notify(conn, &sec).await.is_err() {
                 error!("[time_task] error notifying connection");
             };
         };

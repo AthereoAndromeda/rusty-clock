@@ -1,7 +1,7 @@
 pub mod sntp;
 pub mod web_server;
 
-pub const MAX_NET_SOCKETS: usize = 8;
+pub const MAX_NET_SOCKETS: usize = 6;
 
 use defmt::{info, println, warn};
 use embassy_net::StackResources;
