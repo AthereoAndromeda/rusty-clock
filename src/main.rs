@@ -10,6 +10,7 @@
 // NIGHTLY: Required for `static_cell::make_static!`
 #![feature(type_alias_impl_trait)]
 
+mod buzzer;
 mod rtc_ds3231;
 mod wireless;
 
@@ -21,6 +22,7 @@ use esp_backtrace as _;
 use esp_hal::interrupt::software::SoftwareInterruptControl;
 use esp_hal::{
     clock::CpuClock,
+    gpio::Output,
     i2c::{self, master::I2c},
     timer::timg::TimerGroup,
 };
@@ -77,6 +79,7 @@ pub static TZ_OFFSET: LazyLock<i8> = LazyLock::new(|| {
 
 pub const NTP_SERVER_ADDR: &str = "pool.ntp.org";
 
+pub type BuzzerOutput = Mutex<CriticalSectionRawMutex, Output<'static>>;
 esp_bootloader_esp_idf::esp_app_desc!();
 
 // When you are okay with using a nightly compiler it's better to use https://docs.rs/static_cell/2.1.0/static_cell/macro.make_static.html
@@ -152,6 +155,17 @@ async fn main(spawner: Spawner) {
     .unwrap();
     info!("Initialized Wireless!");
 
+    let buzzer_output = esp_hal::gpio::Output::new(
+        peripherals.GPIO5,
+        esp_hal::gpio::Level::High,
+        esp_hal::gpio::OutputConfig::default()
+            .with_drive_strength(esp_hal::gpio::DriveStrength::_5mA)
+            .with_pull(esp_hal::gpio::Pull::Down),
+    );
+
+    let buzz: &'static Mutex<CriticalSectionRawMutex, Output<'static>> =
+        mk_static!(Mutex<CriticalSectionRawMutex, Output<'static>>, Mutex::new(buzzer_output));
+
     info!("Running Embassy spawners");
     spawner.must_spawn(ble_runner_task(ble_runner));
     spawner.must_spawn(net_runner_task(net_runner));
@@ -163,11 +177,11 @@ async fn main(spawner: Spawner) {
     spawner.must_spawn(rtc_ds3231::run(rtc));
 
     spawner
-        .spawn(rtc_ds3231::listen_for_alarm(
-            peripherals.GPIO5,
-            peripherals.GPIO6,
-        ))
+        .spawn(rtc_ds3231::listen_for_alarm(peripherals.GPIO6))
         .unwrap_or_else(|_| error!("Failed to listen for alarm"));
+
+    spawner.must_spawn(buzzer::run(buzz));
+    spawner.must_spawn(buzzer::listen_for_button(peripherals.GPIO7));
 
     let (app, conf) = init_web();
 

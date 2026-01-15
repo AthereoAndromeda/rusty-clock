@@ -12,14 +12,15 @@ use ds3231::{
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use embassy_time::Timer;
 use esp_hal::{
-    gpio::{DriveStrength, Input, InputConfig, Level, Output, OutputConfig, Pull},
-    peripherals,
+    gpio::{Input, InputConfig, Pull},
+    peripherals::{self},
 };
 use static_cell::StaticCell;
 
 use crate::{
     I2cAsync, TIME_SIGNAL,
-    wireless::wifi::web_server::{ALARM_REQUEST, ALARM_SIGNAL, SET_ALARM},
+    buzzer::{BUZZER_SIGNAL, BuzzerState},
+    wireless::wifi::routes::{ALARM_REQUEST, ALARM_SIGNAL, SET_ALARM},
 };
 
 pub(crate) type RtcDS3231 = DS3231<I2cAsync>;
@@ -45,7 +46,7 @@ pub async fn init_rtc(i2c: I2cAsync) -> Result<RtcDS3231, RtcError> {
         Alarm1Config::AtSeconds { seconds: 30 }
     } else {
         let hours = option_env!("ALARM_HOUR")
-            .unwrap_or("23")
+            .unwrap_or("0")
             .parse::<u8>()
             .unwrap();
         let minutes = option_env!("ALARM_MINUTES")
@@ -71,13 +72,6 @@ pub async fn init_rtc(i2c: I2cAsync) -> Result<RtcDS3231, RtcError> {
 
     Ok(rtc)
 }
-
-// async fn set_alarm() {}
-
-// /// Run a timer for alarm
-// async fn start_timer() {
-//     todo!()
-// }
 
 #[embassy_executor::task]
 /// Runner for DS3231
@@ -137,20 +131,9 @@ pub async fn run(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) 
 
 // TODO: Move to GPIO mod
 #[embassy_executor::task]
-pub async fn listen_for_alarm(
-    output_pin: peripherals::GPIO5<'static>,
-    alarm_pin: peripherals::GPIO6<'static>,
-) {
+pub async fn listen_for_alarm(alarm_pin: peripherals::GPIO6<'static>) {
     info!("Initializing Alarm Listener...");
     let mut alarm_input = Input::new(alarm_pin, InputConfig::default().with_pull(Pull::Up));
-
-    let mut buzzer_output = Output::new(
-        output_pin,
-        Level::High,
-        OutputConfig::default()
-            .with_drive_strength(DriveStrength::_5mA)
-            .with_pull(Pull::Down),
-    );
 
     // Some time to initialize
     Timer::after_millis(500).await;
@@ -158,23 +141,27 @@ pub async fn listen_for_alarm(
     // Beep 3 times
     for _ in 0..3 {
         Timer::after_millis(300).await;
-        buzzer_output.toggle();
+        // buzzer_output.lock().await.toggle();
+        BUZZER_SIGNAL.signal(BuzzerState::Toggle);
     }
 
-    buzzer_output.set_low();
+    // buzzer_output.lock().await.set_low();
+    BUZZER_SIGNAL.signal(BuzzerState::Off);
 
     loop {
         info!("Waiting for alarm...");
         alarm_input.wait_for_falling_edge().await;
 
         info!("DS3231 Interrupt Received!");
-        buzzer_output.set_high();
+        // buzzer_output.lock().await.set_high();
+        BUZZER_SIGNAL.signal(BuzzerState::On);
 
         #[cfg(debug_assertions)]
         {
             // Stop it from bleeding my ears while devving
             Timer::after_secs(5).await;
-            buzzer_output.set_low();
+            // buzzer_output.lock().await.set_low();
+            BUZZER_SIGNAL.signal(BuzzerState::Off);
             info!("Buzzer set low");
         }
     }
