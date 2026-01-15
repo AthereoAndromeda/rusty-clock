@@ -4,7 +4,7 @@ pub mod web_server;
 
 pub const MAX_NET_SOCKETS: usize = 6;
 
-use defmt::{info, println, warn};
+use defmt::{debug, info, warn};
 use embassy_net::StackResources;
 use embassy_time::Timer;
 use esp_hal::rng::Rng;
@@ -48,8 +48,8 @@ pub async fn net_runner_task(mut runner: embassy_net::Runner<'static, WifiDevice
 #[embassy_executor::task]
 /// Connect to Wi-Fi
 pub async fn connect_to_wifi(mut controller: WifiController<'static>) {
-    println!("start connection task");
-    println!("Device capabilities: {:?}", controller.capabilities());
+    debug!("start connection task");
+    debug!("Device capabilities: {:?}", controller.capabilities());
 
     loop {
         match esp_radio::wifi::sta_state() {
@@ -69,22 +69,21 @@ pub async fn connect_to_wifi(mut controller: WifiController<'static>) {
             );
 
             controller.set_config(&station_config).unwrap();
-            println!("Starting wifi");
+            info!("Starting wifi");
             controller.start_async().await.unwrap();
-            println!("Wifi started!");
+            info!("Wifi started! Scanning for available networks...");
 
-            println!("Scan");
             let scan_config = esp_radio::wifi::ScanConfig::default().with_max(10);
             let result = controller
                 .scan_with_config_async(scan_config)
                 .await
                 .unwrap();
 
+            #[cfg(debug_assertions)]
             for ap in result {
-                println!("{:?}", ap);
+                debug!("{:?}", ap);
             }
         }
-        println!("About to connect...");
 
         match controller.connect_async().await {
             Ok(_) => info!("Wifi connected!"),

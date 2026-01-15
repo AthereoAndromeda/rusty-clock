@@ -14,7 +14,6 @@ mod buzzer;
 mod rtc_ds3231;
 mod wireless;
 
-use bt_hci::uuid::appearance;
 use defmt::{error, info};
 use embassy_executor::Spawner;
 use esp_backtrace as _;
@@ -27,10 +26,6 @@ use esp_hal::{
     timer::timg::TimerGroup,
 };
 use esp_println as _;
-use trouble_host::{
-    Address, HostResources,
-    gap::{GapConfig, PeripheralConfig},
-};
 
 // Found via `espflash`
 // pub const MAC_ADDR: &'static str = "10:20:ba:91:bb:b4";
@@ -45,20 +40,19 @@ use embassy_sync::{
 use embassy_sync::signal::Signal;
 
 use crate::{
+    buzzer::init_buzzer,
     rtc_ds3231::{RTC_DS3231, RtcDS3231, rtc_time::RtcTime},
     wireless::{
         bt::{
-            self, BleResources, BleStack,
+            self, BleStack,
             ble_bas_peripheral::{Server, ble_runner_task},
+            get_ble_stack,
         },
         init_wireless,
         wifi::{
-            connect_to_wifi,
-            get_net_stack,
-            net_runner_task,
+            connect_to_wifi, get_net_stack, net_runner_task,
             sntp::fetch_sntp,
             web_server::{WEB_TASK_POOL_SIZE, init_web, web_task},
-            // web_server::serve_webpage,
         },
     },
 };
@@ -120,58 +114,31 @@ async fn main(spawner: Spawner) {
         .with_scl(peripherals.GPIO3)
         .into_async();
 
-    defmt::info!("Init Alarm...");
+    info!("Init RTC...");
     let rtc: RtcDS3231 = rtc_ds3231::init_rtc(i2c).await.unwrap();
-
     let rtc: &Mutex<CriticalSectionRawMutex, RtcDS3231> = RTC_DS3231.init(Mutex::new(rtc));
 
-    // Using a fixed "random" address can be useful for testing. In real scenarios, one would
-    // use e.g. the MAC 6 byte array as the address (how to get that varies by the platform).
-    let address: Address = Address::random(MAC_ADDR);
-    info!("Our address = {}", address.addr);
+    info!("Init Buzzer...");
+    let buzzer_out = init_buzzer(peripherals.GPIO5);
 
     info!("Initializing Wireless...");
-
     let (wifi_controller, wifi_interface, ble_controller) =
         init_wireless(peripherals.WIFI, peripherals.BT);
 
     let (net_stack, net_runner) = get_net_stack(wifi_interface);
-    // let (ble_stack, ble_runner) = get_ble_stack();
-
-    let ble_resources = mk_static!(BleResources, HostResources::new());
-    let ble_stack: &'static mut BleStack = mk_static!(
-        BleStack,
-        trouble_host::new(ble_controller, ble_resources).set_random_address(address)
-    );
-
-    let ble_host = ble_stack.build();
-    let ble_peripheral = ble_host.peripheral;
-    let ble_runner = ble_host.runner;
-
-    let gatt_server = Server::new_with_config(GapConfig::Peripheral(PeripheralConfig {
-        name: "TrouBLE",
-        appearance: &appearance::power_device::GENERIC_POWER_DEVICE,
-    }))
-    .unwrap();
+    let (ble_stack, ble_host, gatt_server) = get_ble_stack(ble_controller);
     info!("Initialized Wireless!");
 
-    let buzzer_output = esp_hal::gpio::Output::new(
-        peripherals.GPIO5,
-        esp_hal::gpio::Level::High,
-        esp_hal::gpio::OutputConfig::default()
-            .with_drive_strength(esp_hal::gpio::DriveStrength::_5mA)
-            .with_pull(esp_hal::gpio::Pull::Down),
-    );
-
-    let buzz: &'static Mutex<CriticalSectionRawMutex, Output<'static>> =
-        mk_static!(Mutex<CriticalSectionRawMutex, Output<'static>>, Mutex::new(buzzer_output));
-
     info!("Running Embassy spawners");
-    spawner.must_spawn(ble_runner_task(ble_runner));
+    spawner.must_spawn(ble_runner_task(ble_host.runner));
     spawner.must_spawn(net_runner_task(net_runner));
     spawner.must_spawn(connect_to_wifi(wifi_controller));
 
-    spawner.must_spawn(bt::run_peripheral(ble_peripheral, gatt_server, ble_stack));
+    spawner.must_spawn(bt::run_peripheral(
+        ble_host.peripheral,
+        gatt_server,
+        ble_stack,
+    ));
     spawner.must_spawn(fetch_sntp(net_stack, rtc));
 
     spawner.must_spawn(rtc_ds3231::run(rtc));
@@ -180,7 +147,7 @@ async fn main(spawner: Spawner) {
         .spawn(rtc_ds3231::listen_for_alarm(peripherals.GPIO6))
         .unwrap_or_else(|_| error!("Failed to listen for alarm"));
 
-    spawner.must_spawn(buzzer::run(buzz));
+    spawner.must_spawn(buzzer::run(buzzer_out));
     spawner.must_spawn(buzzer::listen_for_button(peripherals.GPIO7));
     spawner.must_spawn(buzzer::listen_for_timer());
 

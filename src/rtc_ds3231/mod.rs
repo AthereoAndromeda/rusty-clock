@@ -4,7 +4,7 @@ pub use error::*;
 pub mod alarm;
 use alarm::*;
 
-use defmt::info;
+use defmt::{debug, info};
 use ds3231::{
     Alarm1Config, Config, DS3231, InterruptControl, Oscillator, SquareWaveFrequency,
     TimeRepresentation,
@@ -66,6 +66,8 @@ pub async fn init_rtc(i2c: I2cAsync) -> Result<RtcDS3231, RtcError> {
         }
     };
 
+    debug!("{:?}", alarm1_config);
+
     rtc.set_alarm1(&alarm1_config).await?;
 
     reset_alarm_flags(&mut rtc).await?;
@@ -99,6 +101,8 @@ pub async fn run(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) 
             let mut rtc = rtc_mutex.lock().await;
             rtc.set_alarm1(&config).await.unwrap();
             reset_alarm_flags(&mut rtc).await.unwrap();
+
+            debug!("Set New Alarm: {}", config);
 
             SET_ALARM.reset();
         }

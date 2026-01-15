@@ -1,4 +1,5 @@
 use super::routes::*;
+use defmt::info;
 use embassy_time::Duration;
 use picoserve::{
     AppBuilder, AppRouter, Router, make_static,
@@ -41,11 +42,19 @@ pub async fn web_task(
     app: &'static AppRouter<App>,
     config: &'static picoserve::Config<Duration>,
 ) -> ! {
-    let port = 80;
     let mut tcp_rx_buffer = [0; 1024];
     let mut tcp_tx_buffer = [0; 1024];
     let mut http_buffer = [0; 2048];
 
+    let port = option_env!("WEB_PORT")
+        .unwrap_or("80")
+        .parse::<u16>()
+        .unwrap();
+
+    stack.wait_config_up().await;
+    let addr = stack.config_v4().unwrap().address;
+
+    info!("Serving and listening at {}:{}", addr, port);
     picoserve::Server::new(app, config, &mut http_buffer)
         .listen_and_serve(task_id, stack, port, &mut tcp_rx_buffer, &mut tcp_tx_buffer)
         .await

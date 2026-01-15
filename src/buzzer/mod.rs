@@ -1,12 +1,12 @@
 use defmt::info;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex, signal::Signal};
 use embassy_time::Timer;
 use esp_hal::{
-    gpio::{Input, InputConfig, Pull},
+    gpio::{Input, InputConfig, Output, Pull},
     peripherals::{self},
 };
 
-use crate::BuzzerOutput;
+use crate::{BuzzerOutput, mk_static};
 
 pub enum BuzzerState {
     On,
@@ -16,6 +16,23 @@ pub enum BuzzerState {
 
 pub static BUZZER_SIGNAL: Signal<CriticalSectionRawMutex, BuzzerState> = Signal::new();
 pub static TIMER_SIGNAL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
+
+pub type Buzzer = Mutex<CriticalSectionRawMutex, Output<'static>>;
+
+pub fn init_buzzer(pin: peripherals::GPIO5<'static>) -> &'static Buzzer {
+    let buzzer_output = Output::new(
+        pin,
+        esp_hal::gpio::Level::High,
+        esp_hal::gpio::OutputConfig::default()
+            .with_drive_strength(esp_hal::gpio::DriveStrength::_5mA)
+            .with_pull(esp_hal::gpio::Pull::Down),
+    );
+
+    let buzz: &'static Mutex<CriticalSectionRawMutex, Output<'static>> =
+        mk_static!(Mutex<CriticalSectionRawMutex, Output<'static>>, Mutex::new(buzzer_output));
+
+    buzz
+}
 
 #[embassy_executor::task]
 pub async fn run(output: &'static BuzzerOutput) {
@@ -41,6 +58,7 @@ pub async fn run(output: &'static BuzzerOutput) {
 #[embassy_executor::task]
 pub async fn listen_for_timer() {
     info!("[buzzer:listen_for_timer] Listening for timer");
+
     loop {
         let secs = TIMER_SIGNAL.wait().await;
         TIMER_SIGNAL.reset();

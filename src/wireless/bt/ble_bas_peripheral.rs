@@ -26,14 +26,14 @@ pub async fn ble_runner_task(
 /// It has fields for
 /// - Battery
 /// - TimeService
-pub(crate) struct Server {
+pub struct Server {
     battery_service: BatteryService,
     time_service: TimeService,
 }
 
 /// Battery service
 #[gatt_service(uuid = service::BATTERY)]
-pub(crate) struct BatteryService {
+pub struct BatteryService {
     /// Battery Level
     #[descriptor(uuid = descriptors::VALID_RANGE, read, value = [0, 100])]
     #[descriptor(uuid = descriptors::MEASUREMENT_DESCRIPTION, name = "hello", read, value = "Battery Level")]
@@ -45,7 +45,7 @@ pub(crate) struct BatteryService {
 
 /// Time Service
 #[gatt_service(uuid = service::DEVICE_TIME)]
-pub(crate) struct TimeService {
+pub struct TimeService {
     /// Time
     #[descriptor(uuid = descriptors::VALID_RANGE, read, value = [0, 100])]
     #[descriptor(uuid = descriptors::MEASUREMENT_DESCRIPTION, name = "time", read, value = "Time!")]

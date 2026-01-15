@@ -1,12 +1,11 @@
 use core::net::{IpAddr, SocketAddr};
-
-use defmt::{info, warn};
+use defmt::{debug, info, warn};
 use embassy_net::udp::{PacketMetadata, UdpSocket};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use embassy_time::{Duration, WithTimeout};
 use sntpc::NtpContext;
 
-use crate::{NTP_SERVER_ADDR, rtc_ds3231::RtcDS3231};
+use crate::{NTP_SERVER_ADDR, TIME_SIGNAL, rtc_ds3231::RtcDS3231};
 
 #[derive(Copy, Clone)]
 /// Time in us
@@ -37,8 +36,8 @@ pub async fn fetch_sntp(
     // Create UDP socket
     let mut udp_rx_meta = [PacketMetadata::EMPTY; 16];
     let mut udp_tx_meta = [PacketMetadata::EMPTY; 16];
-    let mut udp_tx_buffer = [0u8; 4096];
-    let mut udp_rx_buffer = [0u8; 4096];
+    let mut udp_tx_buffer = [0u8; 1024];
+    let mut udp_rx_buffer = [0u8; 1024];
 
     let mut udp_socket = UdpSocket::new(
         net_stack,
@@ -85,10 +84,18 @@ pub async fn fetch_sntp(
     };
 
     // TODO: Retry and connect to multiple NTP servers
-    let ntp_addrs = net_stack
+    let ntp_addrs_response = net_stack
         .dns_query(NTP_SERVER_ADDR, smoltcp::wire::DnsQueryType::A)
-        .await
-        .unwrap();
+        .with_timeout(Duration::from_secs(180))
+        .await;
+
+    let ntp_addrs = match ntp_addrs_response {
+        Ok(addrs) => addrs.unwrap(),
+        Err(_) => {
+            warn!("[sntp] DNS Request Timeout!");
+            return;
+        }
+    };
 
     if ntp_addrs.is_empty() {
         warn!("[sntp] Failed to resolve DNS! Falling back to stored RTC time");
@@ -97,14 +104,7 @@ pub async fn fetch_sntp(
 
     info!("[sntp] Sending SNTP Request...");
     let addr: IpAddr = ntp_addrs[0].into();
-    let current_timestamp = rtc
-        .lock()
-        .await
-        .datetime()
-        .await
-        .unwrap()
-        .and_utc()
-        .timestamp_micros();
+    let current_timestamp = TIME_SIGNAL.wait().await.and_utc().timestamp_micros();
 
     let result = sntpc::get_time(
         SocketAddr::from((addr, 123)),
@@ -116,17 +116,19 @@ pub async fn fetch_sntp(
     info!("[sntp] Received a response!");
     match result {
         Ok(time) => {
-            info!("[sntp] Response: {:?}", time);
+            debug!("[sntp] Response: {:?}", time);
             info!("[rtc:update-timestamp] Setting RTC Datetime to NTP...");
 
             #[cfg(debug_assertions)]
             {
                 use crate::TIME_SIGNAL;
                 use defmt::debug;
-                let rtc_time = TIME_SIGNAL.wait().await.and_utc().timestamp() as u32;
-                debug!("[sntp] ntp: {}", time.seconds);
-                debug!("[sntp] rtc: {}", rtc_time);
-                debug!("[sntp] Difference: {}", time.seconds - rtc_time);
+                let rtc_time = TIME_SIGNAL.wait().await.and_utc().timestamp();
+                debug!("[sntp] NTP: {}", time.seconds);
+                debug!("[sntp] RTC: {}", rtc_time);
+
+                let diff = (time.seconds as i64).saturating_sub(rtc_time);
+                debug!("[sntp] Difference: {}", diff);
             }
 
             let datetime = chrono::DateTime::from_timestamp_secs(time.seconds as i64)

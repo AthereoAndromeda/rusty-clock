@@ -5,9 +5,16 @@ pub use ble_bas_peripheral::run_peripheral;
 // pub mod ble_l2cap_peripheral;
 // pub mod ble_time_peripheral;
 
-use bt_hci::controller::ExternalController;
+use bt_hci::{controller::ExternalController, uuid::appearance};
+use defmt::info;
 use esp_radio::ble::controller::BleConnector;
-use trouble_host::{HostResources, prelude::DefaultPacketPool};
+use trouble_host::{
+    Address, HostResources,
+    gap::{GapConfig, PeripheralConfig},
+    prelude::DefaultPacketPool,
+};
+
+use crate::{MAC_ADDR, mk_static};
 
 /// Max number of connections for Bluetooth
 pub const BLE_CONNECTIONS_MAX: usize = 2;
@@ -22,6 +29,38 @@ pub type BleStack = trouble_host::Stack<
     ExternalController<BleConnector<'static>, BLE_SLOTS>,
     DefaultPacketPool,
 >;
+
+pub fn get_ble_stack(
+    ble_controller: BleController,
+) -> (
+    &'static BleStack,
+    trouble_host::Host<'static, BleController, DefaultPacketPool>,
+    crate::Server<'static>,
+) {
+    // Using a fixed "random" address can be useful for testing. In real scenarios, one would
+    // use e.g. the MAC 6 byte array as the address (how to get that varies by the platform).
+    let address: Address = Address::random(MAC_ADDR);
+    info!("Our address = {}", address.addr);
+
+    let ble_resources = mk_static!(BleResources, HostResources::new());
+    let ble_stack: &'static BleStack = mk_static!(
+        BleStack,
+        trouble_host::new(ble_controller, ble_resources).set_random_address(address)
+    );
+
+    let ble_host = ble_stack.build();
+    // let ble_peripheral = ble_host.peripheral;
+    // let ble_runner = ble_host.runner;
+
+    let gatt_server =
+        ble_bas_peripheral::Server::new_with_config(GapConfig::Peripheral(PeripheralConfig {
+            name: "TrouBLE",
+            appearance: &appearance::CLOCK,
+        }))
+        .unwrap();
+
+    (ble_stack, ble_host, gatt_server)
+}
 
 // PSM from the dynamic range (0x0080-0x00FF) according to the Bluetooth
 // Specification for L2CAP channels using LE Credit Based Flow Control mode.
