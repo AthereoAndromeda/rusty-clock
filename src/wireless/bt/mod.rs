@@ -1,3 +1,5 @@
+pub mod gatt;
+pub use gatt::*;
 pub mod ble_bas_peripheral;
 pub use ble_bas_peripheral::run_peripheral;
 
@@ -30,6 +32,17 @@ pub type BleStack = trouble_host::Stack<
     DefaultPacketPool,
 >;
 
+#[embassy_executor::task]
+/// Background dunner for bluetooth
+///
+/// # Warning
+/// Must be ran in the background for BLE to work!
+pub async fn ble_runner_task(
+    mut runner: trouble_host::prelude::Runner<'static, BleController, DefaultPacketPool>,
+) {
+    runner.run().await.unwrap();
+}
+
 pub fn get_ble_stack(
     ble_controller: BleController,
 ) -> (
@@ -49,15 +62,12 @@ pub fn get_ble_stack(
     );
 
     let ble_host = ble_stack.build();
-    // let ble_peripheral = ble_host.peripheral;
-    // let ble_runner = ble_host.runner;
 
-    let gatt_server =
-        ble_bas_peripheral::Server::new_with_config(GapConfig::Peripheral(PeripheralConfig {
-            name: "TrouBLE",
-            appearance: &appearance::CLOCK,
-        }))
-        .unwrap();
+    let gatt_server = gatt::Server::new_with_config(GapConfig::Peripheral(PeripheralConfig {
+        name: "TrouBLE",
+        appearance: &appearance::CLOCK,
+    }))
+    .unwrap();
 
     (ble_stack, ble_host, gatt_server)
 }

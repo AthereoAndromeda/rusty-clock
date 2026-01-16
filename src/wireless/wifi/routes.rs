@@ -1,4 +1,3 @@
-use defmt::println;
 use ds3231::Alarm1Config;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use picoserve::{
@@ -71,7 +70,7 @@ pub(super) async fn set_alarm(
     };
 
     #[cfg(debug_assertions)]
-    println!("{} {} {}", time.hour(), time.minute(), time.second());
+    defmt::debug!("{} {} {}", time.hour(), time.minute(), time.second());
 
     let conf = Alarm1Config::AtTime {
         hours: time.hour() as u8,

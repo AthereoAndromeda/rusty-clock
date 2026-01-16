@@ -43,11 +43,7 @@ use crate::{
     buzzer::init_buzzer,
     rtc_ds3231::{RTC_DS3231, RtcDS3231, rtc_time::RtcTime},
     wireless::{
-        bt::{
-            self, BleStack,
-            ble_bas_peripheral::{Server, ble_runner_task},
-            get_ble_stack,
-        },
+        bt::{self, BleStack, ble_runner_task, gatt::Server, get_ble_stack},
         init_wireless,
         wifi::{
             connect_to_wifi, get_net_stack, net_runner_task,

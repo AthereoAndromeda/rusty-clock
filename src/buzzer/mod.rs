@@ -14,6 +14,12 @@ pub enum BuzzerState {
     Toggle,
 }
 
+impl From<bool> for BuzzerState {
+    fn from(value: bool) -> Self {
+        if value { Self::On } else { Self::Off }
+    }
+}
+
 pub static BUZZER_SIGNAL: Signal<CriticalSectionRawMutex, BuzzerState> = Signal::new();
 pub static TIMER_SIGNAL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
 

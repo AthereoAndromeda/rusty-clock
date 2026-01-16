@@ -74,6 +74,8 @@ pub async fn connect_to_wifi(mut controller: WifiController<'static>) {
             info!("Wifi started! Scanning for available networks...");
 
             let scan_config = esp_radio::wifi::ScanConfig::default().with_max(10);
+
+            #[allow(unused_assignments)]
             let result = controller
                 .scan_with_config_async(scan_config)
                 .await

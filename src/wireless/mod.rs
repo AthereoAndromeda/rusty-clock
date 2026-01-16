@@ -5,7 +5,7 @@ use esp_radio::{
     wifi::{Interfaces, WifiController},
 };
 
-use crate::{bt::BleController, wireless::bt::ble_bas_peripheral::RADIO_INIT};
+use crate::{bt::BleController, mk_static};
 
 pub mod bt;
 pub mod wifi;
@@ -14,8 +14,13 @@ pub fn init_wireless(
     wifi: peripherals::WIFI<'static>,
     bt: peripherals::BT<'static>,
 ) -> (WifiController<'static>, Interfaces<'static>, BleController) {
-    let radio_init: &'static mut esp_radio::Controller<'static> =
-        RADIO_INIT.init(esp_radio::init().expect("Failed to init Wifi/BLE controller"));
+    // let radio_init: &'static mut esp_radio::Controller<'static> =
+    // RADIO_INIT.init(esp_radio::init().expect("Failed to init Wifi/BLE controller"));
+
+    let radio_init: &'static mut esp_radio::Controller<'static> = mk_static!(
+        esp_radio::Controller<'static>,
+        esp_radio::init().expect("Failed to init WiFi/BLE Controller")
+    );
 
     let (wifi_controller, interfaces) = esp_radio::wifi::new(radio_init, wifi, Default::default())
         .expect("Failed to initialize Wi-Fi controller");
