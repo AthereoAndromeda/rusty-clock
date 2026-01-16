@@ -1,3 +1,7 @@
+[workspace]
+resolver = "3"
+members = ["rusty-clock-macros"]
+
 [package]
 edition      = "2024"
 name         = "rusty-clock"
@@ -9,6 +13,8 @@ name = "rusty-clock"
 path = "./src/main.rs"
 
 [dependencies]
+rusty-clock-macros = { path = "./rusty-clock-macros" }
+
 esp-hal = { version = "=1.0.0-rc.1", features = [
   "defmt",
   "esp32c3",
@@ -78,7 +84,7 @@ critical-section = "1.2.0"
 static_cell      = { version = "2.1.1", features = ["nightly"] }
 ds3231 = { version = "0.3.0", features = [ "defmt", "async"] }
 chrono = { version = "0.4.42", default-features = false }
-heapless = { version = "0.9.1", features = ["defmt"] }
+heapless = { version = "0.9.1", features = ["defmt", "nightly"] }
 thiserror = { version = "2.0.17", default-features = false }
 embassy-futures = { version = "0.1.2", features = ["defmt"] }
 sntpc = { version = "0.7.0", default-features = false, features = ["defmt", "embassy-socket"] }
@@ -87,6 +93,7 @@ futures = { version = "0.3.31", default-features = false }
 picoserve = { version = "0.17.1", features = ["defmt", "embassy"] }
 serde = { version = "1.0.228", features = ["derive"], default-features = false }
 bilge = "0.3.0"
+paste = "1.0.15"
 
 
 [profile.dev]
