@@ -17,9 +17,12 @@ mod buzzer;
 mod rtc_ds3231;
 mod wireless;
 
+use defmt_rtt as _;
+use esp_backtrace as _;
+// use esp_println as _;
+
 use defmt::{error, info};
 use embassy_executor::Spawner;
-use esp_backtrace as _;
 #[cfg(target_arch = "riscv32")]
 use esp_hal::interrupt::software::SoftwareInterruptControl;
 use esp_hal::{
@@ -28,7 +31,6 @@ use esp_hal::{
     i2c::{self, master::I2c},
     timer::timg::TimerGroup,
 };
-use esp_println as _;
 
 // Found via `espflash`
 // pub const MAC_ADDR: &'static str = "10:20:ba:91:bb:b4";

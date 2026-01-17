@@ -40,6 +40,7 @@
               mprocs
               pkg-config
               espflash
+              probe-rs-tools
             ]);
         };
       }

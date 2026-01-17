@@ -94,6 +94,7 @@ serde = { version = "1.0.228", features = ["derive"], default-features = false }
 bilge = "0.3.0"
 paste = "1.0.15"
 bumpalo = { version = "3.19.1", features = ["collections", "boxed", "allocator_api"] }
+defmt-rtt = "1.1.0"
 
 
 [profile.dev]

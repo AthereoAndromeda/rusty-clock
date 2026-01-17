@@ -1,8 +1,11 @@
+# [target.riscv32imc-unknown-none-elf]
+# runner = "espflash flash --monitor --chip esp32c3 --log-format defmt"
 [target.riscv32imc-unknown-none-elf]
-runner = "espflash flash --monitor --chip esp32c3 --log-format defmt"
+runner = 'probe-rs run --chip esp32c3'
 
 [env]
-DEFMT_LOG="info"
+DEFMT_LOG="rusty_clock=debug"
+# DEFMT_LOG="info"
 
 [build]
 rustflags = [
