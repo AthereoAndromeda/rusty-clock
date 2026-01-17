@@ -1,3 +1,4 @@
+use chrono::{FixedOffset, NaiveTime};
 use ds3231::Alarm1Config;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use picoserve::{
@@ -43,9 +44,19 @@ pub(super) async fn get_epoch() -> impl IntoResponse {
     DebugValue(epoch)
 }
 
-pub(super) async fn get_time() -> impl IntoResponse {
+pub(super) async fn get_time(Query(query): Query<AlarmQueryParams>) -> impl IntoResponse {
+    let is_utc = query.utc.is_some_and(|p| p);
     let time = TIME_SIGNAL.wait().await;
-    DebugValue(time)
+
+    let res = if is_utc {
+        time
+    } else {
+        let offset = FixedOffset::east_opt((*TZ_OFFSET.get() as i32) * 3600).unwrap();
+        let a = time.and_utc().with_timezone(&offset).naive_local();
+        a.into()
+    };
+
+    DebugValue(res)
 }
 
 pub(super) async fn get_alarm() -> impl IntoResponse {
@@ -60,12 +71,12 @@ pub(super) async fn set_alarm(
     (hour, minute, sec): (u8, u8, u8),
     Query(query): Query<AlarmQueryParams>,
 ) -> impl IntoResponse {
+    let base_time = jiff::civil::time(hour as i8, minute as i8, sec as i8, 0);
+
     let time = if query.utc.is_some_and(|p| p) {
-        let time = jiff::civil::time(hour as i8, minute as i8, sec as i8, 0);
-        time
+        base_time
     } else {
-        let time = jiff::civil::time(hour as i8, minute as i8, sec as i8, 0);
-        let a = time.wrapping_sub(jiff::Span::new().hours(*TZ_OFFSET.get()));
+        let a = base_time.wrapping_sub(jiff::Span::new().hours(*TZ_OFFSET.get()));
         a
     };
 
