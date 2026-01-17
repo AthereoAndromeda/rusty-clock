@@ -11,6 +11,7 @@
 // NIGHTLY: Required for `static_cell::make_static!`
 #![feature(type_alias_impl_trait)]
 #![feature(allocator_api)]
+#![feature(decl_macro)]
 
 extern crate alloc;
 
@@ -79,14 +80,38 @@ pub type BuzzerOutput = Mutex<CriticalSectionRawMutex, Output<'static>>;
 esp_bootloader_esp_idf::esp_app_desc!();
 
 // When you are okay with using a nightly compiler it's better to use https://docs.rs/static_cell/2.1.0/static_cell/macro.make_static.html
-#[macro_export]
-macro_rules! mk_static {
-    ($t:ty,$val:expr) => {{
+// #[macro_export]
+// macro_rules! mk_static {
+//     ($t:ty,$val:expr) => {{
+//         static STATIC_CELL: static_cell::StaticCell<$t> = static_cell::StaticCell::new();
+//         #[deny(unused_attributes)]
+//         let x = STATIC_CELL.uninit().write($val);
+//         x
+//     }};
+// }
+
+pub macro mk_static($t:ty,$val:expr) {{
+    static STATIC_CELL: static_cell::StaticCell<$t> = static_cell::StaticCell::new();
+    #[deny(unused_attributes)]
+    let x = STATIC_CELL.uninit().write($val);
+    x
+}}
+
+/// Convert a `T` to a `&'static mut T`.
+///
+/// The macro declares a `static StaticCell` and then initializes it when run, returning the `&'static mut`.
+/// Therefore, each instance can only be run once. Next runs will panic. The `static` can additionally be
+/// decorated with attributes, such as `#[link_section]`, `#[used]`, et al.
+pub macro make_static {
+    ($t:ty; $val:expr) => ($crate::make_static!($t, $val, )),
+    ($t:ty, $val:expr) => ($crate::make_static!($t, $val, )),
+    ($t:ty, $val:expr, $(#[$m:meta])*) => {{
+        $(#[$m])*
         static STATIC_CELL: static_cell::StaticCell<$t> = static_cell::StaticCell::new();
         #[deny(unused_attributes)]
         let x = STATIC_CELL.uninit().write($val);
         x
-    }};
+    }}
 }
 
 #[esp_rtos::main]
