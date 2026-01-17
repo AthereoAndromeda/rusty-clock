@@ -9,6 +9,9 @@
 #![feature(impl_trait_in_assoc_type)]
 // NIGHTLY: Required for `static_cell::make_static!`
 #![feature(type_alias_impl_trait)]
+#![feature(allocator_api)]
+
+extern crate alloc;
 
 mod buzzer;
 mod rtc_ds3231;
