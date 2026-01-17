@@ -5,6 +5,7 @@
 
 #![no_std]
 #![no_main]
+#![recursion_limit = "256"]
 // NIGHTLY: Required for Picoserve
 #![feature(impl_trait_in_assoc_type)]
 // NIGHTLY: Required for `static_cell::make_static!`
