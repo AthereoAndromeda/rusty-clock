@@ -5,8 +5,18 @@ use defmt::info;
 use embassy_time::Duration;
 use picoserve::{
     AppBuilder, AppRouter, Router, make_static,
-    routing::{get, parse_path_segment},
+    response::File,
+    routing::{get, get_service, parse_path_segment},
 };
+
+const HTML_STR: &str = if cfg!(debug_assertions) {
+    include_str!("./index.html")
+} else {
+    include_str!("./index.min.html")
+};
+
+pub const WEB_TASK_POOL_SIZE: usize = 2;
+
 /// Our Web server App
 pub struct App;
 
@@ -15,7 +25,12 @@ impl AppBuilder for App {
 
     fn build_app(self) -> picoserve::Router<Self::PathRouter> {
         Router::new()
-            .route("/", get(root))
+            // WARN: HTMX CDN is used instead of being bundled. This means if
+            // client is not connected to the internet, webpage will not work
+            // TODO?: Bundle HTMX with page? (has to be compressed beforehand)
+            // to keep binary size small
+            .route("/", get_service(File::html(HTML_STR)))
+            .route("/help", get(get_help))
             .route("/time", get(get_time))
             .route("/epoch", get(get_epoch))
             .route("/alarm", get(get_alarm))
@@ -34,8 +49,6 @@ impl AppBuilder for App {
             .route(("/timer", parse_path_segment::<i32>()), get(set_timer))
     }
 }
-
-pub const WEB_TASK_POOL_SIZE: usize = 2;
 
 #[embassy_executor::task(pool_size = WEB_TASK_POOL_SIZE)]
 pub async fn web_task(
@@ -72,9 +85,9 @@ pub fn init_web() -> (
         picoserve::Config<Duration>,
         picoserve::Config::new(picoserve::Timeouts {
             start_read_request: Some(Duration::from_secs(5)),
-            persistent_start_read_request: Some(Duration::from_secs(1)),
-            read_request: Some(Duration::from_secs(1)),
-            write: Some(Duration::from_secs(1)),
+            persistent_start_read_request: Some(Duration::from_secs(2)),
+            read_request: Some(Duration::from_secs(2)),
+            write: Some(Duration::from_secs(5)),
         })
         .keep_connection_alive()
     );

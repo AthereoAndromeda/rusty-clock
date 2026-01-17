@@ -12,14 +12,15 @@ use crate::{
     rtc_ds3231::{ALARM_REQUEST, ALARM_SIGNAL, SET_ALARM},
 };
 
-pub(super) async fn root() -> &'static str {
+pub(super) async fn get_help() -> &'static str {
     r#"
 Hello from ESP32! This is the web server for rusty clock
 
 All paths use GET unless otherwise specified
 
-Paths: 
-/                         - Prints this help message.
+Paths:
+/                         - Gets Control Panel webpage
+/help                     - Prints this help message.
 /time                     - Gets current time
 /epoch                    - Gets current time as UNIX_EPOCH
 
@@ -52,7 +53,7 @@ pub(super) async fn get_time(Query(query): Query<AlarmQueryParams>) -> impl Into
         a.into()
     };
 
-    DebugValue(res)
+    DebugValue(res.to_human())
 }
 
 pub(super) async fn get_alarm() -> impl IntoResponse {

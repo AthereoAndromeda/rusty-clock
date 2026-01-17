@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Rusty Clock</title>
+    <!-- <link rel="icon" href="./favicon.ico" type="image/x-icon"> -->
+  </head>
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      background-color: #3b4252;
+      color: #eceff4;
+    }
+
+    #time-output {
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+  </style>
+  <body>
+    <center>
+      <h1>Rusty Clock Control Panel</h1>  
+      <sub>Hosted on the ESP32-C3!</sub>
+      <hr/>
+    </center>
+
+    <pre id="help-msg" hx-get="/help" hx-swap="innerHTML" hx-trigger="load"></pre>
+
+    <button hx-get="/sync" hx-swap="innerHTML" hx-target="#time-output">
+      Sync NTP
+    </button>
+    <button hx-get="/buzzer/toggle" hx-swap="none">
+      Toggle Buzzer
+    </button>
+
+    <p id="time-output" hx-get="/time" hx-swap="innerHTML" hx-trigger="every 1s">Getting Time...</p>
+    <p id="output">Output Appears Here</p>
+  </body>
+</html>
+ 
