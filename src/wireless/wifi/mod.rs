@@ -58,7 +58,9 @@ pub async fn connect_to_wifi(mut controller: WifiController<'static>) {
                 controller.wait_for_event(WifiEvent::StaDisconnected).await;
                 Timer::after_millis(5000).await
             }
-            _ => {}
+            _ => {
+                info!("Wifi Not Connected!");
+            }
         }
 
         if !matches!(controller.is_started(), Ok(true)) {

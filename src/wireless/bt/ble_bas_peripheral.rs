@@ -19,7 +19,7 @@ pub async fn run_peripheral(
     loop {
         match advertise("Rusty Alarm Clock", &mut peripheral, server).await {
             Ok(conn) => {
-                gatt_events_task(&server, &conn, &stack).await;
+                gatt_events_task(server, &conn, stack).await;
                 // spawner.must_spawn(battery_task(&server, &conn, &stack));
                 // spawner.must_spawn(time_task(&server, &conn));
             }

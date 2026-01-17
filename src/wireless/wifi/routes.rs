@@ -1,4 +1,4 @@
-use chrono::{FixedOffset, NaiveTime};
+use chrono::FixedOffset;
 use ds3231::Alarm1Config;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use picoserve::{
@@ -76,8 +76,7 @@ pub(super) async fn set_alarm(
     let time = if query.utc.is_some_and(|p| p) {
         base_time
     } else {
-        let a = base_time.wrapping_sub(jiff::Span::new().hours(*TZ_OFFSET.get()));
-        a
+        base_time.wrapping_sub(jiff::Span::new().hours(*TZ_OFFSET.get()))
     };
 
     #[cfg(debug_assertions)]

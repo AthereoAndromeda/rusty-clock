@@ -7,7 +7,7 @@ use sntpc::NtpContext;
 
 use crate::{NTP_SERVER_ADDR, TIME_SIGNAL, rtc_ds3231::RtcDS3231};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 /// Time in us
 pub struct SntpTimestamp(u64);
 
@@ -19,12 +19,6 @@ impl sntpc::NtpTimestampGenerator for SntpTimestamp {
     }
     fn timestamp_subsec_micros(&self) -> u32 {
         (self.0 % 1_000_000) as u32
-    }
-}
-
-impl Default for SntpTimestamp {
-    fn default() -> Self {
-        Self(0)
     }
 }
 
