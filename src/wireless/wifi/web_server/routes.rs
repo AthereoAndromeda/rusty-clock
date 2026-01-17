@@ -1,6 +1,5 @@
 use chrono::FixedOffset;
 use ds3231::Alarm1Config;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use picoserve::{
     extract::Query,
     response::{DebugValue, IntoResponse},
@@ -10,11 +9,8 @@ use serde::Deserialize;
 use crate::{
     TIME_SIGNAL, TZ_OFFSET,
     buzzer::{BUZZER_SIGNAL, BuzzerState, TIMER_SIGNAL},
+    rtc_ds3231::{ALARM_REQUEST, ALARM_SIGNAL, SET_ALARM},
 };
-
-pub static ALARM_REQUEST: Signal<CriticalSectionRawMutex, bool> = Signal::new();
-pub static ALARM_SIGNAL: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
-pub static SET_ALARM: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
 
 pub(super) async fn root() -> &'static str {
     r#"

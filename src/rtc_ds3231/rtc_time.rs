@@ -1,10 +1,29 @@
-use core::ops::Deref;
+use core::{fmt::Debug, ops::Deref};
 
 use chrono::{Datelike, NaiveDateTime, Timelike};
+
+use crate::TZ_OFFSET;
 
 #[derive(Debug, Copy, Clone)]
 /// A wrapper around `chrono::NaiveDateTime` and also implements `Deref`
 pub struct RtcTime(pub NaiveDateTime);
+
+impl RtcTime {
+    pub fn to_human(&self) -> heapless::String<30> {
+        heapless::format!(
+            30;
+            "{}-{:02}-{} | {:02}:{:02}:{:02} ({:02}:00)",
+            self.0.year(),
+            self.0.month(),
+            self.0.day(),
+            self.0.hour(),
+            self.0.minute(),
+            self.0.second(),
+            TZ_OFFSET.get()
+        )
+        .unwrap()
+    }
+}
 
 impl Deref for RtcTime {
     type Target = NaiveDateTime;

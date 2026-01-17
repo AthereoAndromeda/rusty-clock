@@ -1,4 +1,6 @@
-use super::routes::*;
+mod routes;
+use routes::*;
+
 use defmt::info;
 use embassy_time::Duration;
 use picoserve::{

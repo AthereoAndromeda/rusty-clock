@@ -9,7 +9,7 @@ use ds3231::{
     Alarm1Config, Config, DS3231, InterruptControl, Oscillator, SquareWaveFrequency,
     TimeRepresentation,
 };
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex, signal::Signal};
 use embassy_time::Timer;
 use esp_hal::{
     gpio::{Input, InputConfig, Pull},
@@ -20,8 +20,11 @@ use static_cell::StaticCell;
 use crate::{
     I2cAsync, TIME_SIGNAL,
     buzzer::{BUZZER_SIGNAL, BuzzerState},
-    wireless::wifi::routes::{ALARM_REQUEST, ALARM_SIGNAL, SET_ALARM},
 };
+
+pub static ALARM_REQUEST: Signal<CriticalSectionRawMutex, bool> = Signal::new();
+pub static ALARM_SIGNAL: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
+pub static SET_ALARM: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
 
 pub(crate) type RtcDS3231 = DS3231<I2cAsync>;
 pub(crate) const RTC_I2C_ADDR: u8 = 0x68;
@@ -109,24 +112,9 @@ pub async fn run(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) 
 
         #[cfg(debug_assertions)]
         {
-            use crate::TZ_OFFSET;
-            use jiff::tz::{Offset, TimeZone};
-
-            let ts = datetime.and_utc().timestamp();
-            let ts = jiff::Timestamp::from_second(ts).unwrap();
-            let offset = *TZ_OFFSET.get();
-            let datetime = ts.to_zoned(TimeZone::fixed(Offset::constant(offset)));
-
-            defmt::info!(
-                "{}-{}-{} | {:02}:{:02}:{:02} ({:02}:00)",
-                datetime.year(),
-                datetime.month(),
-                datetime.day(),
-                datetime.hour(),
-                datetime.minute(),
-                datetime.second(),
-                offset
-            );
+            use crate::rtc_ds3231::rtc_time::RtcTime;
+            let ts: RtcTime = datetime.into();
+            defmt::debug!("{}", ts.to_human());
         }
 
         Timer::after_secs(1).await;
@@ -145,11 +133,9 @@ pub async fn listen_for_alarm(alarm_pin: peripherals::GPIO6<'static>) {
     // Beep 3 times
     for _ in 0..3 {
         Timer::after_millis(300).await;
-        // buzzer_output.lock().await.toggle();
         BUZZER_SIGNAL.signal(BuzzerState::Toggle);
     }
 
-    // buzzer_output.lock().await.set_low();
     BUZZER_SIGNAL.signal(BuzzerState::Off);
 
     loop {
@@ -157,14 +143,12 @@ pub async fn listen_for_alarm(alarm_pin: peripherals::GPIO6<'static>) {
         alarm_input.wait_for_falling_edge().await;
 
         info!("DS3231 Interrupt Received!");
-        // buzzer_output.lock().await.set_high();
         BUZZER_SIGNAL.signal(BuzzerState::On);
 
         #[cfg(debug_assertions)]
         {
             // Stop it from bleeding my ears while devving
             Timer::after_secs(5).await;
-            // buzzer_output.lock().await.set_low();
             BUZZER_SIGNAL.signal(BuzzerState::Off);
             info!("Buzzer set low");
         }

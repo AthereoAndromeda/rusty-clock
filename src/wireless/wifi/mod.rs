@@ -1,4 +1,3 @@
-pub mod routes;
 pub mod sntp;
 pub mod web_server;
 
