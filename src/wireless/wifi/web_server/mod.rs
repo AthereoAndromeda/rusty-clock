@@ -73,7 +73,10 @@ pub async fn web_task(
     stack.wait_config_up().await;
     let addr = stack.config_v4().unwrap().address;
 
-    info!("Serving and listening at {}:{}", addr, port);
+    info!(
+        "[task-id:{}] Serving and listening at {}:{}",
+        task_id, addr, port
+    );
     picoserve::Server::new(app, config, &mut http_buffer)
         .listen_and_serve(task_id, stack, port, &mut tcp_rx_buffer, &mut tcp_tx_buffer)
         .await
