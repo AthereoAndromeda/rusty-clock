@@ -1,7 +1,7 @@
 # [target.riscv32imc-unknown-none-elf]
 # runner = "espflash flash --monitor --chip esp32c3 --log-format defmt"
 [target.riscv32imc-unknown-none-elf]
-runner = 'probe-rs run --chip esp32c3'
+runner = 'probe-rs run --chip esp32c3 --protocol jtag --no-location'
 
 [env]
 DEFMT_LOG="rusty_clock=debug"
