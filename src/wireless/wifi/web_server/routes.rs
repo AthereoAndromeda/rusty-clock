@@ -100,7 +100,7 @@ pub(super) struct AlarmQueryParams {
 }
 
 pub(super) async fn get_alarm() -> impl IntoResponse {
-    ALARM_REQUEST.signal(true); // Send anything to trigger
+    ALARM_REQUEST.signal(());
     let response = ALARM_SIGNAL.wait().await;
     ALARM_REQUEST.reset();
 

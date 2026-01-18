@@ -26,7 +26,7 @@ use crate::{
 };
 
 pub static TIME_WATCH: Watch<CriticalSectionRawMutex, RtcTime, 5> = Watch::new();
-pub static ALARM_REQUEST: Signal<CriticalSectionRawMutex, bool> = Signal::new();
+pub static ALARM_REQUEST: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 pub static ALARM_SIGNAL: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
 pub static SET_ALARM: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
 
