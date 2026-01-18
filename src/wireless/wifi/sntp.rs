@@ -1,11 +1,14 @@
 use core::net::{IpAddr, SocketAddr};
 use defmt::{debug, info, warn};
 use embassy_net::udp::{PacketMetadata, UdpSocket};
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex, signal::Signal};
 use embassy_time::{Duration, WithTimeout};
 use sntpc::NtpContext;
 
 use crate::{NTP_SERVER_ADDR, TIME_WATCH, rtc_ds3231::RtcDS3231};
+
+pub static NTP_SYNC: Signal<CriticalSectionRawMutex, ()> = Signal::new();
+const SNTP_PORT: u16 = 123;
 
 #[derive(Copy, Clone, Default)]
 /// Time in us
@@ -41,9 +44,19 @@ pub async fn fetch_sntp(
         &mut udp_tx_buffer,
     );
 
-    // 123 is SNTP port
-    udp_socket.bind(123).unwrap();
+    udp_socket.bind(SNTP_PORT).unwrap();
 
+    loop {
+        fetch_sntp_inner(net_stack, rtc, &udp_socket).await;
+        NTP_SYNC.wait().await;
+    }
+}
+
+async fn fetch_sntp_inner(
+    net_stack: embassy_net::Stack<'static>,
+    rtc: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>,
+    udp_socket: &UdpSocket<'_>,
+) {
     info!("[sntp] Waiting for Network Link...");
     match net_stack
         .wait_link_up()
@@ -103,8 +116,8 @@ pub async fn fetch_sntp(
     let current_timestamp = recv.get().await.and_utc().timestamp_micros();
 
     let result = sntpc::get_time(
-        SocketAddr::from((addr, 123)),
-        &udp_socket,
+        SocketAddr::from((addr, SNTP_PORT)),
+        udp_socket,
         NtpContext::new(SntpTimestamp(current_timestamp as u64)),
     )
     .await;
