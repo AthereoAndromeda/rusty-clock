@@ -5,7 +5,7 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use embassy_time::{Duration, WithTimeout};
 use sntpc::NtpContext;
 
-use crate::{NTP_SERVER_ADDR, TIME_SIGNAL, rtc_ds3231::RtcDS3231};
+use crate::{NTP_SERVER_ADDR, TIME_WATCH, rtc_ds3231::RtcDS3231};
 
 #[derive(Copy, Clone, Default)]
 /// Time in us
@@ -96,9 +96,11 @@ pub async fn fetch_sntp(
         return;
     }
 
+    let mut recv = TIME_WATCH.receiver().expect("Maximum reached");
+
     info!("[sntp] Sending SNTP Request...");
     let addr: IpAddr = ntp_addrs[0].into();
-    let current_timestamp = TIME_SIGNAL.wait().await.and_utc().timestamp_micros();
+    let current_timestamp = recv.get().await.and_utc().timestamp_micros();
 
     let result = sntpc::get_time(
         SocketAddr::from((addr, 123)),
@@ -115,9 +117,8 @@ pub async fn fetch_sntp(
 
             #[cfg(debug_assertions)]
             {
-                use crate::TIME_SIGNAL;
                 use defmt::debug;
-                let rtc_time = TIME_SIGNAL.wait().await.and_utc().timestamp();
+                let rtc_time = recv.get().await.and_utc().timestamp();
                 debug!("[sntp] NTP: {}", time.seconds);
                 debug!("[sntp] RTC: {}", rtc_time);
 

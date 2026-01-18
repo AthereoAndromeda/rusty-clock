@@ -5,7 +5,7 @@ use embassy_futures::select::select;
 use embassy_time::Timer;
 use trouble_host::prelude::*;
 
-use crate::{BleStack, TIME_SIGNAL, bt::BleController, buzzer::BUZZER_SIGNAL, mk_static};
+use crate::{BleStack, TIME_WATCH, bt::BleController, buzzer::BUZZER_SIGNAL, mk_static};
 
 #[embassy_executor::task]
 pub async fn run_peripheral(
@@ -55,9 +55,13 @@ async fn gatt_events_task(
     let time_epoch_char = server.time_service.epoch;
     let buzzer = server.buzzer_service.level;
 
+    let mut recv = TIME_WATCH
+        .receiver()
+        .expect("Maximum Number of receivers reached");
+
     loop {
         let a = async {
-            let time = TIME_SIGNAL.wait().await;
+            let time = recv.get().await;
             let sec = time.second() as i64;
 
             info!("[time_task] notifying connection of time {}", time);

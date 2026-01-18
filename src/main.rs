@@ -44,11 +44,9 @@ use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex, lazy_lock::LazyLock, mutex::Mutex,
 };
 
-use embassy_sync::signal::Signal;
-
 use crate::{
     buzzer::init_buzzer,
-    rtc_ds3231::{RTC_DS3231, RtcDS3231, rtc_time::RtcTime},
+    rtc_ds3231::{RTC_DS3231, RtcDS3231},
     wireless::{
         bt::{self, BleStack, ble_runner_task, gatt::Server, get_ble_stack},
         init_wireless,
@@ -60,7 +58,7 @@ use crate::{
     },
 };
 
-pub static TIME_SIGNAL: Signal<CriticalSectionRawMutex, RtcTime> = Signal::new();
+pub use crate::rtc_ds3231::TIME_WATCH;
 
 // TIP: Set these in .env if using direnv
 pub const SSID: &str = env!("SSID");

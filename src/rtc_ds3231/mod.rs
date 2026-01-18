@@ -9,7 +9,9 @@ use ds3231::{
     Alarm1Config, Config, DS3231, InterruptControl, Oscillator, SquareWaveFrequency,
     TimeRepresentation,
 };
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex, signal::Signal};
+use embassy_sync::{
+    blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex, signal::Signal, watch::Watch,
+};
 use embassy_time::Timer;
 use esp_hal::{
     gpio::{Input, InputConfig, Pull},
@@ -18,10 +20,12 @@ use esp_hal::{
 use static_cell::StaticCell;
 
 use crate::{
-    I2cAsync, TIME_SIGNAL,
+    I2cAsync,
     buzzer::{BUZZER_SIGNAL, BuzzerState},
+    rtc_ds3231::rtc_time::RtcTime,
 };
 
+pub static TIME_WATCH: Watch<CriticalSectionRawMutex, RtcTime, 5> = Watch::new();
 pub static ALARM_REQUEST: Signal<CriticalSectionRawMutex, bool> = Signal::new();
 pub static ALARM_SIGNAL: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
 pub static SET_ALARM: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
@@ -83,6 +87,8 @@ pub async fn init_rtc(i2c: I2cAsync) -> Result<RtcDS3231, RtcError> {
 ///
 /// Keeps the time
 pub async fn run(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) {
+    let sender = TIME_WATCH.sender();
+
     loop {
         let (datetime, alarm) = {
             let mut rtc = rtc_mutex.lock().await;
@@ -92,7 +98,7 @@ pub async fn run(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) 
             (datetime, alarm)
         };
 
-        TIME_SIGNAL.signal(datetime.into());
+        sender.send(datetime.into());
 
         // Listen for alarm requests by web server or GATT
         if ALARM_REQUEST.signaled() {

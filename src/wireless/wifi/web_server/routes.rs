@@ -7,9 +7,9 @@ use picoserve::{
 use serde::Deserialize;
 
 use crate::{
-    TIME_SIGNAL, TZ_OFFSET,
+    TIME_WATCH, TZ_OFFSET,
     buzzer::{BUZZER_SIGNAL, BuzzerState, TIMER_SIGNAL},
-    rtc_ds3231::{ALARM_REQUEST, ALARM_SIGNAL, SET_ALARM},
+    rtc_ds3231::{ALARM_REQUEST, ALARM_SIGNAL, SET_ALARM, rtc_time::RtcTime},
 };
 
 pub(super) async fn get_help() -> &'static str {
@@ -35,7 +35,7 @@ Paths:
 }
 
 pub(super) async fn get_epoch() -> impl IntoResponse {
-    let rtc_time = &TIME_SIGNAL.wait().await;
+    let rtc_time = TIME_WATCH.receiver().expect("Maximum reached").get().await;
     let epoch = rtc_time.and_utc().timestamp();
 
     DebugValue(epoch)
@@ -43,7 +43,7 @@ pub(super) async fn get_epoch() -> impl IntoResponse {
 
 pub(super) async fn get_time(Query(query): Query<AlarmQueryParams>) -> impl IntoResponse {
     let is_utc = query.utc.is_some_and(|p| p);
-    let time = TIME_SIGNAL.wait().await;
+    let time = TIME_WATCH.receiver().expect("Maximum reached").get().await;
 
     let res = if is_utc {
         time
