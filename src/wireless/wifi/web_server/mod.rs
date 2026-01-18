@@ -47,6 +47,10 @@ impl AppBuilder for App {
             .route("/buzzer/on", get(toggle_buzzer_on))
             .route("/buzzer/off", get(toggle_buzzer_off))
             .route(("/timer", parse_path_segment::<i32>()), get(set_timer))
+            .route(
+                "/events",
+                get(async || picoserve::response::EventStream(TimeEvent)),
+            );
     }
 }
 

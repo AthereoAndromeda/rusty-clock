@@ -1,5 +1,6 @@
 use chrono::FixedOffset;
 use ds3231::Alarm1Config;
+use embassy_time::Timer;
 use picoserve::{
     extract::Query,
     response::{DebugValue, IntoResponse},
@@ -11,6 +12,42 @@ use crate::{
     buzzer::{BUZZER_SIGNAL, BuzzerState, TIMER_SIGNAL},
     rtc_ds3231::{ALARM_REQUEST, ALARM_SIGNAL, SET_ALARM, rtc_time::RtcTime},
 };
+
+pub struct TimeEvent;
+
+impl picoserve::response::sse::EventSource for TimeEvent {
+    async fn write_events<W: picoserve::io::Write>(
+        self,
+        mut writer: picoserve::response::sse::EventWriter<'_, W>,
+    ) -> Result<(), W::Error> {
+        let mut anon_recv = TIME_WATCH.anon_receiver();
+
+        loop {
+            #[cfg(debug_assertions)]
+            defmt::debug!("[sse:time] Writing Event...");
+
+            let time = anon_recv.try_get();
+            if time.is_none() {
+                writer.write_keepalive().await?;
+                Timer::after_secs(1).await;
+                continue;
+            }
+
+            writer.write_event("time", time.unwrap()).await?;
+
+            #[cfg(debug_assertions)]
+            defmt::debug!("[sse:time] Event Written!");
+            Timer::after_secs(1).await;
+        }
+    }
+}
+
+impl picoserve::response::sse::EventData for RtcTime {
+    async fn write_to<W: picoserve::io::Write>(self, writer: &mut W) -> Result<(), W::Error> {
+        writer.write_all(self.to_human().as_bytes()).await?;
+        Ok(())
+    }
+}
 
 pub(super) async fn get_help() -> &'static str {
     r#"
