@@ -9,13 +9,11 @@ use picoserve::{
     routing::{get, get_service, parse_path_segment},
 };
 
-const HTML_STR: &str = if cfg!(debug_assertions) {
-    include_str!("./index.html")
-} else {
-    include_str!("./index.min.html")
-};
+#[cfg(debug_assertions)]
+const HTML_STR: &str = include_str!("./index.html");
+const HTML_MIN_BR: &[u8] = include_bytes!("./index.min.html.br");
 
-pub const WEB_TASK_POOL_SIZE: usize = 2;
+pub const WEB_TASK_POOL_SIZE: usize = 3;
 
 /// Our Web server App
 pub struct App;
@@ -24,12 +22,23 @@ impl AppBuilder for App {
     type PathRouter = impl picoserve::routing::PathRouter;
 
     fn build_app(self) -> picoserve::Router<Self::PathRouter> {
-        Router::new()
+        let router = Router::new()
             // WARN: HTMX CDN is used instead of being bundled. This means if
             // client is not connected to the internet, webpage will not work
+            //
+            // WARN: Firefox does not support brotli on HTTP by default.
+            // Go to about:config and add br to `network.http.accept-encoding`
+            //
             // TODO?: Bundle HTMX with page? (has to be compressed beforehand)
             // to keep binary size small
-            .route("/", get_service(File::html(HTML_STR)))
+            .route(
+                "/",
+                get_service(File::with_content_type_and_headers(
+                    "text/html",
+                    HTML_MIN_BR,
+                    &[("content-encoding", "br")],
+                )),
+            )
             .route("/help", get(get_help))
             .route("/time", get(get_time))
             .route("/epoch", get(get_epoch))
@@ -51,6 +60,11 @@ impl AppBuilder for App {
                 "/events",
                 get(async || picoserve::response::EventStream(TimeEvent)),
             );
+
+        #[cfg(debug_assertions)]
+        let router = router.route("/", get_service(File::html(HTML_STR)));
+
+        router
     }
 }
 
