@@ -11,6 +11,7 @@ use crate::{
     TIME_WATCH, TZ_OFFSET,
     buzzer::{BUZZER_SIGNAL, BuzzerState, TIMER_SIGNAL},
     rtc_ds3231::{ALARM_REQUEST, ALARM_SIGNAL, SET_ALARM, rtc_time::RtcTime},
+    wireless::wifi::sntp::NTP_SYNC,
 };
 
 pub struct TimeEvent;
@@ -93,6 +94,11 @@ pub(super) async fn get_time(Query(query): Query<AlarmQueryParams>) -> impl Into
     DebugValue(res.to_human())
 }
 
+#[derive(Debug, Deserialize)]
+pub(super) struct AlarmQueryParams {
+    utc: Option<bool>,
+}
+
 pub(super) async fn get_alarm() -> impl IntoResponse {
     ALARM_REQUEST.signal(true); // Send anything to trigger
     let response = ALARM_SIGNAL.wait().await;
@@ -142,7 +148,6 @@ pub(super) async fn toggle_buzzer_off() -> impl IntoResponse {
     BUZZER_SIGNAL.signal(BuzzerState::Off);
 }
 
-#[derive(Debug, Deserialize)]
-pub(super) struct AlarmQueryParams {
-    utc: Option<bool>,
+pub(super) async fn get_sync() -> impl IntoResponse {
+    NTP_SYNC.signal(());
 }
