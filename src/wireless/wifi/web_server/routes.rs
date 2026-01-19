@@ -2,15 +2,15 @@ use chrono::FixedOffset;
 use ds3231::Alarm1Config;
 use embassy_time::Timer;
 use picoserve::{
-    extract::Query,
+    extract::{Form, Query},
     response::{DebugValue, IntoResponse},
 };
 use serde::Deserialize;
 
 use crate::{
     TIME_WATCH, TZ_OFFSET,
-    buzzer::{BUZZER_SIGNAL, BuzzerState, TIMER_SIGNAL},
-    rtc_ds3231::{ALARM_REQUEST, ALARM_SIGNAL, SET_ALARM, rtc_time::RtcTime},
+    buzzer::{BUZZER_SIGNAL, BuzzerAction, IS_BUZZER_ON, TIMER_SIGNAL},
+    rtc_ds3231::{ALARM_SIGNAL, IS_ALARM_REQUESTED, SET_ALARM, rtc_time::RtcTime},
     wireless::wifi::sntp::NTP_SYNC,
 };
 
@@ -45,7 +45,7 @@ impl picoserve::response::sse::EventSource for TimeEvent {
 
 impl picoserve::response::sse::EventData for RtcTime {
     async fn write_to<W: picoserve::io::Write>(self, writer: &mut W) -> Result<(), W::Error> {
-        writer.write_all(self.to_human().as_bytes()).await?;
+        writer.write_all(self.to_human_local().as_bytes()).await?;
         Ok(())
     }
 }
@@ -91,7 +91,7 @@ pub(super) async fn get_time(Query(query): Query<AlarmQueryParams>) -> impl Into
         a.into()
     };
 
-    DebugValue(res.to_human())
+    DebugValue(res.to_human_local())
 }
 
 #[derive(Debug, Deserialize)]
@@ -100,20 +100,17 @@ pub(super) struct AlarmQueryParams {
 }
 
 pub(super) async fn get_alarm() -> impl IntoResponse {
-    ALARM_REQUEST.signal(());
+    IS_ALARM_REQUESTED.store(true, core::sync::atomic::Ordering::SeqCst);
     let response = ALARM_SIGNAL.wait().await;
-    ALARM_REQUEST.reset();
+    IS_ALARM_REQUESTED.store(false, core::sync::atomic::Ordering::SeqCst);
 
     DebugValue(response)
 }
 
-pub(super) async fn set_alarm(
-    (hour, minute, sec): (u8, u8, u8),
-    Query(query): Query<AlarmQueryParams>,
-) -> impl IntoResponse {
-    let base_time = jiff::civil::time(hour as i8, minute as i8, sec as i8, 0);
+async fn set_alarm_inner(hour: u8, min: u8, sec: u8, is_utc: bool) {
+    let base_time = jiff::civil::time(hour as i8, min as i8, sec as i8, 0);
 
-    let time = if query.utc.is_some_and(|p| p) {
+    let time = if is_utc {
         base_time
     } else {
         base_time.wrapping_sub(jiff::Span::new().hours(*TZ_OFFSET.get()))
@@ -130,22 +127,55 @@ pub(super) async fn set_alarm(
     };
 
     SET_ALARM.signal(conf);
+}
 
+pub(super) async fn set_alarm(
+    (hour, min, sec): (u8, u8, u8),
+    Query(query): Query<AlarmQueryParams>,
+) -> impl IntoResponse {
+    set_alarm_inner(hour, min, sec, query.utc.is_some_and(|x| x)).await;
     "Alarm Set!"
+}
+
+#[derive(Debug, Deserialize)]
+pub(super) struct AlarmForm {
+    pub hour: u8,
+    pub min: u8,
+    pub sec: u8,
+    pub is_utc: heapless::String<3>,
+}
+
+pub(super) async fn set_alarm_form(Form(form): Form<AlarmForm>) -> impl IntoResponse {
+    defmt::info!("{}", defmt::Debug2Format(&form));
+    let AlarmForm {
+        hour,
+        min,
+        sec,
+        is_utc,
+    } = form;
+
+    let a = if is_utc == "on" { true } else { false };
+
+    set_alarm_inner(hour, min, sec, a).await
 }
 
 pub(super) async fn set_timer(sec: i32) -> impl IntoResponse {
     TIMER_SIGNAL.signal(sec);
 }
 
+pub(super) async fn get_buzzer() -> impl IntoResponse {
+    let state = IS_BUZZER_ON.load(core::sync::atomic::Ordering::SeqCst);
+    DebugValue(state)
+}
+
 pub(super) async fn toggle_buzzer() -> impl IntoResponse {
-    BUZZER_SIGNAL.signal(BuzzerState::Toggle);
+    BUZZER_SIGNAL.signal(BuzzerAction::Toggle);
 }
 pub(super) async fn toggle_buzzer_on() -> impl IntoResponse {
-    BUZZER_SIGNAL.signal(BuzzerState::On);
+    BUZZER_SIGNAL.signal(BuzzerAction::On);
 }
 pub(super) async fn toggle_buzzer_off() -> impl IntoResponse {
-    BUZZER_SIGNAL.signal(BuzzerState::Off);
+    BUZZER_SIGNAL.signal(BuzzerAction::Off);
 }
 
 pub(super) async fn get_sync() -> impl IntoResponse {

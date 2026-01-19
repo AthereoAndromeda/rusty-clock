@@ -1,5 +1,7 @@
 pub mod error;
 pub mod rtc_time;
+use core::sync::atomic::AtomicBool;
+
 pub use error::*;
 pub mod alarm;
 use alarm::*;
@@ -21,14 +23,15 @@ use static_cell::StaticCell;
 
 use crate::{
     I2cAsync,
-    buzzer::{BUZZER_SIGNAL, BuzzerState},
+    buzzer::{BUZZER_SIGNAL, BuzzerAction},
     rtc_ds3231::rtc_time::RtcTime,
 };
 
 pub static TIME_WATCH: Watch<CriticalSectionRawMutex, RtcTime, 5> = Watch::new();
-pub static ALARM_REQUEST: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 pub static ALARM_SIGNAL: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
 pub static SET_ALARM: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
+
+pub static IS_ALARM_REQUESTED: AtomicBool = AtomicBool::new(false);
 
 pub(crate) type RtcDS3231 = DS3231<I2cAsync>;
 pub(crate) const RTC_I2C_ADDR: u8 = 0x68;
@@ -101,7 +104,7 @@ pub async fn run(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) 
         sender.send(datetime.into());
 
         // Listen for alarm requests by web server or GATT
-        if ALARM_REQUEST.signaled() {
+        if IS_ALARM_REQUESTED.load(core::sync::atomic::Ordering::SeqCst) {
             ALARM_SIGNAL.signal(alarm);
         }
 
@@ -139,23 +142,23 @@ pub async fn listen_for_alarm(alarm_pin: peripherals::GPIO6<'static>) {
     // Beep 3 times
     for _ in 0..3 {
         Timer::after_millis(300).await;
-        BUZZER_SIGNAL.signal(BuzzerState::Toggle);
+        BUZZER_SIGNAL.signal(BuzzerAction::Toggle);
     }
 
-    BUZZER_SIGNAL.signal(BuzzerState::Off);
+    BUZZER_SIGNAL.signal(BuzzerAction::Off);
 
     loop {
         info!("Waiting for alarm...");
         alarm_input.wait_for_falling_edge().await;
 
         info!("DS3231 Interrupt Received!");
-        BUZZER_SIGNAL.signal(BuzzerState::On);
+        BUZZER_SIGNAL.signal(BuzzerAction::On);
 
         #[cfg(debug_assertions)]
         {
             // Stop it from bleeding my ears while devving
             Timer::after_secs(5).await;
-            BUZZER_SIGNAL.signal(BuzzerState::Off);
+            BUZZER_SIGNAL.signal(BuzzerAction::Off);
             info!("Buzzer set low");
         }
     }
