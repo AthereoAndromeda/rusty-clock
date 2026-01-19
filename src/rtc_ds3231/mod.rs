@@ -123,7 +123,7 @@ pub async fn run(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) 
         {
             use crate::rtc_ds3231::rtc_time::RtcTime;
             let ts: RtcTime = datetime.into();
-            defmt::debug!("{}", ts.to_human());
+            defmt::debug!("{}", ts.to_human_local());
         }
 
         Timer::after_secs(1).await;

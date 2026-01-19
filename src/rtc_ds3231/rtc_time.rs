@@ -1,6 +1,6 @@
 use core::{fmt::Debug, ops::Deref};
 
-use chrono::{Datelike, NaiveDateTime, Timelike};
+use chrono::{Datelike, FixedOffset, NaiveDateTime, Timelike};
 
 use crate::TZ_OFFSET;
 
@@ -9,17 +9,49 @@ use crate::TZ_OFFSET;
 pub struct RtcTime(pub NaiveDateTime);
 
 impl RtcTime {
-    pub fn to_human(&self) -> heapless::String<30> {
+    pub fn to_human_utc(&self) -> heapless::String<30> {
         heapless::format!(
             30;
-            "{}-{:02}-{} | {:02}:{:02}:{:02} ({:02}:00)",
+            "{}-{:02}-{:02} | {:02}:{:02}:{:02} (00:00)",
             self.0.year(),
             self.0.month(),
             self.0.day(),
             self.0.hour(),
             self.0.minute(),
             self.0.second(),
+        )
+        .unwrap()
+    }
+
+    pub fn to_human_local(&self) -> heapless::String<30> {
+        let time = self
+            .0
+            .and_local_timezone(FixedOffset::east_opt(*TZ_OFFSET.get() as i32 * 3600).unwrap())
+            .unwrap();
+
+        heapless::format!(
+            30;
+            "{}-{:02}-{:02} | {:02}:{:02}:{:02} ({:02}:00)",
+            time.year(),
+            time.month(),
+            time.day(),
+            time.hour(),
+            time.minute(),
+            time.second(),
             TZ_OFFSET.get()
+        )
+        .unwrap()
+    }
+
+    pub fn to_iso8601_utc(&self) -> heapless::String<20> {
+        heapless::format!(
+            "{}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
+            self.0.year(),
+            self.0.month(),
+            self.0.day(),
+            self.0.hour(),
+            self.0.minute(),
+            self.0.second(),
         )
         .unwrap()
     }
