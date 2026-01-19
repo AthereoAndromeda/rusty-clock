@@ -1,8 +1,8 @@
 #!/usr/bin/env nix-shell
 #!nix-shell -i nu -p brotli
 
-def main [] {
-  let content = open ./index.html
+def main [input?: string] {
+  let content = open ($input | default ./index.html)
 
   print "Minifying HTML..."
   xh --body --form https://htmlcompressor.com/compress html_level=2 html_single_line=1 code=$"($content)"

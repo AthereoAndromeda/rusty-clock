@@ -6,7 +6,7 @@ use embassy_time::Duration;
 use picoserve::{
     AppBuilder, AppRouter, Router, make_static,
     response::File,
-    routing::{get, get_service, parse_path_segment},
+    routing::{get, get_service, parse_path_segment, post},
 };
 
 #[cfg(debug_assertions)]
@@ -43,6 +43,7 @@ impl AppBuilder for App {
             .route("/time", get(get_time))
             .route("/epoch", get(get_epoch))
             .route("/alarm", get(get_alarm))
+            .route("/alarm_submit", post(set_alarm_form))
             .route(
                 (
                     "/alarm",
@@ -52,6 +53,7 @@ impl AppBuilder for App {
                 ),
                 get(set_alarm),
             )
+            .route("/buzzer", get(get_buzzer))
             .route("/buzzer/toggle", get(toggle_buzzer))
             .route("/buzzer/on", get(toggle_buzzer_on))
             .route("/buzzer/off", get(toggle_buzzer_off))
