@@ -86,7 +86,7 @@ pub(super) async fn get_time(Query(query): Query<AlarmQueryParams>) -> impl Into
     let res = if is_utc {
         time
     } else {
-        let offset = FixedOffset::east_opt((*TZ_OFFSET.get() as i32) * 3600).unwrap();
+        let offset = FixedOffset::east_opt((TZ_OFFSET as i32) * 3600).unwrap();
         let a = time.and_utc().with_timezone(&offset).naive_local();
         a.into()
     };
@@ -113,7 +113,7 @@ async fn set_alarm_inner(hour: u8, min: u8, sec: u8, is_utc: bool) {
     let time = if is_utc {
         base_time
     } else {
-        base_time.wrapping_sub(jiff::Span::new().hours(*TZ_OFFSET.get()))
+        base_time.wrapping_sub(jiff::Span::new().hours(TZ_OFFSET))
     };
 
     #[cfg(debug_assertions)]

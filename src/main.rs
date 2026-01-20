@@ -6,12 +6,17 @@
 #![no_std]
 #![no_main]
 #![recursion_limit = "256"]
+#![feature(allocator_api)]
+#![feature(decl_macro)]
 // NIGHTLY: Required for Picoserve
 #![feature(impl_trait_in_assoc_type)]
 // NIGHTLY: Required for `static_cell::make_static!`
 #![feature(type_alias_impl_trait)]
-#![feature(allocator_api)]
-#![feature(decl_macro)]
+// NIGHTLY: Allows env vars to be parsed at compile time
+#![feature(const_option_ops)]
+#![feature(const_trait_impl)]
+#![feature(const_result_trait_fn)]
+#![feature(const_result_unwrap_unchecked)]
 
 extern crate alloc;
 
@@ -40,9 +45,7 @@ pub const MAC_ADDR: [u8; 6] = [0x10, 0x20, 0xba, 0x91, 0xbb, 0xb4];
 
 pub type I2cAsync = I2c<'static, esp_hal::Async>;
 
-use embassy_sync::{
-    blocking_mutex::raw::CriticalSectionRawMutex, lazy_lock::LazyLock, mutex::Mutex,
-};
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 
 use crate::{
     buzzer::init_buzzer,
@@ -65,12 +68,15 @@ pub const SSID: &str = env!("SSID");
 pub const PASSWORD: &str = env!("PASSWORD");
 
 // NOTE: Using TZ_OFFSET since IANA Timezones adds unnecessary weight
-pub static TZ_OFFSET: LazyLock<i8> = LazyLock::new(|| {
-    option_env!("TZ_OFFSET")
-        .unwrap_or("0")
-        .parse::<i8>()
-        .expect("Must be a valid i8!")
-});
+// PERF: Faster and leaner than LazyLock if you're
+// okay with using unsafe and nightly features
+pub const TZ_OFFSET: i8 = {
+    let tz = option_env!("TZ_OFFSET").unwrap_or("0");
+
+    // SAFETY: Caller is required to guarantee valid number
+    // NOTE: Result::unwrap cannot be used since it is non-const
+    unsafe { i8::from_str_radix(tz, 10).unwrap_unchecked() }
+};
 
 pub const NTP_SERVER_ADDR: &str = "pool.ntp.org";
 

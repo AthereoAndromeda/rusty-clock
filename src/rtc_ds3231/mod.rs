@@ -27,6 +27,28 @@ use crate::{
     rtc_ds3231::rtc_time::RtcTime,
 };
 
+/// The alarm time set through env
+const ENV_TIME: Alarm1Config = {
+    let hours_str = option_env!("ALARM_HOUR").unwrap_or("0");
+    let min_str = option_env!("ALARM_MINUTES").unwrap_or("0");
+    let sec_str = option_env!("ALARM_SECONDS").unwrap_or("0");
+
+    // SAFETY: Caller is required to guarantee valid number
+    let (hours, minutes, seconds) = unsafe {
+        let h = u8::from_str_radix(hours_str, 10).unwrap_unchecked();
+        let m = u8::from_str_radix(min_str, 10).unwrap_unchecked();
+        let s = u8::from_str_radix(sec_str, 10).unwrap_unchecked();
+        (h, m, s)
+    };
+
+    Alarm1Config::AtTime {
+        hours,
+        minutes,
+        seconds,
+        is_pm: None,
+    }
+};
+
 pub static TIME_WATCH: Watch<CriticalSectionRawMutex, RtcTime, 5> = Watch::new();
 pub static ALARM_SIGNAL: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
 pub static SET_ALARM: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
@@ -55,25 +77,7 @@ pub async fn init_rtc(i2c: I2cAsync) -> Result<RtcDS3231, RtcError> {
     let alarm1_config = if cfg!(debug_assertions) {
         Alarm1Config::AtSeconds { seconds: 30 }
     } else {
-        let hours = option_env!("ALARM_HOUR")
-            .unwrap_or("0")
-            .parse::<u8>()
-            .unwrap();
-        let minutes = option_env!("ALARM_MINUTES")
-            .unwrap_or("0")
-            .parse::<u8>()
-            .unwrap();
-        let seconds = option_env!("ALARM_SECONDS")
-            .unwrap_or("0")
-            .parse::<u8>()
-            .unwrap();
-
-        Alarm1Config::AtTime {
-            hours,
-            minutes,
-            seconds,
-            is_pm: None,
-        }
+        ENV_TIME
     };
 
     debug!("{:?}", alarm1_config);

@@ -26,7 +26,7 @@ impl RtcTime {
     pub fn to_human_local(&self) -> heapless::String<30> {
         let time = self
             .0
-            .and_local_timezone(FixedOffset::east_opt(*TZ_OFFSET.get() as i32 * 3600).unwrap())
+            .and_local_timezone(FixedOffset::east_opt(TZ_OFFSET as i32 * 3600).unwrap())
             .unwrap();
 
         heapless::format!(
@@ -38,7 +38,7 @@ impl RtcTime {
             time.hour(),
             time.minute(),
             time.second(),
-            TZ_OFFSET.get()
+            TZ_OFFSET
         )
         .unwrap()
     }

@@ -82,20 +82,21 @@ pub async fn web_task(
     let mut tcp_tx_buffer = [0; 1024];
     let mut http_buffer = [0; 2048];
 
-    let port = option_env!("WEB_PORT")
-        .unwrap_or("80")
-        .parse::<u16>()
-        .unwrap();
+    const PORT: u16 = {
+        let s = option_env!("WEB_PORT").unwrap_or("80");
+        // SAFETY: User must ensure WEB_PORT is a valid number
+        unsafe { u16::from_str_radix(s, 10).unwrap_unchecked() }
+    };
 
     stack.wait_config_up().await;
     let addr = stack.config_v4().unwrap().address;
 
     info!(
         "[task-id:{}] Serving and listening at {}:{}",
-        task_id, addr, port
+        task_id, addr, PORT
     );
     picoserve::Server::new(app, config, &mut http_buffer)
-        .listen_and_serve(task_id, stack, port, &mut tcp_rx_buffer, &mut tcp_tx_buffer)
+        .listen_and_serve(task_id, stack, PORT, &mut tcp_rx_buffer, &mut tcp_tx_buffer)
         .await
         .into_never()
 }
