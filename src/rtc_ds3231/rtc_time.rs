@@ -8,13 +8,27 @@ use crate::TZ_OFFSET;
 /// A wrapper around `chrono::NaiveDateTime` and also implements `Deref`
 pub struct RtcTime(pub NaiveDateTime);
 
+const MONTH_BY_INDEX: [&str; 12] = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+];
+
 impl RtcTime {
-    pub fn to_human_utc(&self) -> heapless::String<30> {
+    pub fn to_human_utc(&self) -> heapless::String<50> {
         heapless::format!(
-            30;
-            "{}-{:02}-{:02} | {:02}:{:02}:{:02} (00:00)",
+            "{} {} {:02} | {:02}:{:02}:{:02} (00:00)",
             self.0.year(),
-            self.0.month(),
+            MONTH_BY_INDEX[self.0.month() as usize],
             self.0.day(),
             self.0.hour(),
             self.0.minute(),
@@ -30,7 +44,6 @@ impl RtcTime {
             .unwrap();
 
         heapless::format!(
-            30;
             "{}-{:02}-{:02} | {:02}:{:02}:{:02} ({:02}:00)",
             time.year(),
             time.month(),
@@ -52,6 +65,27 @@ impl RtcTime {
             self.0.hour(),
             self.0.minute(),
             self.0.second(),
+        )
+        .unwrap()
+    }
+    pub fn to_iso8601_local(&self) -> heapless::String<25> {
+        let time = self
+            .0
+            .and_local_timezone(FixedOffset::east_opt(TZ_OFFSET as i32 * 3600).unwrap())
+            .unwrap();
+
+        let sign = if TZ_OFFSET >= 0 { "+" } else { "-" };
+
+        heapless::format!(
+            "{}-{:02}-{:02}T{:02}:{:02}:{:02}{}{:02}:00",
+            time.year(),
+            time.month(),
+            time.day(),
+            time.hour(),
+            time.minute(),
+            time.second(),
+            sign,
+            TZ_OFFSET
         )
         .unwrap()
     }
@@ -79,15 +113,6 @@ impl From<RtcTime> for chrono::NaiveDateTime {
 
 impl defmt::Format for RtcTime {
     fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(
-            fmt,
-            "{}-{}-{}T{}:{}:{}",
-            self.0.year(),
-            self.0.month(),
-            self.0.day(),
-            self.0.hour(),
-            self.0.minute(),
-            self.0.second()
-        )
+        defmt::write!(fmt, "{}", self.to_iso8601_local());
     }
 }

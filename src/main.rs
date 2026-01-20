@@ -49,7 +49,7 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 
 use crate::{
     buzzer::init_buzzer,
-    rtc_ds3231::{RTC_DS3231, RtcDS3231},
+    rtc_ds3231::{RTC_DS3231, RtcDS3231, TIME_WATCH},
     wireless::{
         bt::{self, BleStack, ble_runner_task, gatt::Server, get_ble_stack},
         init_wireless,
@@ -60,8 +60,6 @@ use crate::{
         },
     },
 };
-
-pub use crate::rtc_ds3231::TIME_WATCH;
 
 // TIP: Set these in .env if using direnv
 pub const SSID: &str = env!("SSID");
@@ -77,6 +75,9 @@ pub const TZ_OFFSET: i8 = {
     // NOTE: Result::unwrap cannot be used since it is non-const
     unsafe { i8::from_str_radix(tz, 10).unwrap_unchecked() }
 };
+
+// TEST: Within UTC Offset range
+static_assertions::const_assert!(TZ_OFFSET <= 12 && TZ_OFFSET >= -12);
 
 pub const NTP_SERVER_ADDR: &str = "pool.ntp.org";
 

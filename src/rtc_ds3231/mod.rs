@@ -29,18 +29,24 @@ use crate::{
 
 /// The alarm time set through env
 const ENV_TIME: Alarm1Config = {
-    let hours_str = option_env!("ALARM_HOUR").unwrap_or("0");
-    let min_str = option_env!("ALARM_MINUTES").unwrap_or("0");
-    let sec_str = option_env!("ALARM_SECONDS").unwrap_or("0");
+    const HOUR: &str = option_env!("ALARM_HOUR").unwrap_or("0");
+    const MIN: &str = option_env!("ALARM_MINUTES").unwrap_or("0");
+    const SEC: &str = option_env!("ALARM_SECONDS").unwrap_or("0");
 
     // SAFETY: Caller is required to guarantee valid number
-    let (hours, minutes, seconds) = unsafe {
-        let h = u8::from_str_radix(hours_str, 10).unwrap_unchecked();
-        let m = u8::from_str_radix(min_str, 10).unwrap_unchecked();
-        let s = u8::from_str_radix(sec_str, 10).unwrap_unchecked();
+    const TUP: (u8, u8, u8) = unsafe {
+        let h = u8::from_str_radix(HOUR, 10).unwrap_unchecked();
+        let m = u8::from_str_radix(MIN, 10).unwrap_unchecked();
+        let s = u8::from_str_radix(SEC, 10).unwrap_unchecked();
         (h, m, s)
     };
 
+    // TEST: Valid units
+    static_assertions::const_assert!(TUP.0 < 24);
+    static_assertions::const_assert!(TUP.1 < 60);
+    static_assertions::const_assert!(TUP.2 < 60);
+
+    let (hours, minutes, seconds) = TUP;
     Alarm1Config::AtTime {
         hours,
         minutes,
@@ -127,7 +133,7 @@ pub async fn run(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) 
         {
             use crate::rtc_ds3231::rtc_time::RtcTime;
             let ts: RtcTime = datetime.into();
-            defmt::debug!("{}", ts.to_human_local());
+            defmt::debug!("{}", ts);
         }
 
         Timer::after_secs(1).await;
