@@ -1,6 +1,6 @@
 use core::{fmt::Debug, ops::Deref};
 
-use chrono::{Datelike, FixedOffset, NaiveDateTime, Timelike};
+use chrono::{Datelike, FixedOffset, NaiveDateTime, TimeZone, Timelike};
 
 use crate::TZ_OFFSET;
 
@@ -89,6 +89,10 @@ impl RtcTime {
         )
         .unwrap()
     }
+
+    pub fn from_timestamp(ts: i64) -> Self {
+        chrono::Utc.timestamp_opt(ts, 0).unwrap().naive_utc().into()
+    }
 }
 
 impl Deref for RtcTime {
@@ -108,6 +112,12 @@ impl From<chrono::NaiveDateTime> for RtcTime {
 impl From<RtcTime> for chrono::NaiveDateTime {
     fn from(value: RtcTime) -> Self {
         value.0
+    }
+}
+
+impl From<i64> for RtcTime {
+    fn from(value: i64) -> Self {
+        RtcTime::from_timestamp(value)
     }
 }
 
