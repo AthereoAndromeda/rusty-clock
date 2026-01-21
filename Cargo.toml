@@ -114,4 +114,6 @@ lto              = 'fat'
 opt-level        = 's'
 overflow-checks  = false
 
-[dev-dependencies]
+[build-dependencies]
+brotli = { version = "8.0.2", features = ["simd"] }
+html-minifier = "5.0.0"

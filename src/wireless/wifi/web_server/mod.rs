@@ -10,8 +10,8 @@ use picoserve::{
 };
 
 #[cfg(debug_assertions)]
-const HTML_STR: &str = include_str!("./index.html");
-const HTML_MIN_BR: &[u8] = include_bytes!("./index.min.html.br");
+const HTML_STR: &str = include_str!("./../../../../resources/index.html");
+const HTML_MIN_BR: &[u8] = include_bytes!("./../../../../resources/index.min.html.br");
 
 pub const WEB_TASK_POOL_SIZE: usize = 3;
 

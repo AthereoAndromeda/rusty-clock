@@ -1,7 +1,7 @@
 #!/usr/bin/env nix-shell
 #!nix-shell -i nu -p brotli
 
-def main [input?: string, output?: string] {
+def main [input?: path, output?: path] {
   let input_path = ($input | default ./index.html)
   let output_path = ($output | default ./index.min.html.br)
   

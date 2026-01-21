@@ -1,8 +1,34 @@
+use std::io::Write;
+
 fn main() {
+    minify_html();
     linker_be_nice();
     println!("cargo:rustc-link-arg=-Tdefmt.x");
     // make sure linkall.x is the last linker script (otherwise might cause problems with flip-link)
     println!("cargo:rustc-link-arg=-Tlinkall.x");
+}
+
+fn minify_html() {
+    let profile = std::env::var("PROFILE").unwrap();
+
+    if profile == "release" {
+        let file = std::fs::read_to_string("./resources/index.html").unwrap();
+
+        let mut minifier = html_minifier::HTMLMinifier::new();
+        minifier.digest(file).unwrap();
+        let minified_html = minifier.get_html();
+
+        let out = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .truncate(true)
+            .create(true)
+            .open("./resources/index.min.html.br")
+            .unwrap();
+
+        let mut writer = brotli::CompressorWriter::new(out, 4096, 11, 22);
+        writer.write_all(minified_html).unwrap();
+    }
 }
 
 fn linker_be_nice() {
