@@ -151,9 +151,7 @@ pub(super) async fn set_alarm_form(Form(form): Form<AlarmForm>) -> impl IntoResp
         is_utc,
     } = form;
 
-    let a = if is_utc == "on" { true } else { false };
-
-    set_alarm_inner(hour, min, sec, a).await
+    set_alarm_inner(hour, min, sec, is_utc == "on").await
 }
 
 pub(super) async fn set_timer(sec: i32) -> impl IntoResponse {

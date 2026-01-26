@@ -1,5 +1,6 @@
 use core::net::{IpAddr, SocketAddr};
 use defmt::{debug, info, warn};
+use embassy_executor::SendSpawner;
 use embassy_net::udp::{PacketMetadata, UdpSocket};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex, signal::Signal};
 use embassy_time::{Duration, WithTimeout};

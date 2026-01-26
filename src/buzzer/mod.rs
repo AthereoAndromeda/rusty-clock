@@ -46,7 +46,7 @@ pub fn init_buzzer(pin: peripherals::GPIO5<'static>) -> &'static Buzzer {
 
 #[embassy_executor::task]
 pub async fn run(output: &'static BuzzerOutput) {
-    let mut buzzer_state: bool = IS_BUZZER_ON.load(Ordering::SeqCst).into();
+    let mut buzzer_state = IS_BUZZER_ON.load(Ordering::SeqCst);
 
     loop {
         match BUZZER_SIGNAL.wait().await {
@@ -75,7 +75,6 @@ pub async fn listen_for_timer() {
 
     loop {
         let secs = TIMER_SIGNAL.wait().await;
-        TIMER_SIGNAL.reset();
 
         Timer::after_secs(secs as u64).await;
         BUZZER_SIGNAL.signal(BuzzerAction::On);

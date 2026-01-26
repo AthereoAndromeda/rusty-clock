@@ -115,12 +115,7 @@ pub async fn run(rtc_mutex: &'static RtcMutex) {
     let sender = TIME_WATCH.sender();
 
     loop {
-        let datetime = {
-            let mut rtc = rtc_mutex.lock().await;
-            let datetime = rtc.datetime().await.unwrap();
-            datetime
-        };
-
+        let datetime = rtc_mutex.lock().await.datetime().await.unwrap();
         sender.send(datetime.into());
 
         if SET_ALARM.signaled() {

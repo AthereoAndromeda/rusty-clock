@@ -24,39 +24,33 @@ const MONTH_BY_INDEX: [&str; 12] = [
 ];
 
 impl RtcTime {
-    pub fn to_human_utc(&self) -> heapless::String<50> {
+    fn human_inner(dt: impl Datelike + Timelike) -> heapless::String<50> {
         heapless::format!(
-            "{} {} {:02} | {:02}:{:02}:{:02} (00:00)",
-            self.0.year(),
-            MONTH_BY_INDEX[self.0.month() as usize],
-            self.0.day(),
-            self.0.hour(),
-            self.0.minute(),
-            self.0.second(),
+            "{} {} {:02} | {:02}:{:02}:{:02}",
+            dt.year(),
+            MONTH_BY_INDEX[dt.month() as usize],
+            dt.day(),
+            dt.hour(),
+            dt.minute(),
+            dt.second(),
         )
         .unwrap()
     }
 
-    pub fn to_human_local(&self) -> heapless::String<30> {
+    pub fn to_human_utc(self) -> heapless::String<50> {
+        Self::human_inner(self.0)
+    }
+
+    pub fn to_human_local(self) -> heapless::String<50> {
         let time = self
             .0
             .and_local_timezone(FixedOffset::east_opt(TZ_OFFSET as i32 * 3600).unwrap())
             .unwrap();
 
-        heapless::format!(
-            "{}-{:02}-{:02} | {:02}:{:02}:{:02} ({:02}:00)",
-            time.year(),
-            time.month(),
-            time.day(),
-            time.hour(),
-            time.minute(),
-            time.second(),
-            TZ_OFFSET
-        )
-        .unwrap()
+        Self::human_inner(time)
     }
 
-    pub fn to_iso8601_utc(&self) -> heapless::String<20> {
+    pub fn to_iso8601_utc(self) -> heapless::String<20> {
         heapless::format!(
             "{}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
             self.0.year(),
@@ -68,7 +62,8 @@ impl RtcTime {
         )
         .unwrap()
     }
-    pub fn to_iso8601_local(&self) -> heapless::String<25> {
+
+    pub fn to_iso8601_local(self) -> heapless::String<25> {
         let time = self
             .0
             .and_local_timezone(FixedOffset::east_opt(TZ_OFFSET as i32 * 3600).unwrap())

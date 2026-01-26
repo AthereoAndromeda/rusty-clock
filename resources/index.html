@@ -7,6 +7,7 @@
     <title>Rusty Clock</title>
     <!-- <link rel="icon" href="./favicon.ico" type="image/x-icon"> -->
     <style>
+      @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap');
       body {
         font-family: Helvetica, sans-serif;
         background-color: #3b4252;
@@ -16,11 +17,18 @@
       #time-output {
         font-size: 3rem;
         font-weight: bold;
+        font-family: "Orbitron";
+        text-shadow: 2px 2px 10px red;
+        text-align: center;
       }
     </style>
-    <script defer src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.4" integrity="sha384-A986SAtodyH8eg8x8irJnYUk7i9inVQqYigD6qZ9evobksGNIXfeFvDwLSHcp31N" crossorigin="anonymous"></script>
+    <!-- Alpine Plugins before core -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- HTMX PLugins after core -->
+    <script defer src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.4"></script>
   </head>
   <body>
     <center>
@@ -29,15 +37,16 @@
       <hr/>
     </center>
 
-    <center>
-      <div id="time-output" hx-ext="sse" sse-connect="/events" sse-swap="time">
-          Contents of this box will be updated in real time
-      </div>
-    </center>
+    <div id="time-output" hx-ext="sse" sse-connect="/events" sse-swap="time">
+        Contents of this box will be updated in real time
+    </div>
 
-    <pre id="help-msg" hx-get="/help" hx-trigger="load"></pre>
-
-    <button hx-get="/sync" hx-swap="innerHTML" hx-target="#time-output">
+    <div x-data="{show: true}" x-transition x-collapse>
+      <button @click="show = !show">Toggle Help</button>
+      <pre x-show="show" id="help-msg" hx-get="/help" hx-trigger="load"></pre>
+    </div>
+  
+    <button hx-get="/sync" hx-target="#time-output">
       Sync NTP
     </button>
 
@@ -45,24 +54,30 @@
       Toggle Buzzer
     </button>
 
-    <button hx-get="/alarm" hx-target="alarm-output">
+    <button hx-get="/alarm" hx-target="#alarm-output" hx-trigger="load,onclick">
       Get Alarm Time
+    </button>
+    
+    <button hx-get="/alarm/clear" hx-swap="none">
+      Clear Alarm Flags
     </button>
 
 
-    <div id="alarm-counter" x-data="{ hour: 0, min: 0, sec: 0 }">
-      <!-- <button @click="count++">Increment</button> -->
-      <!-- <button @click="count--">Decrement</button> -->
-      <!-- <span x-text="count"></span> -->
-      
+    <div id="alarm-counter" x-data="{ hour: 0, min: 0, sec: 0 }">      
       <form hx-post="/alarm_submit" hx-target="#response-div">
-        <input type="number" name="hour" placeholder="Hour" :value="hour">
-        <input type="number" name="min" placeholder="Minute" :value="min">
-        <input type="number" name="sec" placeholder="Second" :value="sec">
+        <input type="number" name="hour" placeholder="Hour"  x-model="hour">
+        <input type="number" name="min" placeholder="Minute" x-model="min">
+        <input type="number" name="sec" placeholder="Second" x-model="sec">
         <label>
           <input type="checkbox" name="is_utc">
           UTC
         </label>
+
+        <p>
+          <span x-text="hour"></span>:
+          <span x-text="min"></span>:
+          <span x-text="sec"></span>:
+        </p>
         
         <button type="submit">Submit</button>
       </form>
@@ -73,7 +88,7 @@
     </div>
     
     
-    <p>Alarm: <span id="alarm-output" hx-get="/alarm" hx-trigger="load"></span> </p>
+    <p>Alarm: <span id="alarm-output"></span> </p>
   </body>
 </html>
  
