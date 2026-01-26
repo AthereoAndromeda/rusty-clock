@@ -1,7 +1,5 @@
 pub mod error;
 pub mod rtc_time;
-use core::sync::atomic::AtomicBool;
-
 pub use error::*;
 pub mod alarm;
 use alarm::*;
@@ -12,20 +10,26 @@ use ds3231::{
     TimeRepresentation,
 };
 use embassy_sync::{
-    blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex, signal::Signal, watch::Watch,
+    blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex, rwlock::RwLock, signal::Signal,
+    watch::Watch,
 };
 use embassy_time::Timer;
 use esp_hal::{
     gpio::{Input, InputConfig, Pull},
+    i2c::master::I2c,
     peripherals::{self},
 };
 use static_cell::StaticCell;
 
 use crate::{
-    I2cAsync,
     buzzer::{BUZZER_SIGNAL, BuzzerAction},
     rtc_ds3231::rtc_time::RtcTime,
 };
+
+type I2cAsync = I2c<'static, esp_hal::Async>;
+
+pub static ALARM_CONFIG_RWLOCK: RwLock<CriticalSectionRawMutex, Alarm1Config> =
+    RwLock::new(ENV_TIME);
 
 /// The alarm time set through env
 const ENV_TIME: Alarm1Config = {
@@ -56,17 +60,21 @@ const ENV_TIME: Alarm1Config = {
 };
 
 pub static TIME_WATCH: Watch<CriticalSectionRawMutex, RtcTime, 5> = Watch::new();
-pub static ALARM_SIGNAL: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
 pub static SET_ALARM: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
 
-pub static IS_ALARM_REQUESTED: AtomicBool = AtomicBool::new(false);
-
 pub(crate) type RtcDS3231 = DS3231<I2cAsync>;
-pub(crate) const RTC_I2C_ADDR: u8 = 0x68;
-pub static RTC_DS3231: StaticCell<Mutex<CriticalSectionRawMutex, RtcDS3231>> = StaticCell::new();
+
+pub(crate) const RTC_I2C_ADDR: u8 = {
+    let addr = option_env!("RTC_I2C_ADDR").unwrap_or(/*0x*/ "68");
+    unsafe { u8::from_str_radix(addr, 16).unwrap_unchecked() }
+};
+
+// Cannot use RwLock since reading requires &mut self
+pub type RtcMutex = Mutex<CriticalSectionRawMutex, RtcDS3231>;
+pub static RTC_DS3231: StaticCell<RtcMutex> = StaticCell::new();
 
 /// Initialize the DS3231 Instance and return RTC
-pub async fn init_rtc(i2c: I2cAsync) -> Result<RtcDS3231, RtcError> {
+pub async fn init_rtc(i2c: I2cAsync) -> Result<&'static RtcMutex, RtcError> {
     let config = Config {
         time_representation: TimeRepresentation::TwentyFourHour,
         square_wave_frequency: SquareWaveFrequency::Hz1,
@@ -89,43 +97,43 @@ pub async fn init_rtc(i2c: I2cAsync) -> Result<RtcDS3231, RtcError> {
     debug!("{:?}", alarm1_config);
 
     rtc.set_alarm1(&alarm1_config).await?;
-
     reset_alarm_flags(&mut rtc).await?;
 
-    Ok(rtc)
+    *ALARM_CONFIG_RWLOCK.write().await = alarm1_config;
+
+    let rtc_mutex = RTC_DS3231.init(Mutex::new(rtc));
+    Ok(rtc_mutex)
 }
 
+// TODO: Restructure such that it only gets time at init
+// and when requested. saves on cycles
 #[embassy_executor::task]
 /// Runner for DS3231
 ///
 /// Keeps the time
-pub async fn run(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) {
+pub async fn run(rtc_mutex: &'static RtcMutex) {
     let sender = TIME_WATCH.sender();
 
     loop {
-        let (datetime, alarm) = {
+        let datetime = {
             let mut rtc = rtc_mutex.lock().await;
             let datetime = rtc.datetime().await.unwrap();
-            let alarm = rtc.alarm1().await.unwrap();
-
-            (datetime, alarm)
+            datetime
         };
 
         sender.send(datetime.into());
 
-        // Listen for alarm requests by web server or GATT
-        if IS_ALARM_REQUESTED.load(core::sync::atomic::Ordering::SeqCst) {
-            ALARM_SIGNAL.signal(alarm);
-        }
-
         if SET_ALARM.signaled() {
-            let config = SET_ALARM.try_take().expect("Already waited signal");
-            let mut rtc = rtc_mutex.lock().await;
-            rtc.set_alarm1(&config).await.unwrap();
-            reset_alarm_flags(&mut rtc).await.unwrap();
-
+            let config = SET_ALARM.try_take().unwrap();
             debug!("Set New Alarm: {}", config);
 
+            {
+                let mut rtc = rtc_mutex.lock().await;
+                rtc.set_alarm1(&config).await.unwrap();
+                reset_alarm_flags(&mut rtc).await.unwrap();
+            }
+
+            *ALARM_CONFIG_RWLOCK.write().await = config;
             SET_ALARM.reset();
         }
 
@@ -145,9 +153,6 @@ pub async fn run(rtc_mutex: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>) 
 pub async fn listen_for_alarm(alarm_pin: peripherals::GPIO6<'static>) {
     info!("Initializing Alarm Listener...");
     let mut alarm_input = Input::new(alarm_pin, InputConfig::default().with_pull(Pull::Up));
-
-    // Some time to initialize
-    Timer::after_millis(500).await;
 
     // Beep 3 times
     for _ in 0..3 {

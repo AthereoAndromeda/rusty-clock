@@ -43,13 +43,11 @@ use esp_hal::{
 // pub const MAC_ADDR: &'static str = "10:20:ba:91:bb:b4";
 pub const MAC_ADDR: [u8; 6] = [0x10, 0x20, 0xba, 0x91, 0xbb, 0xb4];
 
-pub type I2cAsync = I2c<'static, esp_hal::Async>;
-
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 
 use crate::{
     buzzer::init_buzzer,
-    rtc_ds3231::{RTC_DS3231, RtcDS3231, TIME_WATCH},
+    rtc_ds3231::TIME_WATCH,
     wireless::{
         bt::{self, BleStack, ble_runner_task, gatt::Server, get_ble_stack},
         init_wireless,
@@ -84,32 +82,14 @@ pub const NTP_SERVER_ADDR: &str = "pool.ntp.org";
 pub type BuzzerOutput = Mutex<CriticalSectionRawMutex, Output<'static>>;
 esp_bootloader_esp_idf::esp_app_desc!();
 
-// When you are okay with using a nightly compiler it's better to use https://docs.rs/static_cell/2.1.0/static_cell/macro.make_static.html
-// #[macro_export]
-// macro_rules! mk_static {
-//     ($t:ty,$val:expr) => {{
-//         static STATIC_CELL: static_cell::StaticCell<$t> = static_cell::StaticCell::new();
-//         #[deny(unused_attributes)]
-//         let x = STATIC_CELL.uninit().write($val);
-//         x
-//     }};
-// }
-
-pub macro mk_static($t:ty,$val:expr) {{
-    static STATIC_CELL: static_cell::StaticCell<$t> = static_cell::StaticCell::new();
-    #[deny(unused_attributes)]
-    let x = STATIC_CELL.uninit().write($val);
-    x
-}}
-
 /// Convert a `T` to a `&'static mut T`.
 ///
 /// The macro declares a `static StaticCell` and then initializes it when run, returning the `&'static mut`.
 /// Therefore, each instance can only be run once. Next runs will panic. The `static` can additionally be
 /// decorated with attributes, such as `#[link_section]`, `#[used]`, et al.
-pub macro make_static {
-    ($t:ty; $val:expr) => ($crate::make_static!($t, $val, )),
-    ($t:ty, $val:expr) => ($crate::make_static!($t, $val, )),
+pub macro mk_static {
+    ($t:ty; $val:expr) => (mk_static!($t, $val, )),
+    ($t:ty, $val:expr) => (mk_static!($t, $val, )),
     ($t:ty, $val:expr, $(#[$m:meta])*) => {{
         $(#[$m])*
         static STATIC_CELL: static_cell::StaticCell<$t> = static_cell::StaticCell::new();
@@ -140,15 +120,14 @@ async fn main(spawner: Spawner) {
     info!("ESP-RTOS Started!");
 
     info!("Initializing I2C...");
-    let i2c: I2cAsync = I2c::new(peripherals.I2C0, i2c::master::Config::default())
+    let i2c = I2c::new(peripherals.I2C0, i2c::master::Config::default())
         .expect("I2C Failed to Initialize!")
         .with_sda(peripherals.GPIO2) // Might change later since these are for UART
         .with_scl(peripherals.GPIO3)
         .into_async();
 
     info!("Init RTC...");
-    let rtc: RtcDS3231 = rtc_ds3231::init_rtc(i2c).await.unwrap();
-    let rtc: &Mutex<CriticalSectionRawMutex, RtcDS3231> = RTC_DS3231.init(Mutex::new(rtc));
+    let rtc = rtc_ds3231::init_rtc(i2c).await.unwrap();
 
     info!("Init Buzzer...");
     let buzzer_out = init_buzzer(peripherals.GPIO5);

@@ -10,7 +10,7 @@ use serde::Deserialize;
 use crate::{
     TIME_WATCH, TZ_OFFSET,
     buzzer::{BUZZER_SIGNAL, BuzzerAction, IS_BUZZER_ON, TIMER_SIGNAL},
-    rtc_ds3231::{ALARM_SIGNAL, IS_ALARM_REQUESTED, SET_ALARM, rtc_time::RtcTime},
+    rtc_ds3231::{ALARM_CONFIG_RWLOCK, SET_ALARM, rtc_time::RtcTime},
     wireless::wifi::sntp::NTP_SYNC,
 };
 
@@ -100,10 +100,7 @@ pub(super) struct AlarmQueryParams {
 }
 
 pub(super) async fn get_alarm() -> impl IntoResponse {
-    IS_ALARM_REQUESTED.store(true, core::sync::atomic::Ordering::SeqCst);
-    let response = ALARM_SIGNAL.wait().await;
-    IS_ALARM_REQUESTED.store(false, core::sync::atomic::Ordering::SeqCst);
-
+    let response = ALARM_CONFIG_RWLOCK.read().await;
     DebugValue(response)
 }
 
