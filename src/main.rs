@@ -47,15 +47,10 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 
 use crate::{
     buzzer::init_buzzer,
-    rtc_ds3231::TIME_WATCH,
+    rtc_ds3231::{TIME_WATCH, init_rtc},
     wireless::{
-        bt::{self, BleStack, ble_runner_task, gatt::Server, get_ble_stack},
+        bt::{self, BleStack, gatt::Server},
         init_wireless,
-        wifi::{
-            connect_to_wifi, get_net_stack, net_runner_task,
-            sntp::fetch_sntp,
-            web_server::{WEB_TASK_POOL_SIZE, init_web, web_task},
-        },
     },
 };
 
@@ -125,13 +120,13 @@ async fn main(spawner: Spawner) {
         .into_async();
 
     info!("Init RTC...");
-    let rtc = rtc_ds3231::init_rtc(spawner, i2c).await.unwrap();
+    init_rtc(spawner, i2c).await;
 
     info!("Init Buzzer...");
     init_buzzer(spawner, peripherals.GPIO5, peripherals.GPIO7).await;
 
     info!("Initializing Wireless...");
-    init_wireless(spawner, peripherals.WIFI, peripherals.BT, rtc);
+    init_wireless(spawner, peripherals.WIFI, peripherals.BT);
 
     info!("All Systems Go!");
     info!("Running.... ");

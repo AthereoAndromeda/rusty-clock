@@ -1,15 +1,18 @@
 pub mod error;
 pub mod rtc_time;
-use embassy_executor::Spawner;
 pub use error::*;
 pub mod alarm;
 use alarm::*;
+
+mod listener;
+use listener::*;
 
 use defmt::debug;
 use ds3231::{
     Alarm1Config, Config, DS3231, InterruptControl, Oscillator, SquareWaveFrequency,
     TimeRepresentation,
 };
+use embassy_executor::Spawner;
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex, rwlock::RwLock, signal::Signal,
     watch::Watch,
@@ -24,6 +27,9 @@ type I2cAsync = I2c<'static, esp_hal::Async>;
 
 pub static ALARM_CONFIG_RWLOCK: RwLock<CriticalSectionRawMutex, Alarm1Config> =
     RwLock::new(ENV_TIME);
+
+pub static SET_DATETIME_SIGNAL: Signal<CriticalSectionRawMutex, chrono::NaiveDateTime> =
+    Signal::new();
 
 /// The alarm time set through env
 const ENV_TIME: Alarm1Config = {
@@ -68,7 +74,7 @@ pub type RtcMutex = Mutex<CriticalSectionRawMutex, RtcDS3231>;
 pub static RTC_DS3231: StaticCell<RtcMutex> = StaticCell::new();
 
 /// Initialize the DS3231 Instance and return RTC
-pub async fn init_rtc(spawner: Spawner, i2c: I2cAsync) -> Result<&'static RtcMutex, RtcError> {
+pub async fn init_rtc(spawner: Spawner, i2c: I2cAsync) {
     let config = Config {
         time_representation: TimeRepresentation::TwentyFourHour,
         square_wave_frequency: SquareWaveFrequency::Hz1,
@@ -78,7 +84,9 @@ pub async fn init_rtc(spawner: Spawner, i2c: I2cAsync) -> Result<&'static RtcMut
     };
 
     let mut rtc = DS3231::new(i2c, RTC_I2C_ADDR);
-    rtc.configure(&config).await?;
+    rtc.configure(&config)
+        .await
+        .expect("[rtc] Failed to configure");
 
     // Hardcoded values for now
     // NOTE: Time stored in RTC is in UTC, adjust to your timezone
@@ -90,30 +98,23 @@ pub async fn init_rtc(spawner: Spawner, i2c: I2cAsync) -> Result<&'static RtcMut
 
     debug!("{:?}", alarm1_config);
 
-    rtc.set_alarm1(&alarm1_config).await?;
-    reset_alarm_flags(&mut rtc).await?;
+    rtc.set_alarm1(&alarm1_config)
+        .await
+        .expect("[rtc] Failes to set alarm");
+    reset_alarm_flags(&mut rtc)
+        .await
+        .expect("[rtc] Failed to reset flags");
 
     *ALARM_CONFIG_RWLOCK.write().await = alarm1_config;
 
     let rtc_mutex = RTC_DS3231.init(Mutex::new(rtc));
 
-    spawner.must_spawn(listen_for_clear_flag(rtc_mutex));
     spawner.must_spawn(run(rtc_mutex));
-
-    Ok(rtc_mutex)
+    spawner.must_spawn(listen_for_clear_flag(rtc_mutex));
+    spawner.must_spawn(listen_for_datetime_set(rtc_mutex));
 }
 
 pub static CLEAR_FLAGS_SIGNAL: Signal<CriticalSectionRawMutex, ()> = Signal::new();
-
-#[embassy_executor::task]
-async fn listen_for_clear_flag(rtc: &'static RtcMutex) {
-    loop {
-        CLEAR_FLAGS_SIGNAL.wait().await;
-        let _ = reset_alarm_flags_mutex(rtc)
-            .await
-            .inspect_err(|_e| defmt::error!("Failed to reset flags"));
-    }
-}
 
 // TODO: Restructure such that it only gets time at init
 // and when requested. saves on cycles
@@ -123,6 +124,9 @@ async fn listen_for_clear_flag(rtc: &'static RtcMutex) {
 /// Keeps the time
 async fn run(rtc_mutex: &'static RtcMutex) {
     let sender = TIME_WATCH.sender();
+
+    #[cfg(debug_assertions)]
+    let mut count = 0;
 
     loop {
         let datetime = rtc_mutex.lock().await.datetime().await.unwrap();
@@ -144,9 +148,14 @@ async fn run(rtc_mutex: &'static RtcMutex) {
 
         #[cfg(debug_assertions)]
         {
-            use crate::rtc_ds3231::rtc_time::RtcTime;
-            let ts: RtcTime = datetime.into();
-            defmt::debug!("{}", ts);
+            if count >= 10 {
+                use crate::rtc_ds3231::rtc_time::RtcTime;
+                let ts: RtcTime = datetime.into();
+                defmt::debug!("{}", ts);
+                count = 0;
+            }
+
+            count += 1;
         }
 
         Timer::after_secs(1).await;

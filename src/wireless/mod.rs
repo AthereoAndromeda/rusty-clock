@@ -6,7 +6,6 @@ use esp_radio::ble::controller::BleConnector;
 use crate::{
     bt::BleController,
     mk_static,
-    rtc_ds3231::RtcMutex,
     wireless::{
         bt::{ble_runner_task, get_ble_stack},
         wifi::{
@@ -24,11 +23,7 @@ pub fn init_wireless(
     spawner: Spawner,
     wifi: peripherals::WIFI<'static>,
     bt: peripherals::BT<'static>,
-    rtc: &'static RtcMutex, // ) -> (WifiController<'static>, Interfaces<'static>, BleController) {
 ) {
-    // let radio_init: &'static mut esp_radio::Controller<'static> =
-    // RADIO_INIT.init(esp_radio::init().expect("Failed to init Wifi/BLE controller"));
-
     let radio_init: &'static mut esp_radio::Controller<'static> = mk_static!(
         esp_radio::Controller<'static>,
         esp_radio::init().expect("Failed to init WiFi/BLE Controller")
@@ -53,7 +48,7 @@ pub fn init_wireless(
         gatt_server,
         ble_stack,
     ));
-    spawner.must_spawn(fetch_sntp(net_stack, rtc));
+    spawner.must_spawn(fetch_sntp(net_stack));
 
     let (app, conf) = init_web();
 

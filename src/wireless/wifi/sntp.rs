@@ -1,14 +1,11 @@
 use core::net::{IpAddr, SocketAddr};
 use defmt::{debug, info, warn};
 use embassy_net::udp::{PacketMetadata, UdpSocket};
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex, signal::Signal};
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_time::{Duration, WithTimeout};
 use sntpc::NtpContext;
 
-use crate::{
-    TIME_WATCH,
-    rtc_ds3231::{RtcDS3231, RtcMutex},
-};
+use crate::{TIME_WATCH, rtc_ds3231::SET_DATETIME_SIGNAL};
 
 pub static NTP_SYNC: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 const NTP_SERVER_ADDR: &str = "pool.ntp.org";
@@ -30,7 +27,7 @@ impl sntpc::NtpTimestampGenerator for SntpTimestamp {
 }
 
 #[embassy_executor::task]
-pub async fn fetch_sntp(net_stack: embassy_net::Stack<'static>, rtc: &'static RtcMutex) {
+pub async fn fetch_sntp(net_stack: embassy_net::Stack<'static>) {
     // Create UDP socket
     let mut udp_rx_meta = [PacketMetadata::EMPTY; 16];
     let mut udp_tx_meta = [PacketMetadata::EMPTY; 16];
@@ -48,16 +45,12 @@ pub async fn fetch_sntp(net_stack: embassy_net::Stack<'static>, rtc: &'static Rt
     udp_socket.bind(SNTP_PORT).unwrap();
 
     loop {
-        fetch_sntp_inner(net_stack, rtc, &udp_socket).await;
+        fetch_sntp_inner(net_stack, &udp_socket).await;
         NTP_SYNC.wait().await;
     }
 }
 
-async fn fetch_sntp_inner(
-    net_stack: embassy_net::Stack<'static>,
-    rtc: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>,
-    udp_socket: &UdpSocket<'_>,
-) {
+async fn fetch_sntp_inner(net_stack: embassy_net::Stack<'static>, udp_socket: &UdpSocket<'_>) {
     info!("[sntp] Waiting for Network Link...");
     match net_stack
         .wait_link_up()
@@ -151,7 +144,8 @@ async fn fetch_sntp_inner(
             let datetime = chrono::DateTime::from_timestamp_secs(time.seconds as i64)
                 .unwrap()
                 .naive_utc();
-            rtc.lock().await.set_datetime(&datetime).await.unwrap();
+
+            SET_DATETIME_SIGNAL.signal(datetime);
             info!("[rtc:update-timestamp] Succesfully Set RTC Datetime!");
         }
         Err(e) => {
