@@ -76,14 +76,13 @@ pub async fn connect_to_wifi(mut controller: WifiController<'static>) {
 
             let scan_config = esp_radio::wifi::ScanConfig::default().with_max(10);
 
-            #[allow(unused_assignments)]
-            let result = controller
+            let _result = controller
                 .scan_with_config_async(scan_config)
                 .await
                 .unwrap();
 
             #[cfg(debug_assertions)]
-            for ap in result {
+            for ap in _result {
                 debug!("{:?}", ap);
             }
         }

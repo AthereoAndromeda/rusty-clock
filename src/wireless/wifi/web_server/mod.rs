@@ -43,6 +43,7 @@ impl AppBuilder for App {
             .route("/time", get(get_time))
             .route("/epoch", get(get_epoch))
             .route("/alarm", get(get_alarm))
+            .route("/alarm/clear", get(get_clear_flags))
             .route("/alarm_submit", post(set_alarm_form))
             .route(
                 (
