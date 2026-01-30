@@ -34,7 +34,6 @@ use embassy_executor::Spawner;
 use esp_hal::interrupt::software::SoftwareInterruptControl;
 use esp_hal::{
     clock::CpuClock,
-    gpio::Output,
     i2c::{self, master::I2c},
     timer::timg::TimerGroup,
 };
@@ -42,8 +41,6 @@ use esp_hal::{
 // Found via `espflash`
 // pub const MAC_ADDR: &'static str = "10:20:ba:91:bb:b4";
 pub const MAC_ADDR: [u8; 6] = [0x10, 0x20, 0xba, 0x91, 0xbb, 0xb4];
-
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 
 use crate::{
     buzzer::init_buzzer,
@@ -71,8 +68,6 @@ pub const TZ_OFFSET: i8 = {
 
 // TEST: Within UTC Offset range
 static_assertions::const_assert!(TZ_OFFSET <= 12 && TZ_OFFSET >= -12);
-
-pub type BuzzerOutput = Mutex<CriticalSectionRawMutex, Output<'static>>;
 esp_bootloader_esp_idf::esp_app_desc!();
 
 /// Convert a `T` to a `&'static mut T`.
