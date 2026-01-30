@@ -1,10 +1,11 @@
 pub mod error;
 pub mod rtc_time;
+use embassy_executor::Spawner;
 pub use error::*;
 pub mod alarm;
 use alarm::*;
 
-use defmt::{debug, info};
+use defmt::debug;
 use ds3231::{
     Alarm1Config, Config, DS3231, InterruptControl, Oscillator, SquareWaveFrequency,
     TimeRepresentation,
@@ -14,17 +15,10 @@ use embassy_sync::{
     watch::Watch,
 };
 use embassy_time::Timer;
-use esp_hal::{
-    gpio::{Input, InputConfig, Pull},
-    i2c::master::I2c,
-    peripherals::{self},
-};
+use esp_hal::i2c::master::I2c;
 use static_cell::StaticCell;
 
-use crate::{
-    buzzer::{BUZZER_SIGNAL, BuzzerAction},
-    rtc_ds3231::rtc_time::RtcTime,
-};
+use crate::rtc_ds3231::rtc_time::RtcTime;
 
 type I2cAsync = I2c<'static, esp_hal::Async>;
 
@@ -74,7 +68,7 @@ pub type RtcMutex = Mutex<CriticalSectionRawMutex, RtcDS3231>;
 pub static RTC_DS3231: StaticCell<RtcMutex> = StaticCell::new();
 
 /// Initialize the DS3231 Instance and return RTC
-pub async fn init_rtc(i2c: I2cAsync) -> Result<&'static RtcMutex, RtcError> {
+pub async fn init_rtc(spawner: Spawner, i2c: I2cAsync) -> Result<&'static RtcMutex, RtcError> {
     let config = Config {
         time_representation: TimeRepresentation::TwentyFourHour,
         square_wave_frequency: SquareWaveFrequency::Hz1,
@@ -102,7 +96,23 @@ pub async fn init_rtc(i2c: I2cAsync) -> Result<&'static RtcMutex, RtcError> {
     *ALARM_CONFIG_RWLOCK.write().await = alarm1_config;
 
     let rtc_mutex = RTC_DS3231.init(Mutex::new(rtc));
+
+    spawner.must_spawn(listen_for_clear_flag(rtc_mutex));
+    spawner.must_spawn(run(rtc_mutex));
+
     Ok(rtc_mutex)
+}
+
+pub static CLEAR_FLAGS_SIGNAL: Signal<CriticalSectionRawMutex, ()> = Signal::new();
+
+#[embassy_executor::task]
+async fn listen_for_clear_flag(rtc: &'static RtcMutex) {
+    loop {
+        CLEAR_FLAGS_SIGNAL.wait().await;
+        let _ = reset_alarm_flags_mutex(rtc)
+            .await
+            .inspect_err(|_e| defmt::error!("Failed to reset flags"));
+    }
 }
 
 // TODO: Restructure such that it only gets time at init
@@ -111,7 +121,7 @@ pub async fn init_rtc(i2c: I2cAsync) -> Result<&'static RtcMutex, RtcError> {
 /// Runner for DS3231
 ///
 /// Keeps the time
-pub async fn run(rtc_mutex: &'static RtcMutex) {
+async fn run(rtc_mutex: &'static RtcMutex) {
     let sender = TIME_WATCH.sender();
 
     loop {
@@ -140,36 +150,5 @@ pub async fn run(rtc_mutex: &'static RtcMutex) {
         }
 
         Timer::after_secs(1).await;
-    }
-}
-
-// TODO: Move to GPIO mod
-#[embassy_executor::task]
-pub async fn listen_for_alarm(alarm_pin: peripherals::GPIO6<'static>) {
-    info!("Initializing Alarm Listener...");
-    let mut alarm_input = Input::new(alarm_pin, InputConfig::default().with_pull(Pull::Up));
-
-    // Beep 3 times
-    for _ in 0..3 {
-        Timer::after_millis(300).await;
-        BUZZER_SIGNAL.signal(BuzzerAction::Toggle);
-    }
-
-    BUZZER_SIGNAL.signal(BuzzerAction::Off);
-
-    loop {
-        info!("Waiting for alarm...");
-        alarm_input.wait_for_falling_edge().await;
-
-        info!("DS3231 Interrupt Received!");
-        BUZZER_SIGNAL.signal(BuzzerAction::On);
-
-        #[cfg(debug_assertions)]
-        {
-            // Stop it from bleeding my ears while devving
-            Timer::after_secs(5).await;
-            BUZZER_SIGNAL.signal(BuzzerAction::Off);
-            info!("Buzzer set low");
-        }
     }
 }

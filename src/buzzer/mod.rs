@@ -1,12 +1,13 @@
+mod listener;
 use core::sync::atomic::{AtomicBool, Ordering};
-
-use defmt::info;
+use embassy_executor::Spawner;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex, signal::Signal};
 use embassy_time::Timer;
 use esp_hal::{
-    gpio::{Input, InputConfig, Output, Pull},
+    gpio::Output,
     peripherals::{self},
 };
+use listener::*;
 
 use crate::{BuzzerOutput, mk_static};
 
@@ -29,9 +30,13 @@ pub static TIMER_SIGNAL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
 
 pub type Buzzer = Mutex<CriticalSectionRawMutex, Output<'static>>;
 
-pub fn init_buzzer(pin: peripherals::GPIO5<'static>) -> &'static Buzzer {
+pub async fn init_buzzer(
+    spawner: Spawner,
+    output_pin: peripherals::GPIO5<'static>,
+    button_pin: peripherals::GPIO7<'static>,
+) -> &'static Buzzer {
     let buzzer_output = Output::new(
-        pin,
+        output_pin,
         esp_hal::gpio::Level::High,
         esp_hal::gpio::OutputConfig::default()
             .with_drive_strength(esp_hal::gpio::DriveStrength::_5mA)
@@ -41,11 +46,23 @@ pub fn init_buzzer(pin: peripherals::GPIO5<'static>) -> &'static Buzzer {
     let buzz: &'static Mutex<CriticalSectionRawMutex, Output<'static>> =
         mk_static!(Mutex<CriticalSectionRawMutex, Output<'static>>, Mutex::new(buzzer_output));
 
+    spawner.must_spawn(run(buzz));
+    spawner.must_spawn(listen_for_button(button_pin));
+    spawner.must_spawn(listen_for_timer());
+
+    // Beep 3 times
+    for _ in 0..3 {
+        Timer::after_millis(300).await;
+        BUZZER_SIGNAL.signal(BuzzerAction::Toggle);
+    }
+
+    BUZZER_SIGNAL.signal(BuzzerAction::Off);
+
     buzz
 }
 
 #[embassy_executor::task]
-pub async fn run(output: &'static BuzzerOutput) {
+async fn run(output: &'static BuzzerOutput) {
     let mut buzzer_state = IS_BUZZER_ON.load(Ordering::SeqCst);
 
     loop {
@@ -66,36 +83,5 @@ pub async fn run(output: &'static BuzzerOutput) {
                 IS_BUZZER_ON.store(buzzer_state, Ordering::SeqCst);
             }
         }
-    }
-}
-
-#[embassy_executor::task]
-pub async fn listen_for_timer() {
-    info!("[buzzer:listen_for_timer] Listening for timer");
-
-    loop {
-        let secs = TIMER_SIGNAL.wait().await;
-
-        Timer::after_secs(secs as u64).await;
-        BUZZER_SIGNAL.signal(BuzzerAction::On);
-
-        // WARNING: Could potentially turn off the prematurely buzzer if
-        // an alarm goes off between the interval of waiting
-        Timer::after_secs(30).await;
-        BUZZER_SIGNAL.signal(BuzzerAction::Off);
-    }
-}
-
-#[embassy_executor::task]
-pub async fn listen_for_button(input_pin: peripherals::GPIO7<'static>) {
-    let mut input = Input::new(input_pin, InputConfig::default().with_pull(Pull::Up));
-
-    loop {
-        info!("Waiting for alarm button press");
-        input.wait_for_falling_edge().await;
-
-        info!("Alarm Button Pressed!");
-        BUZZER_SIGNAL.signal(BuzzerAction::Off);
-        Timer::after_millis(500).await;
     }
 }

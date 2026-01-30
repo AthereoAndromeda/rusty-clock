@@ -10,7 +10,7 @@ use serde::Deserialize;
 use crate::{
     TIME_WATCH, TZ_OFFSET,
     buzzer::{BUZZER_SIGNAL, BuzzerAction, IS_BUZZER_ON, TIMER_SIGNAL},
-    rtc_ds3231::{ALARM_CONFIG_RWLOCK, SET_ALARM, rtc_time::RtcTime},
+    rtc_ds3231::{ALARM_CONFIG_RWLOCK, CLEAR_FLAGS_SIGNAL, SET_ALARM, rtc_time::RtcTime},
     wireless::wifi::sntp::NTP_SYNC,
 };
 
@@ -175,4 +175,8 @@ pub(super) async fn toggle_buzzer_off() -> impl IntoResponse {
 
 pub(super) async fn get_sync() -> impl IntoResponse {
     NTP_SYNC.signal(());
+}
+
+pub(super) async fn get_clear_flags() -> impl IntoResponse {
+    CLEAR_FLAGS_SIGNAL.signal(());
 }

@@ -1,14 +1,17 @@
 use core::net::{IpAddr, SocketAddr};
 use defmt::{debug, info, warn};
-use embassy_executor::SendSpawner;
 use embassy_net::udp::{PacketMetadata, UdpSocket};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex, signal::Signal};
 use embassy_time::{Duration, WithTimeout};
 use sntpc::NtpContext;
 
-use crate::{NTP_SERVER_ADDR, TIME_WATCH, rtc_ds3231::RtcDS3231};
+use crate::{
+    TIME_WATCH,
+    rtc_ds3231::{RtcDS3231, RtcMutex},
+};
 
 pub static NTP_SYNC: Signal<CriticalSectionRawMutex, ()> = Signal::new();
+const NTP_SERVER_ADDR: &str = "pool.ntp.org";
 const SNTP_PORT: u16 = 123;
 
 #[derive(Copy, Clone, Default)]
@@ -27,10 +30,7 @@ impl sntpc::NtpTimestampGenerator for SntpTimestamp {
 }
 
 #[embassy_executor::task]
-pub async fn fetch_sntp(
-    net_stack: embassy_net::Stack<'static>,
-    rtc: &'static Mutex<CriticalSectionRawMutex, RtcDS3231>,
-) {
+pub async fn fetch_sntp(net_stack: embassy_net::Stack<'static>, rtc: &'static RtcMutex) {
     // Create UDP socket
     let mut udp_rx_meta = [PacketMetadata::EMPTY; 16];
     let mut udp_tx_meta = [PacketMetadata::EMPTY; 16];
@@ -98,9 +98,17 @@ async fn fetch_sntp_inner(
         .await;
 
     let ntp_addrs = match ntp_addrs_response {
-        Ok(addrs) => addrs.unwrap(),
+        Ok(addrs) => addrs,
         Err(_) => {
             warn!("[sntp] DNS Request Timeout!");
+            return;
+        }
+    };
+
+    let ntp_addrs = match ntp_addrs {
+        Ok(addr) => addr,
+        Err(e) => {
+            warn!("[sntp] No Addresses received: {}", e);
             return;
         }
     };

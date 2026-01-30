@@ -28,7 +28,7 @@ use defmt_rtt as _;
 use esp_backtrace as _;
 // use esp_println as _;
 
-use defmt::{error, info};
+use defmt::info;
 use embassy_executor::Spawner;
 #[cfg(target_arch = "riscv32")]
 use esp_hal::interrupt::software::SoftwareInterruptControl;
@@ -76,8 +76,6 @@ pub const TZ_OFFSET: i8 = {
 
 // TEST: Within UTC Offset range
 static_assertions::const_assert!(TZ_OFFSET <= 12 && TZ_OFFSET >= -12);
-
-pub const NTP_SERVER_ADDR: &str = "pool.ntp.org";
 
 pub type BuzzerOutput = Mutex<CriticalSectionRawMutex, Output<'static>>;
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -127,46 +125,13 @@ async fn main(spawner: Spawner) {
         .into_async();
 
     info!("Init RTC...");
-    let rtc = rtc_ds3231::init_rtc(i2c).await.unwrap();
+    let rtc = rtc_ds3231::init_rtc(spawner, i2c).await.unwrap();
 
     info!("Init Buzzer...");
-    let buzzer_out = init_buzzer(peripherals.GPIO5);
+    init_buzzer(spawner, peripherals.GPIO5, peripherals.GPIO7).await;
 
     info!("Initializing Wireless...");
-    let (wifi_controller, wifi_interface, ble_controller) =
-        init_wireless(peripherals.WIFI, peripherals.BT);
-
-    let (net_stack, net_runner) = get_net_stack(wifi_interface);
-    let (ble_stack, ble_host, gatt_server) = get_ble_stack(ble_controller);
-    info!("Initialized Wireless!");
-
-    info!("Running Embassy spawners");
-    spawner.must_spawn(ble_runner_task(ble_host.runner));
-    spawner.must_spawn(net_runner_task(net_runner));
-    spawner.must_spawn(connect_to_wifi(wifi_controller));
-
-    spawner.must_spawn(bt::run_peripheral(
-        ble_host.peripheral,
-        gatt_server,
-        ble_stack,
-    ));
-    spawner.must_spawn(fetch_sntp(net_stack, rtc));
-
-    spawner.must_spawn(rtc_ds3231::run(rtc));
-
-    spawner
-        .spawn(rtc_ds3231::listen_for_alarm(peripherals.GPIO6))
-        .unwrap_or_else(|_| error!("Failed to listen for alarm"));
-
-    spawner.must_spawn(buzzer::run(buzzer_out));
-    spawner.must_spawn(buzzer::listen_for_button(peripherals.GPIO7));
-    spawner.must_spawn(buzzer::listen_for_timer());
-
-    let (app, conf) = init_web();
-
-    for task_id in 0..WEB_TASK_POOL_SIZE {
-        spawner.must_spawn(web_task(task_id, net_stack, app, conf));
-    }
+    init_wireless(spawner, peripherals.WIFI, peripherals.BT, rtc);
 
     info!("All Systems Go!");
     info!("Running.... ");
