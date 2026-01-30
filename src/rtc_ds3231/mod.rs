@@ -100,7 +100,7 @@ pub async fn init_rtc(spawner: Spawner, i2c: I2cAsync) {
 
     rtc.set_alarm1(&alarm1_config)
         .await
-        .expect("[rtc] Failes to set alarm");
+        .expect("[rtc] Failed to set alarm");
     reset_alarm_flags(&mut rtc)
         .await
         .expect("[rtc] Failed to reset flags");
