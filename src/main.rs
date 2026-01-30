@@ -118,7 +118,13 @@ async fn main(spawner: Spawner) {
     init_rtc(spawner, i2c).await;
 
     info!("Init Buzzer...");
-    init_buzzer(spawner, peripherals.GPIO5, peripherals.GPIO7).await;
+    init_buzzer(
+        spawner,
+        peripherals.GPIO5,
+        peripherals.GPIO7,
+        peripherals.GPIO6,
+    )
+    .await;
 
     info!("Initializing Wireless...");
     init_wireless(spawner, peripherals.WIFI, peripherals.BT);

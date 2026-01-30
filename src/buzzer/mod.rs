@@ -1,4 +1,6 @@
 mod listener;
+use listener::*;
+
 use crate::mk_static;
 use core::sync::atomic::{AtomicBool, Ordering};
 use embassy_executor::Spawner;
@@ -8,7 +10,6 @@ use esp_hal::{
     gpio::Output,
     peripherals::{self},
 };
-use listener::*;
 
 pub enum BuzzerAction {
     On,
@@ -33,6 +34,7 @@ pub async fn init_buzzer(
     spawner: Spawner,
     output_pin: peripherals::GPIO5<'static>,
     button_pin: peripherals::GPIO7<'static>,
+    alarm_pin: peripherals::GPIO6<'static>,
 ) {
     let buzzer_output = Output::new(
         output_pin,
@@ -46,6 +48,7 @@ pub async fn init_buzzer(
         mk_static!(Mutex<CriticalSectionRawMutex, Output<'static>>, Mutex::new(buzzer_output));
 
     spawner.must_spawn(run(buzzer));
+    spawner.must_spawn(listen_for_alarm(alarm_pin));
     spawner.must_spawn(listen_for_button(button_pin));
     spawner.must_spawn(listen_for_timer());
 
