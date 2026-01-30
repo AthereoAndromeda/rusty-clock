@@ -42,7 +42,6 @@ pub fn init_wireless(
     spawner.must_spawn(ble_runner_task(ble_host.runner));
     spawner.must_spawn(net_runner_task(net_runner));
     spawner.must_spawn(connect_to_wifi(wifi_controller));
-
     spawner.must_spawn(bt::run_peripheral(
         ble_host.peripheral,
         gatt_server,
@@ -51,9 +50,7 @@ pub fn init_wireless(
     spawner.must_spawn(fetch_sntp(net_stack));
 
     let (app, conf) = init_web();
-
     for task_id in 0..WEB_TASK_POOL_SIZE {
         spawner.must_spawn(web_task(task_id, net_stack, app, conf));
     }
-    // (wifi_controller, interfaces, ble_controller)
 }

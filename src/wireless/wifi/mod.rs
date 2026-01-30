@@ -13,7 +13,7 @@ use esp_radio::wifi::{
 
 use crate::{PASSWORD, SSID, mk_static};
 
-pub fn get_net_stack(
+pub(super) fn get_net_stack(
     wifi_interface: esp_radio::wifi::Interfaces<'_>,
 ) -> (
     embassy_net::Stack<'static>,
@@ -40,13 +40,13 @@ pub fn get_net_stack(
 }
 
 #[embassy_executor::task]
-pub async fn net_runner_task(mut runner: embassy_net::Runner<'static, WifiDevice<'static>>) {
+pub(super) async fn net_runner_task(mut runner: embassy_net::Runner<'static, WifiDevice<'static>>) {
     runner.run().await
 }
 
 #[embassy_executor::task]
 /// Connect to Wi-Fi
-pub async fn connect_to_wifi(mut controller: WifiController<'static>) {
+pub(super) async fn connect_to_wifi(mut controller: WifiController<'static>) {
     debug!("start connection task");
     debug!("Device capabilities: {:?}", controller.capabilities());
 

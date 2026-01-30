@@ -37,13 +37,13 @@ pub type BleStack = trouble_host::Stack<
 ///
 /// # Warning
 /// Must be ran in the background for BLE to work!
-pub async fn ble_runner_task(
+pub(super) async fn ble_runner_task(
     mut runner: trouble_host::prelude::Runner<'static, BleController, DefaultPacketPool>,
 ) {
     runner.run().await.unwrap();
 }
 
-pub fn get_ble_stack(
+pub(super) fn get_ble_stack(
     ble_controller: BleController,
 ) -> (
     &'static BleStack,
