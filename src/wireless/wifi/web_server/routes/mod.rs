@@ -1,17 +1,12 @@
-use chrono::FixedOffset;
-use ds3231::Alarm1Config;
+pub(super) mod alarm;
+pub(super) mod buzzer;
+pub(super) mod time;
+
 use embassy_time::Timer;
-use picoserve::{
-    extract::{Form, Query},
-    response::{DebugValue, IntoResponse},
-};
-use serde::Deserialize;
+use picoserve::response::IntoResponse;
 
 use crate::{
-    TIME_WATCH, TZ_OFFSET,
-    buzzer::{BUZZER_SIGNAL, BuzzerAction, IS_BUZZER_ON, TIMER_SIGNAL},
-    rtc_ds3231::{ALARM_CONFIG_RWLOCK, CLEAR_FLAGS_SIGNAL, SET_ALARM, rtc_time::RtcTime},
-    wireless::wifi::sntp::NTP_SYNC,
+    TIME_WATCH, buzzer::TIMER_SIGNAL, rtc_ds3231::rtc_time::RtcTime, wireless::wifi::sntp::NTP_SYNC,
 };
 
 pub struct TimeEvent;
@@ -72,111 +67,10 @@ Paths:
 "#
 }
 
-pub(super) async fn get_epoch() -> impl IntoResponse {
-    let rtc_time = TIME_WATCH.receiver().expect("Maximum reached").get().await;
-    let epoch = rtc_time.and_utc().timestamp();
-
-    DebugValue(epoch)
-}
-
-pub(super) async fn get_time(Query(query): Query<AlarmQueryParams>) -> impl IntoResponse {
-    let is_utc = query.utc.is_some_and(|p| p);
-    let time = TIME_WATCH.receiver().expect("Maximum reached").get().await;
-
-    let res = if is_utc {
-        time
-    } else {
-        let offset = FixedOffset::east_opt((TZ_OFFSET as i32) * 3600).unwrap();
-        let a = time.and_utc().with_timezone(&offset).naive_local();
-        a.into()
-    };
-
-    DebugValue(res.to_human_local())
-}
-
-#[derive(Debug, Deserialize)]
-pub(super) struct AlarmQueryParams {
-    utc: Option<bool>,
-}
-
-pub(super) async fn get_alarm() -> impl IntoResponse {
-    let response = ALARM_CONFIG_RWLOCK.read().await;
-    DebugValue(response)
-}
-
-async fn set_alarm_inner(hour: u8, min: u8, sec: u8, is_utc: bool) {
-    let base_time = jiff::civil::time(hour as i8, min as i8, sec as i8, 0);
-
-    let time = if is_utc {
-        base_time
-    } else {
-        base_time.wrapping_sub(jiff::Span::new().hours(TZ_OFFSET))
-    };
-
-    #[cfg(debug_assertions)]
-    defmt::debug!("{} {} {}", time.hour(), time.minute(), time.second());
-
-    let conf = Alarm1Config::AtTime {
-        hours: time.hour() as u8,
-        minutes: time.minute() as u8,
-        seconds: time.second() as u8,
-        is_pm: None,
-    };
-
-    SET_ALARM.signal(conf);
-}
-
-pub(super) async fn set_alarm(
-    (hour, min, sec): (u8, u8, u8),
-    Query(query): Query<AlarmQueryParams>,
-) -> impl IntoResponse {
-    set_alarm_inner(hour, min, sec, query.utc.is_some_and(|x| x)).await;
-    "Alarm Set!"
-}
-
-#[derive(Debug, Deserialize)]
-pub(super) struct AlarmForm {
-    pub hour: u8,
-    pub min: u8,
-    pub sec: u8,
-    pub is_utc: heapless::String<3>,
-}
-
-pub(super) async fn set_alarm_form(Form(form): Form<AlarmForm>) -> impl IntoResponse {
-    defmt::info!("{}", defmt::Debug2Format(&form));
-    let AlarmForm {
-        hour,
-        min,
-        sec,
-        is_utc,
-    } = form;
-
-    set_alarm_inner(hour, min, sec, is_utc == "on").await
-}
-
 pub(super) async fn set_timer(sec: i32) -> impl IntoResponse {
     TIMER_SIGNAL.signal(sec);
 }
 
-pub(super) async fn get_buzzer() -> impl IntoResponse {
-    let state = IS_BUZZER_ON.load(core::sync::atomic::Ordering::SeqCst);
-    DebugValue(state)
-}
-
-pub(super) async fn toggle_buzzer() -> impl IntoResponse {
-    BUZZER_SIGNAL.signal(BuzzerAction::Toggle);
-}
-pub(super) async fn toggle_buzzer_on() -> impl IntoResponse {
-    BUZZER_SIGNAL.signal(BuzzerAction::On);
-}
-pub(super) async fn toggle_buzzer_off() -> impl IntoResponse {
-    BUZZER_SIGNAL.signal(BuzzerAction::Off);
-}
-
 pub(super) async fn get_sync() -> impl IntoResponse {
     NTP_SYNC.signal(());
-}
-
-pub(super) async fn get_clear_flags() -> impl IntoResponse {
-    CLEAR_FLAGS_SIGNAL.signal(());
 }

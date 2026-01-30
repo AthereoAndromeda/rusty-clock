@@ -6,12 +6,8 @@ use embassy_time::Duration;
 use picoserve::{
     AppBuilder, AppRouter, Router, make_static,
     response::File,
-    routing::{get, get_service, parse_path_segment, post},
+    routing::{get, get_service, parse_path_segment},
 };
-
-#[cfg(debug_assertions)]
-const HTML_STR: &str = include_str!("./../../../../resources/index.html");
-const HTML_MIN_BR: &[u8] = include_bytes!("./../../../../resources/index.min.html.br");
 
 pub const WEB_TASK_POOL_SIZE: usize = 3;
 
@@ -22,42 +18,16 @@ impl AppBuilder for App {
     type PathRouter = impl picoserve::routing::PathRouter;
 
     fn build_app(self) -> picoserve::Router<Self::PathRouter> {
+        // WARN: HTMX CDN is used instead of being bundled. This means if
+        // client is not connected to the internet, webpage will not work
+        //
+        // WARN: Firefox does not support brotli on HTTP by default.
+        // Go to about:config and add br to `network.http.accept-encoding`
+        //
+        // TODO?: Bundle HTMX with page? (has to be compressed beforehand)
+        // to keep binary size small
         let router = Router::new()
-            // WARN: HTMX CDN is used instead of being bundled. This means if
-            // client is not connected to the internet, webpage will not work
-            //
-            // WARN: Firefox does not support brotli on HTTP by default.
-            // Go to about:config and add br to `network.http.accept-encoding`
-            //
-            // TODO?: Bundle HTMX with page? (has to be compressed beforehand)
-            // to keep binary size small
-            .route(
-                "/",
-                get_service(File::with_content_type_and_headers(
-                    "text/html",
-                    HTML_MIN_BR,
-                    &[("content-encoding", "br")],
-                )),
-            )
             .route("/help", get(get_help))
-            .route("/time", get(get_time))
-            .route("/epoch", get(get_epoch))
-            .route("/alarm", get(get_alarm))
-            .route("/alarm/clear", get(get_clear_flags))
-            .route("/alarm_submit", post(set_alarm_form))
-            .route(
-                (
-                    "/alarm",
-                    parse_path_segment::<u8>(),
-                    parse_path_segment::<u8>(),
-                    parse_path_segment::<u8>(),
-                ),
-                get(set_alarm),
-            )
-            .route("/buzzer", get(get_buzzer))
-            .route("/buzzer/toggle", get(toggle_buzzer))
-            .route("/buzzer/on", get(toggle_buzzer_on))
-            .route("/buzzer/off", get(toggle_buzzer_off))
             .route(("/timer", parse_path_segment::<i32>()), get(set_timer))
             .route("/sync", get(get_sync))
             .route(
@@ -65,10 +35,29 @@ impl AppBuilder for App {
                 get(async || picoserve::response::EventStream(TimeEvent)),
             );
 
-        #[cfg(debug_assertions)]
-        let router = router.route("/", get_service(File::html(HTML_STR)));
+        let router = routes::alarm::add_routes(router);
+        let router = routes::buzzer::add_routes(router);
+        let router = routes::time::add_routes(router);
 
-        router
+        // Use unminified when debug, minified when release build
+        if cfg!(debug_assertions) {
+            router.route(
+                "/",
+                get_service(File::with_content_type(
+                    "text/html",
+                    include_bytes!("./../../../../resources/index.html"),
+                )),
+            )
+        } else {
+            router.route(
+                "/",
+                get_service(File::with_content_type_and_headers(
+                    "text/html",
+                    include_bytes!("./../../../../resources/index.min.html.br"),
+                    &[("content-encoding", "br")],
+                )),
+            )
+        }
     }
 }
 
