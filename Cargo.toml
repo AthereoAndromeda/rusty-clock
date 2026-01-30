@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["rusty-clock-macros"]
+# members = ["rusty-clock-macros"]
 
 [package]
 edition      = "2024"
@@ -13,7 +13,7 @@ name = "rusty-clock"
 path = "./src/main.rs"
 
 [dependencies]
-rusty-clock-macros = { path = "./rusty-clock-macros" }
+# rusty-clock-macros = { path = "./rusty-clock-macros" }
 
 esp-hal = { version = "=1.0.0-rc.1", features = [
   "defmt",
