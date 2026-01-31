@@ -9,6 +9,7 @@ This project is still a work in progress
 - Connects to (S)NTP to correct RTC time
 - [WIP] Remote control via Bluetooth
 - [WIP] Remote control via Web Server
+- [WIP] Volume control via PWM
 - [Planned] 16x2 LCD Screen
 - [Planned] Deep Sleep
 

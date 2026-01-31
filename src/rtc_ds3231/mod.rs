@@ -50,13 +50,18 @@ const ENV_TIME: Alarm1Config = {
     }
 };
 
+/// Contains the time from RTC module
 pub static TIME_WATCH: Watch<CriticalSectionRawMutex, RtcTime, 3> = Watch::new();
+/// Sets the RTC module alarm
 pub static SET_ALARM: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
+/// Clears the alarm flags for RTC
 pub static CLEAR_FLAGS_SIGNAL: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 
+/// Globally accessible Alarm1Config
 pub static ALARM_CONFIG_RWLOCK: RwLock<CriticalSectionRawMutex, Alarm1Config> =
     RwLock::new(ENV_TIME);
 
+/// Sets datetime for RTC
 pub static SET_DATETIME_SIGNAL: Signal<CriticalSectionRawMutex, chrono::NaiveDateTime> =
     Signal::new();
 
@@ -73,7 +78,7 @@ pub(crate) const RTC_I2C_ADDR: u8 = {
     unsafe { u8::from_str_radix(addr, 16).unwrap_unchecked() }
 };
 
-/// Initialize the DS3231 Instance and return RTC
+/// Initialize the DS3231 Instance and spawn tasks
 pub async fn init_rtc(spawner: Spawner, i2c: I2cAsync) {
     let config = Config {
         time_representation: TimeRepresentation::TwentyFourHour,

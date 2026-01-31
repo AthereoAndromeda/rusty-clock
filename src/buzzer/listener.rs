@@ -24,6 +24,7 @@ pub(super) async fn listen_for_timer() {
 }
 
 #[embassy_executor::task]
+/// Listens for a button press which sets buzzer low
 pub(super) async fn listen_for_button(input_pin: peripherals::GPIO7<'static>) {
     let mut input = Input::new(input_pin, InputConfig::default().with_pull(Pull::Up));
 
@@ -38,6 +39,7 @@ pub(super) async fn listen_for_button(input_pin: peripherals::GPIO7<'static>) {
 }
 
 #[embassy_executor::task]
+/// Listen for the alarm interrupt from DS3231 RTC
 pub(super) async fn listen_for_alarm(alarm_pin: peripherals::GPIO6<'static>) {
     info!("Initializing Alarm Listener...");
     let mut alarm_input = Input::new(alarm_pin, InputConfig::default().with_pull(Pull::Up));
