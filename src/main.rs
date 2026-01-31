@@ -21,10 +21,12 @@
 extern crate alloc;
 
 mod buzzer;
+mod i2c;
 mod rtc_ds3231;
 mod wireless;
 
 use defmt_rtt as _;
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use esp_backtrace as _;
 // use esp_println as _;
 
@@ -32,11 +34,7 @@ use defmt::info;
 use embassy_executor::Spawner;
 #[cfg(target_arch = "riscv32")]
 use esp_hal::interrupt::software::SoftwareInterruptControl;
-use esp_hal::{
-    clock::CpuClock,
-    i2c::{self, master::I2c},
-    timer::timg::TimerGroup,
-};
+use esp_hal::{clock::CpuClock, i2c::master::I2c, timer::timg::TimerGroup};
 
 // Found via `espflash`
 // pub const MAC_ADDR: &'static str = "10:20:ba:91:bb:b4";
@@ -108,14 +106,18 @@ async fn main(spawner: Spawner) {
     info!("ESP-RTOS Started!");
 
     info!("Initializing I2C...");
-    let i2c = I2c::new(peripherals.I2C0, i2c::master::Config::default())
-        .expect("I2C Failed to Initialize!")
-        .with_sda(peripherals.GPIO2) // Might change later since these are for UART
-        .with_scl(peripherals.GPIO3)
-        .into_async();
+    let i2c =
+        esp_hal::i2c::master::I2c::new(peripherals.I2C0, esp_hal::i2c::master::Config::default())
+            .expect("I2C Failed to Initialize!")
+            .with_sda(peripherals.GPIO2) // Might change later since these are for UART
+            .with_scl(peripherals.GPIO3)
+            .into_async();
+
+    let i2c_mutex: &'static Mutex<CriticalSectionRawMutex, I2c<'static, esp_hal::Async>> = mk_static!(Mutex<CriticalSectionRawMutex, I2c<'static, esp_hal::Async>>; Mutex::<CriticalSectionRawMutex, _>::new(i2c));
+    let i2c_rtc = embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice::new(i2c_mutex);
 
     info!("Init RTC...");
-    init_rtc(spawner, i2c).await;
+    init_rtc(spawner, i2c_rtc).await;
 
     info!("Init Buzzer...");
     init_buzzer(

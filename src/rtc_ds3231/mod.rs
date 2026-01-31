@@ -18,9 +18,8 @@ use embassy_sync::{
     watch::Watch,
 };
 use embassy_time::Timer;
-use esp_hal::i2c::master::I2c;
 
-use crate::{mk_static, rtc_ds3231::rtc_time::RtcTime};
+use crate::{i2c::I2cBus, mk_static, rtc_ds3231::rtc_time::RtcTime};
 
 /// The alarm time set through env
 const ENV_TIME: Alarm1Config = {
@@ -69,8 +68,7 @@ pub static SET_DATETIME_SIGNAL: Signal<CriticalSectionRawMutex, chrono::NaiveDat
 // /// This is used instead of pinging the RTC module every second
 // pub static LOCAL_TIMESTAMP: AtomicU64 = AtomicU64::new(0);
 
-type I2cAsync = I2c<'static, esp_hal::Async>;
-pub(crate) type RtcDS3231 = DS3231<I2cAsync>;
+pub(crate) type RtcDS3231 = DS3231<I2cBus>;
 pub(crate) type RtcMutex = Mutex<CriticalSectionRawMutex, RtcDS3231>;
 
 pub(crate) const RTC_I2C_ADDR: u8 = {
@@ -79,7 +77,7 @@ pub(crate) const RTC_I2C_ADDR: u8 = {
 };
 
 /// Initialize the DS3231 Instance and spawn tasks
-pub async fn init_rtc(spawner: Spawner, i2c: I2cAsync) {
+pub async fn init_rtc(spawner: Spawner, i2c: I2cBus) {
     let config = Config {
         time_representation: TimeRepresentation::TwentyFourHour,
         square_wave_frequency: SquareWaveFrequency::Hz1,
