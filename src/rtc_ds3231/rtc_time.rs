@@ -25,14 +25,15 @@ const MONTH_BY_INDEX: [&str; 12] = [
 
 impl RtcTime {
     fn human_inner(dt: impl Datelike + Timelike) -> heapless::String<50> {
+        // TODO: Shorten Months and add Day of the week
         heapless::format!(
-            "{} {} {:02} | {:02}:{:02}:{:02}",
-            dt.year(),
-            MONTH_BY_INDEX[dt.month() as usize],
-            dt.day(),
+            "{:02}:{:02}:{:02} | {:02} {} {}",
             dt.hour(),
             dt.minute(),
             dt.second(),
+            dt.day(),
+            MONTH_BY_INDEX[dt.month() as usize],
+            dt.year(),
         )
         .unwrap()
     }
