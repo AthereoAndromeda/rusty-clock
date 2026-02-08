@@ -6,7 +6,7 @@ use embassy_time::Duration;
 use picoserve::{
     AppBuilder, AppRouter, Router, make_static,
     response::File,
-    routing::{get, get_service, parse_path_segment},
+    routing::{get, get_service},
 };
 
 pub const WEB_TASK_POOL_SIZE: usize = 3;
@@ -28,7 +28,7 @@ impl AppBuilder for App {
         // to keep binary size small
         let router = Router::new()
             .route("/help", get(get_help))
-            .route(("/timer", parse_path_segment::<i32>()), get(set_timer))
+            // .route(("/timer", parse_path_segment::<i32>()), get(set_timer))
             .route("/sync", get(get_sync))
             .route(
                 "/events",
@@ -38,6 +38,7 @@ impl AppBuilder for App {
         let router = routes::alarm::add_routes(router);
         let router = routes::buzzer::add_routes(router);
         let router = routes::time::add_routes(router);
+        let router = routes::timer::add_routes(router);
 
         // Use unminified when debug, minified when release build
         if cfg!(debug_assertions) {

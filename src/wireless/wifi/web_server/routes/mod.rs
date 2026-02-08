@@ -1,13 +1,18 @@
 pub(super) mod alarm;
 pub(super) mod buzzer;
 pub(super) mod time;
+pub(super) mod timer;
 
 use embassy_time::Timer;
-use picoserve::response::IntoResponse;
+use picoserve::{Router, response::IntoResponse, routing::PathRouter};
 
 use crate::{TIME_WATCH, rtc_ds3231::rtc_time::RtcTime, wireless::wifi::sntp::NTP_SYNC};
 
 pub struct TimeEvent;
+
+pub trait AddRoute {
+    fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter>;
+}
 
 impl picoserve::response::sse::EventSource for TimeEvent {
     async fn write_events<W: picoserve::io::Write>(
