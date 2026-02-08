@@ -27,8 +27,11 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     <!-- HTMX PLugins after core -->
-    <script defer src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.4"></script>
+    <!-- <script defer src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script> -->
+    <!-- <script defer src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.4"></script> -->
+    
+    <!-- Using HTMX 4 cuz we live on the edge -->
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@4.0.0-alpha6/dist/htmx.min.js" integrity="sha384-/5n21KGM472oBhvzUrvju8FRDq/4WNMS3TGw5RWFkZR/kq+sCevqNXFcakqRtaHu" crossorigin="anonymous"></script>
   </head>
   <body>
     <center>
@@ -37,13 +40,19 @@
       <hr/>
     </center>
 
-    <div id="time-output" hx-ext="sse" sse-connect="/events" sse-swap="time">
+    <!-- <div id="time-output" hx-ext="sse" sse-connect="/events" sse-swap="time"> -->
+        <!-- Contents of this box will be updated in real time -->
+    <!-- </div> -->
+    <div id="time-output" hx-get="/time/stream" hx-config='{"sse":{"reconnect":true}}' hx-trigger="load">
         Contents of this box will be updated in real time
     </div>
 
-    <div x-data="{show: true}" x-transition x-collapse>
+    <div x-data="{show: true}">
       <button @click="show = !show">Toggle Help</button>
-      <pre x-show="show" id="help-msg" hx-get="/help" hx-trigger="load"></pre>
+
+      <div x-show="show" x-collapse>
+        <pre id="help-msg" hx-get="/help" hx-trigger="load"></pre>
+      </div>
     </div>
   
     <button hx-get="/sync" hx-target="#time-output">
@@ -62,8 +71,15 @@
       Clear Alarm Flags
     </button>
 
+    <div x-data="{timer: null, timeout:null}">
+      <form hx-post="/timer" hx-target="#response-div">
+        <input type="number" name="timer" placeholder="Time in Seconds" x-model="timer">
+        <input type="number" name="timeout" placeholder="Timeout in Seconds" x-model="timeout">
+        <button type="submit">Submit</button>
+      </form>
+    </div>
 
-    <div id="alarm-counter" x-data="{ hour: 0, min: 0, sec: 0 }">      
+    <div id="alarm-counter" x-data="{ hour: null, min: null, sec: null }">      
       <form hx-post="/alarm_submit" hx-target="#response-div">
         <input type="number" name="hour" placeholder="Hour"  x-model="hour">
         <input type="number" name="min" placeholder="Minute" x-model="min">
@@ -89,6 +105,7 @@
     
     
     <p>Alarm: <span id="alarm-output"></span> </p>
+    <p hx-get="/buzzer"  hx-trigger="every 3s">Buzz</p>
   </body>
 </html>
  

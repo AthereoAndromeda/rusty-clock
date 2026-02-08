@@ -12,16 +12,6 @@ use crate::{
     rtc_ds3231::{ALARM_CONFIG_RWLOCK, CLEAR_FLAGS_SIGNAL, SET_ALARM},
 };
 
-use super::AddRoute;
-
-pub(super) struct Route;
-
-impl AddRoute for Route {
-    fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
-        add_routes(router)
-    }
-}
-
 pub fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
     router
         .route("/alarm", get(get_alarm))

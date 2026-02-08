@@ -26,14 +26,7 @@ impl AppBuilder for App {
         //
         // TODO?: Bundle HTMX with page? (has to be compressed beforehand)
         // to keep binary size small
-        let router = Router::new()
-            .route("/help", get(get_help))
-            // .route(("/timer", parse_path_segment::<i32>()), get(set_timer))
-            .route("/sync", get(get_sync))
-            .route(
-                "/events",
-                get(async || picoserve::response::EventStream(TimeEvent)),
-            );
+        let router = Router::new().route("/help", get(get_help));
 
         let router = routes::alarm::add_routes(router);
         let router = routes::buzzer::add_routes(router);

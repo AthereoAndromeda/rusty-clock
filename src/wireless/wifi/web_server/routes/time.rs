@@ -1,4 +1,5 @@
 use chrono::FixedOffset;
+use embassy_time::Timer;
 use picoserve::{
     Router,
     extract::Query,
@@ -6,12 +7,46 @@ use picoserve::{
     routing::{PathRouter, get},
 };
 
-use crate::{TZ_OFFSET, rtc_ds3231::TIME_WATCH};
+use crate::{TZ_OFFSET, rtc_ds3231::TIME_WATCH, wireless::wifi::sntp::NTP_SYNC};
+
+struct TimeEvent;
+
+impl picoserve::response::sse::EventSource for TimeEvent {
+    async fn write_events<W: picoserve::io::Write>(
+        self,
+        mut writer: picoserve::response::sse::EventWriter<'_, W>,
+    ) -> Result<(), W::Error> {
+        let mut anon_recv = TIME_WATCH.anon_receiver();
+
+        loop {
+            #[cfg(debug_assertions)]
+            defmt::debug!("[sse:time] Writing Event...");
+
+            let time = anon_recv.try_get();
+            if time.is_none() {
+                writer.write_keepalive().await?;
+                Timer::after_secs(1).await;
+                continue;
+            }
+
+            writer.write_event("", time.unwrap()).await?;
+
+            #[cfg(debug_assertions)]
+            defmt::debug!("[sse:time] Event Written!");
+            Timer::after_secs(1).await;
+        }
+    }
+}
 
 pub fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
     router
         .route("/time", get(get_time))
         .route("/epoch", get(get_epoch))
+        .route("/sync", get(get_sync))
+        .route(
+            "/time/stream",
+            get(async || picoserve::response::EventStream(TimeEvent)),
+        )
 }
 
 async fn get_epoch() -> impl IntoResponse {
@@ -34,4 +69,8 @@ async fn get_time(Query(query): Query<super::alarm::AlarmQueryParams>) -> impl I
     };
 
     DebugValue(res.to_human_local())
+}
+
+async fn get_sync() -> impl IntoResponse {
+    NTP_SYNC.signal(());
 }

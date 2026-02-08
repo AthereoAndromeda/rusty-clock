@@ -122,3 +122,10 @@ impl defmt::Format for RtcTime {
         defmt::write!(fmt, "{}", self.to_iso8601_local());
     }
 }
+
+impl picoserve::response::sse::EventData for RtcTime {
+    async fn write_to<W: picoserve::io::Write>(self, writer: &mut W) -> Result<(), W::Error> {
+        writer.write_all(self.to_human_local().as_bytes()).await?;
+        Ok(())
+    }
+}

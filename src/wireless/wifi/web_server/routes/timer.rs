@@ -4,19 +4,8 @@ use picoserve::{
     routing::{get, parse_path_segment, post},
 };
 
-use crate::{buzzer::TIMER_SIGNAL, wireless::wifi::web_server::routes::AddRoute};
+use crate::buzzer::TIMER_SIGNAL;
 
-pub struct Route;
-
-impl AddRoute for Route {
-    fn add_routes(
-        router: picoserve::Router<impl picoserve::routing::PathRouter>,
-    ) -> picoserve::Router<impl picoserve::routing::PathRouter> {
-        router
-            .route("/timer", post(timer_form))
-            .route(("/timer", parse_path_segment::<u32>()), get(set_timer))
-    }
-}
 pub fn add_routes(
     router: picoserve::Router<impl picoserve::routing::PathRouter>,
 ) -> picoserve::Router<impl picoserve::routing::PathRouter> {
