@@ -41,6 +41,7 @@
               pkg-config
               espflash
               probe-rs-tools
+              cargo-expand
             ]);
         };
       }
