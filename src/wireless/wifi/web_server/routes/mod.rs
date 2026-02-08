@@ -5,9 +5,7 @@ pub(super) mod time;
 use embassy_time::Timer;
 use picoserve::response::IntoResponse;
 
-use crate::{
-    TIME_WATCH, buzzer::TIMER_SIGNAL, rtc_ds3231::rtc_time::RtcTime, wireless::wifi::sntp::NTP_SYNC,
-};
+use crate::{TIME_WATCH, rtc_ds3231::rtc_time::RtcTime, wireless::wifi::sntp::NTP_SYNC};
 
 pub struct TimeEvent;
 
@@ -65,10 +63,6 @@ Paths:
 
 /timer                    - Set a timer to buzz
 "#
-}
-
-pub(super) async fn set_timer(sec: i32) -> impl IntoResponse {
-    TIMER_SIGNAL.signal(sec);
 }
 
 pub(super) async fn get_sync() -> impl IntoResponse {

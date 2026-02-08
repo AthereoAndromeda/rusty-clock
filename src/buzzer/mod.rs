@@ -24,7 +24,7 @@ impl From<bool> for BuzzerAction {
 }
 
 pub static BUZZER_SIGNAL: Signal<CriticalSectionRawMutex, BuzzerAction> = Signal::new();
-pub static TIMER_SIGNAL: Signal<CriticalSectionRawMutex, i32> = Signal::new();
+pub static TIMER_SIGNAL: Signal<CriticalSectionRawMutex, u32> = Signal::new();
 pub static IS_BUZZER_ON: AtomicBool = AtomicBool::new(false);
 
 pub type Buzzer = Mutex<CriticalSectionRawMutex, Output<'static>>;
