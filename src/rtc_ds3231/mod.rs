@@ -18,6 +18,7 @@ use embassy_sync::{
     watch::Watch,
 };
 use embassy_time::Timer;
+use portable_atomic::AtomicI64;
 
 use crate::{i2c::I2cBus, mk_static, rtc_ds3231::rtc_time::RtcTime};
 
@@ -64,9 +65,11 @@ pub static ALARM_CONFIG_RWLOCK: RwLock<CriticalSectionRawMutex, Alarm1Config> =
 pub static SET_DATETIME_SIGNAL: Signal<CriticalSectionRawMutex, chrono::NaiveDateTime> =
     Signal::new();
 
-// /// This is the timestamp held in-memory.
-// /// This is used instead of pinging the RTC module every second
-// pub static LOCAL_TIMESTAMP: AtomicU64 = AtomicU64::new(0);
+/// This is the timestamp held in-memory.
+/// This is used instead of pinging the RTC module every second
+///
+/// NOTE: `portable_atomic` crate is used since native does not support 64 bit atomics
+pub static LOCAL_TIMESTAMP: AtomicI64 = AtomicI64::new(0);
 
 pub(crate) type RtcDS3231 = DS3231<I2cBus>;
 pub(crate) type RtcMutex = Mutex<CriticalSectionRawMutex, RtcDS3231>;
@@ -133,6 +136,10 @@ async fn run(rtc_mutex: &'static RtcMutex) {
     loop {
         let datetime = rtc_mutex.lock().await.datetime().await.unwrap();
         sender.send(datetime.into());
+        LOCAL_TIMESTAMP.store(
+            datetime.and_utc().timestamp(),
+            core::sync::atomic::Ordering::SeqCst,
+        );
 
         #[cfg(debug_assertions)]
         {
@@ -140,6 +147,10 @@ async fn run(rtc_mutex: &'static RtcMutex) {
                 use crate::rtc_ds3231::rtc_time::RtcTime;
                 let ts: RtcTime = datetime.into();
                 defmt::debug!("{}", ts);
+                defmt::debug!(
+                    "{}",
+                    LOCAL_TIMESTAMP.load(core::sync::atomic::Ordering::SeqCst)
+                );
                 count = 0;
             }
 
