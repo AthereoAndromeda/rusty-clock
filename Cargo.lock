@@ -1565,6 +1565,9 @@ name = "portable-atomic"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f89776e4d69bb58bc6993e99ffa1d11f228b839984854c7daeb5d37f87cbe950"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "portable-atomic-util"
@@ -1788,6 +1791,7 @@ dependencies = [
  "html-minifier",
  "jiff",
  "picoserve",
+ "portable-atomic",
  "serde",
  "smoltcp",
  "sntpc",

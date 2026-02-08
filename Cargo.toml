@@ -100,6 +100,7 @@ defmt-rtt = "1.1.0"
 static_assertions = { version = "1.1.0", features = ["nightly"] }
 embedded-hal-async = "1.0.0"
 embassy-embedded-hal = { version = "0.5.0", features = ["defmt"] }
+portable-atomic = { version = "1.13.0", default-features = false, features = ["serde",  "unsafe-assume-single-core"] }
 
 [profile.dev]
 # Rust debug is too slow.
