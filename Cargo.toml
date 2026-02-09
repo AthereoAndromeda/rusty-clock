@@ -21,6 +21,10 @@ esp-hal = { version = "=1.0.0-rc.1", features = [
   "unstable",
 ] }
 
+# Bumping these two to 0.(1)6.1 breaks esp-hal
+esp-println = {version = "=0.16.0", features = ["esp32c3"]}
+esp-config = "=0.6.0"
+
 esp-rtos = { version = "0.1.1", features = [
   "defmt",
   "embassy",
