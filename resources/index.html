@@ -74,12 +74,13 @@
     <div x-data="{timer: null, timeout:null}">
       <form hx-post="/timer" hx-target="#response-div">
         <input type="number" name="timer" placeholder="Time in Seconds" x-model="timer">
-        <input type="number" name="timeout" placeholder="Timeout in Seconds" x-model="timeout">
+        <!-- <input type="number" name="timeout" placeholder="Timeout in Seconds" x-model="timeout"> -->
         <button type="submit">Submit</button>
       </form>
     </div>
 
-    <div id="alarm-counter" x-data="{ hour: null, min: null, sec: null }">      
+    <div id="alarm-counter" x-data="{ hour: null, min: null, sec: null }">
+      <h2>Set Alarm</h2>
       <form hx-post="/alarm_submit" hx-target="#response-div">
         <input type="number" name="hour" placeholder="Hour"  x-model="hour">
         <input type="number" name="min" placeholder="Minute" x-model="min">
@@ -105,7 +106,8 @@
     
     
     <p>Alarm: <span id="alarm-output"></span> </p>
-    <p hx-get="/buzzer"  hx-trigger="every 3s">Buzz</p>
+    <p hx-get="/buzzer" hx-trigger="load delay:1s">Buzz</p>
+    <!-- <p hx-get="/buzzer/stream">Something</p> -->
   </body>
 </html>
  
