@@ -27,7 +27,6 @@ pub static BUZZER_SIGNAL: Signal<CriticalSectionRawMutex, BuzzerAction> = Signal
 pub static TIMER_SIGNAL: Signal<CriticalSectionRawMutex, u32> = Signal::new();
 pub static IS_BUZZER_ON: AtomicBool = AtomicBool::new(false);
 
-pub type Buzzer = Mutex<CriticalSectionRawMutex, Output<'static>>;
 type BuzzerOutput = Mutex<CriticalSectionRawMutex, Output<'static>>;
 
 pub async fn init_buzzer(
