@@ -558,16 +558,16 @@ dependencies = [
 
 [[package]]
 name = "embassy-net"
-version = "0.7.1"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0558a231a47e7d4a06a28b5278c92e860f1200f24821d2f365a2f40fe3f3c7b2"
+checksum = "71f0aa32082b7df00164f485322d6edab59122c9718b363b07ec23424c2c06a0"
 dependencies = [
  "defmt 1.0.1",
  "document-features",
  "embassy-net-driver",
  "embassy-sync 0.7.2",
  "embassy-time",
- "embedded-io-async 0.6.1",
+ "embedded-io-async 0.7.0",
  "embedded-nal-async",
  "heapless 0.8.0",
  "managed",
@@ -731,11 +731,11 @@ dependencies = [
 
 [[package]]
 name = "embedded-nal-async"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76959917cd2b86f40a98c28dd5624eddd1fa69d746241c8257eac428d83cb211"
+checksum = "eb5a1bd585135d302f8f6d7de329310938093da6271b37a6c94b8798795c0c6d"
 dependencies = [
- "embedded-io-async 0.6.1",
+ "embedded-io-async 0.7.0",
  "embedded-nal",
 ]
 
@@ -1561,17 +1561,18 @@ checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
 name = "picoserve"
-version = "0.17.1"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "969ca99aadcb00ac7b93335b8dde99deef0b8c925cdaf5946ad85cc15c71c761"
+checksum = "3e4976908c758efc04289ad266181f22e252b67daac2710581da9f5aa7a3207a"
 dependencies = [
  "const-sha1",
  "defmt 1.0.1",
  "embassy-net",
  "embassy-time",
- "embedded-io-async 0.6.1",
+ "embedded-io-async 0.7.0",
  "heapless 0.8.0",
  "picoserve_derive",
+ "pin-project",
  "serde",
  "serde-json-core",
  "thiserror",
@@ -1582,6 +1583,26 @@ name = "picoserve_derive"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e18e82b212e47a9df016984abe8da12c179440942c02f57c7badc82f6466a051"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.114",
+]
+
+[[package]]
+name = "pin-project"
+version = "1.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "677f1add503faace112b9f1373e43e9e054bfdd22ff1a63c1bc485eaec6a6a8a"
+dependencies = [
+ "pin-project-internal",
+]
+
+[[package]]
+name = "pin-project-internal"
+version = "1.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e918e4ff8c4549eb882f14b3a4bc8c8bc93de829416eacf579f1207a8fbf861"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1835,6 +1856,7 @@ dependencies = [
  "serde",
  "smoltcp",
  "sntpc",
+ "sntpc-net-embassy",
  "static_assertions",
  "static_cell",
  "thiserror",
@@ -1930,13 +1952,22 @@ dependencies = [
 
 [[package]]
 name = "sntpc"
-version = "0.7.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b4225ed8af9afa45007222d268dac20437c9783be704fcbdc3399bffe7e81dc"
+checksum = "3334dc3b0fc8775d320764f947eec3dd5e63d15117b6bde6305989b3558134ef"
 dependencies = [
  "cfg-if",
  "defmt 1.0.1",
+]
+
+[[package]]
+name = "sntpc-net-embassy"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7ee9f9a51937a08ff1774451fa09df22c049475f1f2549275f5be0125a7bd00"
+dependencies = [
  "embassy-net",
+ "sntpc",
 ]
 
 [[package]]

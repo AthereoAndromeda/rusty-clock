@@ -32,8 +32,7 @@ esp-rtos = { version = "0.1.1", features = [
 defmt                  = "1.0.1"
 esp-bootloader-esp-idf = { version = "0.3.0", features = ["esp32c3"] }
 
-# Current version of picoserve requires this version
-embassy-net = { version = "0.7.0", features = [
+embassy-net = { version = "0.8.0", features = [
   "defmt",
   "dhcpv4",
   "medium-ethernet",
@@ -88,9 +87,10 @@ heapless = { version = "0.9.1", features = ["defmt", "nightly", "serde"] }
 thiserror = { version = "2.0.18", default-features = false }
 embassy-futures = { version = "0.1.2", features = ["defmt"] }
 # WARN: Breaks if updating to 0.8
-sntpc = { version = "0.7", default-features = false, features = ["defmt", "embassy-socket"] }
+sntpc = { version = "0.8", default-features = false, features = ["defmt"] }
+sntpc-net-embassy = "*"
 futures = { version = "0.3.31", default-features = false }
-picoserve = { version = "0.17.1", features = ["defmt", "embassy"] }
+picoserve = { version = "0.18", features = ["defmt", "embassy"] }
 serde = { version = "1.0.228", features = ["derive"], default-features = false }
 # bilge = "0.3.0"
 bumpalo = { version = "3.19.1", features = ["collections", "boxed", "allocator_api"] }

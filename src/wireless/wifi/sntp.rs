@@ -4,6 +4,7 @@ use embassy_net::udp::{PacketMetadata, UdpSocket};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_time::{Duration, WithTimeout};
 use sntpc::NtpContext;
+use sntpc_net_embassy::UdpSocketWrapper;
 
 use crate::{TIME_WATCH, rtc_ds3231::SET_DATETIME_SIGNAL};
 
@@ -43,14 +44,18 @@ pub async fn fetch_sntp(net_stack: embassy_net::Stack<'static>) {
     );
 
     udp_socket.bind(SNTP_PORT).unwrap();
+    let wrapper = UdpSocketWrapper::new(udp_socket);
 
     loop {
-        fetch_sntp_inner(net_stack, &udp_socket).await;
+        fetch_sntp_inner(net_stack, &wrapper).await;
         NTP_SYNC.wait().await;
     }
 }
 
-async fn fetch_sntp_inner(net_stack: embassy_net::Stack<'static>, udp_socket: &UdpSocket<'_>) {
+async fn fetch_sntp_inner(
+    net_stack: embassy_net::Stack<'static>,
+    udp_socket: &UdpSocketWrapper<'_>,
+) {
     info!("[sntp] Waiting for Network Link...");
     match net_stack
         .wait_link_up()

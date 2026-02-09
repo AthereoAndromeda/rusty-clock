@@ -60,7 +60,7 @@ pub async fn web_task(
     task_id: usize,
     stack: embassy_net::Stack<'static>,
     app: &'static AppRouter<App>,
-    config: &'static picoserve::Config<Duration>,
+    config: &'static picoserve::Config,
 ) -> ! {
     let mut tcp_rx_buffer = [0; 1024];
     let mut tcp_tx_buffer = [0; 1024];
@@ -87,16 +87,16 @@ pub async fn web_task(
 
 pub fn init_web() -> (
     &'static mut Router<<App as AppBuilder>::PathRouter>,
-    &'static mut picoserve::Config<embassy_time::Duration>,
+    &'static mut picoserve::Config,
 ) {
     let app = make_static!(AppRouter<App>, App.build_app());
     let config = make_static!(
-        picoserve::Config<Duration>,
+        picoserve::Config,
         picoserve::Config::new(picoserve::Timeouts {
-            start_read_request: Some(Duration::from_secs(5)),
-            persistent_start_read_request: Some(Duration::from_secs(2)),
-            read_request: Some(Duration::from_secs(2)),
-            write: Some(Duration::from_secs(5)),
+            start_read_request: Duration::from_secs(5),
+            persistent_start_read_request: Duration::from_secs(2),
+            read_request: Duration::from_secs(2),
+            write: Duration::from_secs(5),
         })
         .keep_connection_alive()
     );
