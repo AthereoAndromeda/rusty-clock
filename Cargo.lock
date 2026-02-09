@@ -1789,7 +1789,6 @@ dependencies = [
  "futures",
  "heapless 0.9.1",
  "html-minifier",
- "jiff",
  "picoserve",
  "portable-atomic",
  "serde",
