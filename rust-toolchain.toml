@@ -1,4 +1,8 @@
 [toolchain]
 channel    = "nightly"
-components = ["rust-src"]
+components = [
+  "rust-src", 
+  "miri",
+  "llvm-tools-preview"
+]
 targets = ["riscv32imc-unknown-none-elf"]
