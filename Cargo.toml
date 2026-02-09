@@ -108,12 +108,14 @@ opt-level = "s"
 
 [profile.release]
 codegen-units    = 1     # LLVM can perform better optimizations using a single thread
-debug            = 2
+debug            = 0     # defmt cannot find location if debug < 2
 debug-assertions = false
 incremental      = false
 lto              = 'fat'
 opt-level        = 's'
 overflow-checks  = false
+panic            = 'abort'
+strip            = 'debuginfo' # Symbols required for defmt
 
 [build-dependencies]
 brotli = { version = "8.0.2", features = ["simd"] }
