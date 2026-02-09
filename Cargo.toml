@@ -67,18 +67,18 @@ esp-radio = { version = "0.16.0", features = [
   "wifi",
 ] }
 smoltcp = { version = "0.12.0", default-features = false, features = [
-  "defmt",
-  "medium-ethernet",
-  "multicast",
-  "proto-dhcpv4",
-  "proto-dns",
-  "proto-ipv4",
-  "socket-dns",
-  "socket-icmp",
-  "socket-raw",
-  "socket-tcp",
-  "socket-udp",
-  "socket-mdns",
+  # "defmt",
+  # "multicast",
+  # "medium-ethernet",
+  # "proto-dhcpv4",
+  # "proto-dns",
+  # "proto-ipv4",
+  # "socket-dns",
+  # "socket-icmp",
+  # "socket-raw",
+  # "socket-tcp",
+  # "socket-udp",
+  # "socket-mdns",
 ] }
 trouble-host = { version = "0.5.0", features = ["gatt"] }
 
@@ -101,6 +101,11 @@ static_assertions = { version = "1.1.0", features = ["nightly"] }
 # embedded-hal-async = "1.0.0"
 embassy-embedded-hal = { version = "0.5.0", features = ["defmt"] }
 portable-atomic = { version = "1.13.0", default-features = false, features = ["serde",  "unsafe-assume-single-core"] }
+
+[profile.dev.package.esp-radio]
+opt-level = 3
+[profile.release.package.esp-radio]
+opt-level = 3
 
 [profile.dev]
 # Rust debug is too slow.
