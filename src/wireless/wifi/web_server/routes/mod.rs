@@ -1,9 +1,16 @@
-pub(super) mod alarm;
-pub(super) mod buzzer;
-pub(super) mod time;
-pub(super) mod timer;
+use picoserve::{
+    Router,
+    routing::{PathRouter, get},
+};
 
-pub(super) async fn get_help() -> &'static str {
+mod alarm;
+mod buzzer;
+mod time;
+mod timer;
+
+// TODO: Dynamically generate help message
+// Attribute macro? #[help_msg = "message"]
+async fn get_help() -> &'static str {
     r#"
 Hello from ESP32! This is the web server for rusty clock
 
@@ -23,4 +30,13 @@ Paths:
 
 /timer                    - Set a timer to buzz
 "#
+}
+
+pub(super) fn add_all_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
+    let router = alarm::add_routes(router);
+    let router = buzzer::add_routes(router);
+    let router = time::add_routes(router);
+    let router = timer::add_routes(router);
+
+    router.route("/help", get(get_help))
 }

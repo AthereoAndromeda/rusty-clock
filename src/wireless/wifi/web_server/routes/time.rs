@@ -43,7 +43,7 @@ impl picoserve::response::sse::EventSource for TimeEvent {
     }
 }
 
-pub(crate) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
+pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
     router
         .route("/time", get(get_time))
         .route("/epoch", get(get_epoch))

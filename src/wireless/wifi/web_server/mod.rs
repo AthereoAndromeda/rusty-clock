@@ -1,13 +1,7 @@
 mod routes;
-use routes::*;
-
 use defmt::info;
 use embassy_time::Duration;
-use picoserve::{
-    AppBuilder, AppRouter, Router, make_static,
-    response::File,
-    routing::{get, get_service},
-};
+use picoserve::{AppBuilder, AppRouter, Router, make_static, response::File, routing::get_service};
 
 pub(crate) const WEB_TASK_POOL_SIZE: usize = 3;
 
@@ -26,12 +20,7 @@ impl AppBuilder for App {
         //
         // TODO?: Bundle HTMX with page? (has to be compressed beforehand)
         // to keep binary size small
-        let router = Router::new().route("/help", get(get_help));
-
-        let router = routes::alarm::add_routes(router);
-        let router = routes::buzzer::add_routes(router);
-        let router = routes::time::add_routes(router);
-        let router = routes::timer::add_routes(router);
+        let router = routes::add_all_routes(Router::new());
 
         // Use unminified when debug, minified when release build
         if cfg!(debug_assertions) {

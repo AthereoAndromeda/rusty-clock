@@ -13,7 +13,7 @@ use crate::{
     rtc_ds3231::{ALARM_CONFIG_RWLOCK, CLEAR_FLAGS_SIGNAL, SET_ALARM},
 };
 
-pub(crate) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
+pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
     router
         .route("/alarm", get(get_alarm))
         .route("/alarm/clear", get(get_clear_flags))
