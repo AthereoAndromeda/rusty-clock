@@ -1,17 +1,15 @@
 mod listener;
 use listener::*;
 
-use crate::mk_static;
-use core::sync::atomic::{AtomicBool, Ordering};
 use embassy_executor::Spawner;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex, signal::Signal};
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_time::Timer;
 use esp_hal::{
     gpio::Output,
     peripherals::{self},
 };
 
-pub enum BuzzerAction {
+pub(crate) enum BuzzerAction {
     On,
     Off,
     Toggle,
@@ -23,13 +21,14 @@ impl From<bool> for BuzzerAction {
     }
 }
 
-pub static BUZZER_SIGNAL: Signal<CriticalSectionRawMutex, BuzzerAction> = Signal::new();
-pub static TIMER_SIGNAL: Signal<CriticalSectionRawMutex, u32> = Signal::new();
-pub static IS_BUZZER_ON: AtomicBool = AtomicBool::new(false);
+pub(crate) static BUZZER_SIGNAL: Signal<CriticalSectionRawMutex, BuzzerAction> = Signal::new();
+pub(crate) static TIMER_SIGNAL: Signal<CriticalSectionRawMutex, u32> = Signal::new();
+/// NOTE: ESP32-C3 does not natively support 8-bit atomics (rv32imc).
+/// portable_atomic supports fetch_not
+pub(crate) static IS_BUZZER_ON: portable_atomic::AtomicBool =
+    portable_atomic::AtomicBool::new(false);
 
-type BuzzerOutput = Mutex<CriticalSectionRawMutex, Output<'static>>;
-
-pub async fn init_buzzer(
+pub(crate) async fn init_buzzer(
     spawner: Spawner,
     output_pin: peripherals::GPIO5<'static>,
     button_pin: peripherals::GPIO7<'static>,
@@ -43,10 +42,7 @@ pub async fn init_buzzer(
             .with_pull(esp_hal::gpio::Pull::Down),
     );
 
-    let buzzer: &'static Mutex<CriticalSectionRawMutex, Output<'static>> =
-        mk_static!(Mutex<CriticalSectionRawMutex, Output<'static>>, Mutex::new(buzzer_output));
-
-    spawner.must_spawn(run(buzzer));
+    spawner.must_spawn(run(buzzer_output));
     spawner.must_spawn(listen_for_alarm(alarm_pin));
     spawner.must_spawn(listen_for_button(button_pin));
     spawner.must_spawn(listen_for_timer());
@@ -61,25 +57,20 @@ pub async fn init_buzzer(
 }
 
 #[embassy_executor::task]
-async fn run(output: &'static BuzzerOutput) {
-    let mut buzzer_state = IS_BUZZER_ON.load(Ordering::SeqCst);
-
+async fn run(mut output: Output<'static>) {
     loop {
         match BUZZER_SIGNAL.wait().await {
             BuzzerAction::On => {
-                output.lock().await.set_high();
-                buzzer_state = true;
-                IS_BUZZER_ON.store(true, Ordering::SeqCst);
+                output.set_high();
+                IS_BUZZER_ON.store(true, core::sync::atomic::Ordering::Relaxed);
             }
             BuzzerAction::Off => {
-                output.lock().await.set_low();
-                buzzer_state = false;
-                IS_BUZZER_ON.store(false, Ordering::SeqCst);
+                output.set_low();
+                IS_BUZZER_ON.store(false, core::sync::atomic::Ordering::Relaxed);
             }
             BuzzerAction::Toggle => {
-                output.lock().await.toggle();
-                buzzer_state = !buzzer_state;
-                IS_BUZZER_ON.store(buzzer_state, Ordering::SeqCst);
+                output.toggle();
+                IS_BUZZER_ON.fetch_not(core::sync::atomic::Ordering::Relaxed);
             }
         }
     }
