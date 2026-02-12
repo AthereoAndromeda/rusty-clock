@@ -1,14 +1,15 @@
-use super::Server;
+use super::gatt::Server;
 use chrono::Timelike;
 use defmt::{error, info, warn};
 use embassy_futures::select::select;
 use embassy_time::Timer;
 use trouble_host::prelude::*;
 
-use crate::{BleStack, TIME_WATCH, bt::BleController, buzzer::BUZZER_SIGNAL, mk_static};
+use super::{BleController, BleStack};
+use crate::{buzzer::BUZZER_SIGNAL, mk_static, rtc_ds3231::TIME_WATCH};
 
 #[embassy_executor::task]
-pub async fn run_peripheral(
+pub(in crate::wireless) async fn run_peripheral(
     mut peripheral: Peripheral<'static, BleController, DefaultPacketPool>,
     server: Server<'static>,
     stack: &'static BleStack,

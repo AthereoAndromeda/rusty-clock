@@ -3,10 +3,10 @@ use defmt::info;
 use embassy_time::Duration;
 use picoserve::{AppBuilder, AppRouter, Router, make_static, response::File, routing::get_service};
 
-pub(crate) const WEB_TASK_POOL_SIZE: usize = 3;
+pub(in crate::wireless) const WEB_TASK_POOL_SIZE: usize = 3;
 
 /// Our Web server App
-pub(crate) struct App;
+pub(in crate::wireless) struct App;
 
 impl AppBuilder for App {
     type PathRouter = impl picoserve::routing::PathRouter;
@@ -45,7 +45,7 @@ impl AppBuilder for App {
 }
 
 #[embassy_executor::task(pool_size = WEB_TASK_POOL_SIZE)]
-pub(crate) async fn web_task(
+pub(in crate::wireless) async fn web_task(
     task_id: usize,
     stack: embassy_net::Stack<'static>,
     app: &'static AppRouter<App>,
@@ -74,7 +74,7 @@ pub(crate) async fn web_task(
         .into_never()
 }
 
-pub(crate) fn init_web() -> (
+pub(in crate::wireless) fn init_web() -> (
     &'static mut Router<<App as AppBuilder>::PathRouter>,
     &'static mut picoserve::Config,
 ) {

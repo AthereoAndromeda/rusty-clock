@@ -1,7 +1,6 @@
-pub mod gatt;
-pub use gatt::*;
 pub mod ble_bas_peripheral;
-pub use ble_bas_peripheral::run_peripheral;
+mod gatt;
+pub(super) use ble_bas_peripheral::run_peripheral;
 
 // pub mod ble_bas_central;
 // pub mod ble_l2cap_peripheral;
@@ -19,14 +18,14 @@ use trouble_host::{
 use crate::{MAC_ADDR, mk_static};
 
 /// Max number of connections for Bluetooth
-pub const BLE_CONNECTIONS_MAX: usize = 2;
+const BLE_CONNECTIONS_MAX: usize = 2;
 
 /// Max number of L2CAP channels.
-pub const L2CAP_CHANNELS_MAX: usize = 3; // Signal + att + CoC
-pub const BLE_SLOTS: usize = 8;
-pub type BleController = ExternalController<BleConnector<'static>, BLE_SLOTS>;
-pub type BleResources = HostResources<DefaultPacketPool, BLE_CONNECTIONS_MAX, L2CAP_CHANNELS_MAX>;
-pub type BleStack = trouble_host::Stack<
+const L2CAP_CHANNELS_MAX: usize = 3; // Signal + att + CoC
+const BLE_SLOTS: usize = 8;
+pub(super) type BleController = ExternalController<BleConnector<'static>, BLE_SLOTS>;
+type BleResources = HostResources<DefaultPacketPool, BLE_CONNECTIONS_MAX, L2CAP_CHANNELS_MAX>;
+type BleStack = trouble_host::Stack<
     'static,
     ExternalController<BleConnector<'static>, BLE_SLOTS>,
     DefaultPacketPool,
@@ -48,7 +47,7 @@ pub(super) fn get_ble_stack(
 ) -> (
     &'static BleStack,
     trouble_host::Host<'static, BleController, DefaultPacketPool>,
-    crate::Server<'static>,
+    gatt::Server<'static>,
 ) {
     // Using a fixed "random" address can be useful for testing. In real scenarios, one would
     // use e.g. the MAC 6 byte array as the address (how to get that varies by the platform).

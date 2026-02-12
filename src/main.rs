@@ -39,14 +39,7 @@ use esp_hal::{clock::CpuClock, timer::timg::TimerGroup};
 // pub const MAC_ADDR: &'static str = "10:20:ba:91:bb:b4";
 pub(crate) const MAC_ADDR: [u8; 6] = [0x10, 0x20, 0xba, 0x91, 0xbb, 0xb4];
 
-use crate::{
-    buzzer::init_buzzer,
-    rtc_ds3231::{TIME_WATCH, init_rtc},
-    wireless::{
-        bt::{self, BleStack, gatt::Server},
-        init_wireless,
-    },
-};
+use crate::{buzzer::init_buzzer, rtc_ds3231::init_rtc, wireless::init_wireless};
 
 // TIP: Set these in .env if using direnv
 pub(crate) const SSID: &str = env!("SSID");

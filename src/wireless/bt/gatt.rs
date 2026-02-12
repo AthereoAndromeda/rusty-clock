@@ -3,7 +3,7 @@ use trouble_host::prelude::{FromGatt, gatt_server, gatt_service};
 
 #[gatt_server]
 /// Our GATT Server
-pub struct Server {
+pub(in crate::wireless) struct Server {
     pub battery_service: BatteryService,
     pub time_service: TimeService,
     pub buzzer_service: BuzzerService,
@@ -11,7 +11,7 @@ pub struct Server {
 
 /// Battery service
 #[gatt_service(uuid = service::BATTERY)]
-pub struct BatteryService {
+pub(in crate::wireless) struct BatteryService {
     #[descriptor(uuid = descriptors::VALID_RANGE, read, value = [0, 100])]
     #[descriptor(uuid = descriptors::MEASUREMENT_DESCRIPTION, name = "hello", read, value = "Battery Level")]
     #[characteristic(uuid = characteristic::BATTERY_LEVEL, read, notify, value = 10)]
@@ -24,7 +24,7 @@ pub struct BatteryService {
 
 /// Time Service
 #[gatt_service(uuid = service::DEVICE_TIME)]
-pub struct TimeService {
+pub(in crate::wireless) struct TimeService {
     #[descriptor(uuid = descriptors::VALID_RANGE, read, value = [0, 100])]
     #[descriptor(uuid = descriptors::MEASUREMENT_DESCRIPTION, name = "epoch", read, value = "epoch")]
     #[characteristic(uuid = characteristic::DEVICE_TIME, read, notify, value = 10)]
@@ -36,7 +36,7 @@ pub struct TimeService {
 
 /// Buzzer Service
 #[gatt_service(uuid = service::COMMON_AUDIO)]
-pub struct BuzzerService {
+pub(in crate::wireless) struct BuzzerService {
     #[characteristic(uuid = characteristic::AUDIO_OUTPUT_DESCRIPTION, read, write, notify)]
     pub level: bool,
 

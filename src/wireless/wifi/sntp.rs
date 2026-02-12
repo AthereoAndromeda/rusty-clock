@@ -6,7 +6,7 @@ use embassy_time::{Duration, WithTimeout};
 use sntpc::NtpContext;
 use sntpc_net_embassy::UdpSocketWrapper;
 
-use crate::{TIME_WATCH, rtc_ds3231::SET_DATETIME_SIGNAL};
+use crate::rtc_ds3231::{SET_DATETIME_SIGNAL, TIME_WATCH};
 
 pub(crate) static NTP_SYNC: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 const NTP_SERVER_ADDR: &str = "pool.ntp.org";
@@ -14,7 +14,7 @@ const SNTP_PORT: u16 = 123;
 
 #[derive(Copy, Clone, Default)]
 /// Time in us
-pub(crate) struct SntpTimestamp(u64);
+struct SntpTimestamp(u64);
 
 impl sntpc::NtpTimestampGenerator for SntpTimestamp {
     fn init(&mut self) {}
