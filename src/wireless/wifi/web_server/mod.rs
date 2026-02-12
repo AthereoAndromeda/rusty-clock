@@ -9,10 +9,10 @@ use picoserve::{
     routing::{get, get_service},
 };
 
-pub const WEB_TASK_POOL_SIZE: usize = 3;
+pub(crate) const WEB_TASK_POOL_SIZE: usize = 3;
 
 /// Our Web server App
-pub struct App;
+pub(crate) struct App;
 
 impl AppBuilder for App {
     type PathRouter = impl picoserve::routing::PathRouter;
@@ -56,7 +56,7 @@ impl AppBuilder for App {
 }
 
 #[embassy_executor::task(pool_size = WEB_TASK_POOL_SIZE)]
-pub async fn web_task(
+pub(crate) async fn web_task(
     task_id: usize,
     stack: embassy_net::Stack<'static>,
     app: &'static AppRouter<App>,
@@ -85,7 +85,7 @@ pub async fn web_task(
         .into_never()
 }
 
-pub fn init_web() -> (
+pub(crate) fn init_web() -> (
     &'static mut Router<<App as AppBuilder>::PathRouter>,
     &'static mut picoserve::Config,
 ) {

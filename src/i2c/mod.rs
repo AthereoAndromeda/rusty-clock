@@ -8,7 +8,7 @@ pub(crate) type I2cAsync = esp_hal::i2c::master::I2c<'static, esp_hal::Async>;
 pub(crate) type I2cMutex = Mutex<CriticalSectionRawMutex, I2cAsync>;
 pub(crate) type I2cBus = I2cDevice<'static, CriticalSectionRawMutex, I2cAsync>;
 
-pub fn init_i2c<const N: usize>(
+pub(crate) fn init_i2c<const N: usize>(
     i2c_peripheral: peripherals::I2C0<'static>,
     sda_pin: peripherals::GPIO2<'static>,
     scl_pin: peripherals::GPIO3<'static>,
@@ -24,20 +24,20 @@ pub fn init_i2c<const N: usize>(
     create_buses(i2c_mutex)
 }
 
-/// Given N `usize` and `&I2cMutex`, it will create and return N `MaybeUninit<I2cDevice>`s
-/// # Safety
-/// This macro is unsafe
-pub macro get_bus_arr($num:expr; $mutex:expr) {
-    let mut arr: [MaybeUninit<$crate::i2c::I2cBus>; $num] = [const { core::mem::zeroed() }; $num];
+// /// Given N `usize` and `&I2cMutex`, it will create and return N `MaybeUninit<I2cDevice>`s
+// pub(crate) fn get_bus_arr<const N: usize>(
+//     mutex: &'static I2cMutex,
+// ) -> [core::mem::MaybeUninit<I2cBus>; N] {
+//     let mut arr = [const { core::mem::MaybeUninit::uninit() }; N];
 
-    for bus in arr {
-        bus.write(embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice::new($mutex));
-    }
+//     for bus in &mut arr {
+//         bus.write(embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice::new(mutex));
+//     }
 
-    arr
-}
+//     arr
+// }
 
-pub fn create_buses<const N: usize>(mutex: &'static I2cMutex) -> heapless::Vec<I2cBus, N> {
+pub(crate) fn create_buses<const N: usize>(mutex: &'static I2cMutex) -> heapless::Vec<I2cBus, N> {
     let mut v: heapless::Vec<I2cBus, N> = const { heapless::Vec::new() };
 
     for _ in 0..N {

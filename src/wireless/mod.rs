@@ -19,7 +19,7 @@ use crate::{
 pub mod bt;
 pub mod wifi;
 
-pub fn init_wireless(
+pub(crate) fn init_wireless(
     spawner: Spawner,
     wifi: peripherals::WIFI<'static>,
     bt: peripherals::BT<'static>,

@@ -1,7 +1,7 @@
 pub mod sntp;
 pub mod web_server;
 
-pub const MAX_NET_SOCKETS: usize = 6;
+pub(crate) const MAX_NET_SOCKETS: usize = 6;
 
 use defmt::{debug, info, warn};
 use embassy_net::StackResources;

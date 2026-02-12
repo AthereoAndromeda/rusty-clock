@@ -9,6 +9,11 @@ use picoserve::{
 
 use crate::{TZ_OFFSET, rtc_ds3231::TIME_WATCH, wireless::wifi::sntp::NTP_SYNC};
 
+#[derive(Debug, serde::Deserialize)]
+struct TimeQueryParams {
+    pub utc: Option<bool>,
+}
+
 struct TimeEvent;
 
 impl picoserve::response::sse::EventSource for TimeEvent {
@@ -38,7 +43,7 @@ impl picoserve::response::sse::EventSource for TimeEvent {
     }
 }
 
-pub fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
+pub(crate) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
     router
         .route("/time", get(get_time))
         .route("/epoch", get(get_epoch))
@@ -56,7 +61,7 @@ async fn get_epoch() -> impl IntoResponse {
     DebugValue(epoch)
 }
 
-async fn get_time(Query(query): Query<super::alarm::AlarmQueryParams>) -> impl IntoResponse {
+async fn get_time(Query(query): Query<TimeQueryParams>) -> impl IntoResponse {
     let is_utc = query.utc.is_some_and(|p| p);
     let time = TIME_WATCH.receiver().expect("Maximum reached").get().await;
 

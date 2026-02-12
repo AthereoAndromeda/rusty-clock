@@ -8,13 +8,13 @@ use sntpc_net_embassy::UdpSocketWrapper;
 
 use crate::{TIME_WATCH, rtc_ds3231::SET_DATETIME_SIGNAL};
 
-pub static NTP_SYNC: Signal<CriticalSectionRawMutex, ()> = Signal::new();
+pub(crate) static NTP_SYNC: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 const NTP_SERVER_ADDR: &str = "pool.ntp.org";
 const SNTP_PORT: u16 = 123;
 
 #[derive(Copy, Clone, Default)]
 /// Time in us
-pub struct SntpTimestamp(u64);
+pub(crate) struct SntpTimestamp(u64);
 
 impl sntpc::NtpTimestampGenerator for SntpTimestamp {
     fn init(&mut self) {}
@@ -28,7 +28,7 @@ impl sntpc::NtpTimestampGenerator for SntpTimestamp {
 }
 
 #[embassy_executor::task]
-pub async fn fetch_sntp(net_stack: embassy_net::Stack<'static>) {
+pub(crate) async fn fetch_sntp(net_stack: embassy_net::Stack<'static>) {
     // Create UDP socket
     let mut udp_rx_meta = [PacketMetadata::EMPTY; 16];
     let mut udp_tx_meta = [PacketMetadata::EMPTY; 16];

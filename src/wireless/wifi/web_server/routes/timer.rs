@@ -6,7 +6,7 @@ use picoserve::{
 
 use crate::buzzer::TIMER_SIGNAL;
 
-pub fn add_routes(
+pub(crate) fn add_routes(
     router: picoserve::Router<impl picoserve::routing::PathRouter>,
 ) -> picoserve::Router<impl picoserve::routing::PathRouter> {
     router

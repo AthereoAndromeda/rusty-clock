@@ -1,7 +1,6 @@
+pub mod alarm;
 pub mod error;
 pub mod rtc_time;
-pub use error::*;
-pub mod alarm;
 use alarm::*;
 
 mod listener;
@@ -51,25 +50,25 @@ const ENV_TIME: Alarm1Config = {
 };
 
 /// Contains the time from RTC module
-pub static TIME_WATCH: Watch<CriticalSectionRawMutex, RtcTime, 3> = Watch::new();
+pub(crate) static TIME_WATCH: Watch<CriticalSectionRawMutex, RtcTime, 3> = Watch::new();
 /// Sets the RTC module alarm
-pub static SET_ALARM: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
+pub(crate) static SET_ALARM: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
 /// Clears the alarm flags for RTC
-pub static CLEAR_FLAGS_SIGNAL: Signal<CriticalSectionRawMutex, ()> = Signal::new();
+pub(crate) static CLEAR_FLAGS_SIGNAL: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 
 /// Globally accessible Alarm1Config
-pub static ALARM_CONFIG_RWLOCK: RwLock<CriticalSectionRawMutex, Alarm1Config> =
+pub(crate) static ALARM_CONFIG_RWLOCK: RwLock<CriticalSectionRawMutex, Alarm1Config> =
     RwLock::new(ENV_TIME);
 
 /// Sets datetime for RTC
-pub static SET_DATETIME_SIGNAL: Signal<CriticalSectionRawMutex, chrono::NaiveDateTime> =
+pub(crate) static SET_DATETIME_SIGNAL: Signal<CriticalSectionRawMutex, chrono::NaiveDateTime> =
     Signal::new();
 
 /// This is the timestamp held in-memory.
 /// This is used instead of pinging the RTC module every second
 ///
 /// NOTE: `portable_atomic` crate is used since native does not support 64 bit atomics
-pub static LOCAL_TIMESTAMP: AtomicI64 = AtomicI64::new(0);
+pub(crate) static LOCAL_TIMESTAMP: AtomicI64 = AtomicI64::new(0);
 
 pub(crate) type RtcDS3231 = DS3231<I2cBus>;
 pub(crate) type RtcMutex = Mutex<CriticalSectionRawMutex, RtcDS3231>;
@@ -80,7 +79,7 @@ pub(crate) const RTC_I2C_ADDR: u8 = {
 };
 
 /// Initialize the DS3231 Instance and spawn tasks
-pub async fn init_rtc(spawner: Spawner, i2c: I2cBus) {
+pub(crate) async fn init_rtc(spawner: Spawner, i2c: I2cBus) {
     let config = Config {
         time_representation: TimeRepresentation::TwentyFourHour,
         square_wave_frequency: SquareWaveFrequency::Hz1,

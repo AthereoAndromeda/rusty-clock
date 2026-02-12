@@ -37,7 +37,7 @@ use esp_hal::{clock::CpuClock, timer::timg::TimerGroup};
 
 // Found via `espflash`
 // pub const MAC_ADDR: &'static str = "10:20:ba:91:bb:b4";
-pub const MAC_ADDR: [u8; 6] = [0x10, 0x20, 0xba, 0x91, 0xbb, 0xb4];
+pub(crate) const MAC_ADDR: [u8; 6] = [0x10, 0x20, 0xba, 0x91, 0xbb, 0xb4];
 
 use crate::{
     buzzer::init_buzzer,
@@ -49,13 +49,13 @@ use crate::{
 };
 
 // TIP: Set these in .env if using direnv
-pub const SSID: &str = env!("SSID");
-pub const PASSWORD: &str = env!("PASSWORD");
+pub(crate) const SSID: &str = env!("SSID");
+pub(crate) const PASSWORD: &str = env!("PASSWORD");
 
 // NOTE: Using TZ_OFFSET since IANA Timezones adds unnecessary weight
 // PERF: Faster and leaner than LazyLock if you're
 // okay with using unsafe and nightly features
-pub const TZ_OFFSET: i8 = {
+pub(crate) const TZ_OFFSET: i8 = {
     let tz = option_env!("TZ_OFFSET").unwrap_or("0");
 
     // SAFETY: Caller is required to guarantee valid number
@@ -72,7 +72,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 /// The macro declares a `static StaticCell` and then initializes it when run, returning the `&'static mut`.
 /// Therefore, each instance can only be run once. Next runs will panic. The `static` can additionally be
 /// decorated with attributes, such as `#[link_section]`, `#[used]`, et al.
-pub macro mk_static {
+pub(crate) macro mk_static {
     ($t:ty; $val:expr) => (mk_static!($t, $val, )),
     ($t:ty, $val:expr) => (mk_static!($t, $val, )),
     ($t:ty, $val:expr, $(#[$m:meta])*) => {{

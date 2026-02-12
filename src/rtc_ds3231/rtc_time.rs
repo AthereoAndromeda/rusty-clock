@@ -6,7 +6,7 @@ use crate::TZ_OFFSET;
 
 #[derive(Debug, Copy, Clone)]
 /// A wrapper around `chrono::NaiveDateTime` and also implements `Deref`
-pub struct RtcTime(pub NaiveDateTime);
+pub(crate) struct RtcTime(pub NaiveDateTime);
 
 const MONTH_BY_INDEX: [&str; 12] = [
     "January",

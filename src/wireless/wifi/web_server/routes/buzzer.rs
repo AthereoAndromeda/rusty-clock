@@ -23,7 +23,7 @@ impl picoserve::response::sse::EventSource for BuzzerEvent {
     }
 }
 
-pub fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
+pub(crate) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
     router
         .route("/buzzer", get(get_buzzer))
         .route("/buzzer/toggle", get(toggle_buzzer))

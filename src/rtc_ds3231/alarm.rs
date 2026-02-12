@@ -1,4 +1,4 @@
-use crate::rtc_ds3231::{RtcDS3231, RtcError};
+use super::{RtcDS3231, error::RtcError};
 use defmt::info;
 
 /// Clears and Sets Alarm1 Flag
