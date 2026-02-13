@@ -9,7 +9,7 @@ pub(crate) type I2cMutex = Mutex<CriticalSectionRawMutex, I2cAsync>;
 pub(crate) type I2cBus = I2cDevice<'static, CriticalSectionRawMutex, I2cAsync>;
 
 /// Initialize the I2C bus and return `N` buses
-pub(crate) fn init_i2c<const N: usize>(
+pub(crate) fn init<const N: usize>(
     i2c_peripheral: peripherals::I2C0<'static>,
     sda_pin: peripherals::GPIO2<'static>,
     scl_pin: peripherals::GPIO3<'static>,

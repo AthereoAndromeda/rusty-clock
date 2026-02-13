@@ -39,8 +39,6 @@ use esp_hal::{clock::CpuClock, timer::timg::TimerGroup};
 // pub const MAC_ADDR: &'static str = "10:20:ba:91:bb:b4";
 pub(crate) const MAC_ADDR: [u8; 6] = [0x10, 0x20, 0xba, 0x91, 0xbb, 0xb4];
 
-use crate::{buzzer::init_buzzer, rtc_ds3231::init_rtc, wireless::init_wireless};
-
 // TIP: Set these in .env if using direnv
 pub(crate) const SSID: &str = env!("SSID");
 pub(crate) const PASSWORD: &str = env!("PASSWORD");
@@ -99,14 +97,14 @@ async fn main(spawner: Spawner) {
 
     info!("Initializing I2C...");
     let mut i2c_buses: heapless::Vec<i2c::I2cBus, 2> =
-        i2c::init_i2c(peripherals.I2C0, peripherals.GPIO2, peripherals.GPIO3);
+        i2c::init(peripherals.I2C0, peripherals.GPIO2, peripherals.GPIO3);
     let i2c_rtc = unsafe { i2c_buses.pop_unchecked() };
 
     info!("Init RTC...");
-    init_rtc(spawner, i2c_rtc).await;
+    rtc_ds3231::init(spawner, i2c_rtc).await;
 
     info!("Init Buzzer...");
-    init_buzzer(
+    buzzer::init(
         spawner,
         peripherals.GPIO5,
         peripherals.GPIO7,
@@ -115,7 +113,7 @@ async fn main(spawner: Spawner) {
     .await;
 
     info!("Initializing Wireless...");
-    init_wireless(spawner, peripherals.WIFI, peripherals.BT);
+    wireless::init(spawner, peripherals.WIFI, peripherals.BT);
 
     info!("All Systems Go!");
     info!("Running.... ");

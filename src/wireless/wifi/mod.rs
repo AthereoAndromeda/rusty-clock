@@ -4,6 +4,7 @@ pub mod web_server;
 const MAX_NET_SOCKETS: usize = 6;
 
 use defmt::{debug, info, warn};
+use embassy_executor::Spawner;
 use embassy_net::StackResources;
 use embassy_time::Timer;
 use esp_hal::rng::Rng;
@@ -13,7 +14,28 @@ use esp_radio::wifi::{
 
 use crate::{PASSWORD, SSID, mk_static};
 
-pub(super) fn get_net_stack(
+pub(super) fn init(
+    spawner: Spawner,
+    radio_init: &'static esp_radio::Controller<'static>,
+    wifi: esp_hal::peripherals::WIFI<'static>,
+) {
+    let (wifi_controller, interfaces) = esp_radio::wifi::new(radio_init, wifi, Default::default())
+        .expect("Failed to initialize Wi-Fi controller");
+
+    let (net_stack, net_runner) = get_stack(interfaces);
+
+    spawner.must_spawn(runner_task(net_runner));
+    spawner.must_spawn(connect_to_wifi(wifi_controller));
+
+    spawner.must_spawn(sntp::fetch_sntp(net_stack));
+
+    let (app, conf) = web_server::init();
+    for task_id in 0..web_server::WEB_TASK_POOL_SIZE {
+        spawner.must_spawn(web_server::web_task(task_id, net_stack, app, conf));
+    }
+}
+
+fn get_stack(
     wifi_interface: esp_radio::wifi::Interfaces<'_>,
 ) -> (
     embassy_net::Stack<'static>,
@@ -40,13 +62,13 @@ pub(super) fn get_net_stack(
 }
 
 #[embassy_executor::task]
-pub(super) async fn net_runner_task(mut runner: embassy_net::Runner<'static, WifiDevice<'static>>) {
+async fn runner_task(mut runner: embassy_net::Runner<'static, WifiDevice<'static>>) {
     runner.run().await
 }
 
 #[embassy_executor::task]
 /// Connect to Wi-Fi
-pub(super) async fn connect_to_wifi(mut controller: WifiController<'static>) {
+async fn connect_to_wifi(mut controller: WifiController<'static>) {
     debug!("start connection task");
     debug!("Device capabilities: {:?}", controller.capabilities());
 

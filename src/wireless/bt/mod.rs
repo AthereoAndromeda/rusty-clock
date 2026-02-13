@@ -1,6 +1,6 @@
 pub mod ble_bas_peripheral;
 mod gatt;
-pub(super) use ble_bas_peripheral::run_peripheral;
+use ble_bas_peripheral::run_peripheral;
 
 // pub mod ble_bas_central;
 // pub mod ble_l2cap_peripheral;
@@ -8,6 +8,7 @@ pub(super) use ble_bas_peripheral::run_peripheral;
 
 use bt_hci::{controller::ExternalController, uuid::appearance};
 use defmt::info;
+use embassy_executor::Spawner;
 use esp_radio::ble::controller::BleConnector;
 use trouble_host::{
     Address, HostResources,
@@ -23,7 +24,7 @@ const BLE_CONNECTIONS_MAX: usize = 2;
 /// Max number of L2CAP channels.
 const L2CAP_CHANNELS_MAX: usize = 3; // Signal + att + CoC
 const BLE_SLOTS: usize = 8;
-pub(super) type BleController = ExternalController<BleConnector<'static>, BLE_SLOTS>;
+type BleController = ExternalController<BleConnector<'static>, BLE_SLOTS>;
 type BleResources = HostResources<DefaultPacketPool, BLE_CONNECTIONS_MAX, L2CAP_CHANNELS_MAX>;
 type BleStack = trouble_host::Stack<
     'static,
@@ -31,18 +32,32 @@ type BleStack = trouble_host::Stack<
     DefaultPacketPool,
 >;
 
+pub(super) fn init(
+    spawner: Spawner,
+    radio_init: &'static esp_radio::Controller<'static>,
+    bt: esp_hal::peripherals::BT<'static>,
+) {
+    // find more examples https://github.com/embassy-rs/trouble/tree/main/examples/esp32
+    let transport = BleConnector::new(radio_init, bt, Default::default()).unwrap();
+    let ble_controller: BleController = ExternalController::new(transport);
+
+    let (ble_stack, ble_host, gatt_server) = get_stack(ble_controller);
+    spawner.must_spawn(runner_task(ble_host.runner));
+    spawner.must_spawn(run_peripheral(ble_host.peripheral, gatt_server, ble_stack));
+}
+
 #[embassy_executor::task]
 /// Background dunner for bluetooth
 ///
 /// # Warning
 /// Must be ran in the background for BLE to work!
-pub(super) async fn ble_runner_task(
+async fn runner_task(
     mut runner: trouble_host::prelude::Runner<'static, BleController, DefaultPacketPool>,
 ) {
     runner.run().await.unwrap();
 }
 
-pub(super) fn get_ble_stack(
+fn get_stack(
     ble_controller: BleController,
 ) -> (
     &'static BleStack,

@@ -28,7 +28,7 @@ pub(crate) static TIMER_SIGNAL: Signal<CriticalSectionRawMutex, u32> = Signal::n
 pub(crate) static IS_BUZZER_ON: portable_atomic::AtomicBool =
     portable_atomic::AtomicBool::new(false);
 
-pub(crate) async fn init_buzzer(
+pub(super) async fn init(
     spawner: Spawner,
     output_pin: peripherals::GPIO5<'static>,
     button_pin: peripherals::GPIO7<'static>,

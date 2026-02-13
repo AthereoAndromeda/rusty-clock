@@ -9,7 +9,7 @@ use super::{BleController, BleStack};
 use crate::{buzzer::BUZZER_SIGNAL, mk_static, rtc_ds3231::TIME_WATCH};
 
 #[embassy_executor::task]
-pub(in crate::wireless) async fn run_peripheral(
+pub(super) async fn run_peripheral(
     mut peripheral: Peripheral<'static, BleController, DefaultPacketPool>,
     server: Server<'static>,
     stack: &'static BleStack,

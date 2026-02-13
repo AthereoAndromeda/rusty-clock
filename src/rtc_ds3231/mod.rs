@@ -80,7 +80,7 @@ pub(crate) const RTC_I2C_ADDR: u8 = {
 };
 
 /// Initialize the DS3231 Instance and spawn tasks
-pub(crate) async fn init_rtc(spawner: Spawner, i2c: I2cBus) {
+pub(crate) async fn init(spawner: Spawner, i2c: I2cBus) {
     let config = Config {
         time_representation: TimeRepresentation::TwentyFourHour,
         square_wave_frequency: SquareWaveFrequency::Hz1,
