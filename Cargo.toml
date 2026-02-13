@@ -91,7 +91,7 @@ embassy-futures = { version = "0.1.2", features = ["defmt"] }
 sntpc = { version = "0.8", default-features = false, features = ["defmt"] }
 sntpc-net-embassy = "*"
 futures = { version = "0.3.31", default-features = false }
-picoserve = { version = "0.18", features = ["defmt", "embassy"] }
+picoserve = { version = "0.18", features = ["defmt", "embassy", "json"] }
 serde = { version = "1.0.228", features = ["derive"], default-features = false }
 # bilge = "0.3.0"
 # bumpalo = { version = "3.19.1", features = ["collections", "boxed", "allocator_api"] }

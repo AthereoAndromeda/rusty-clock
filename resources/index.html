@@ -81,7 +81,7 @@
 
     <div id="alarm-counter" x-data="{ hour: null, min: null, sec: null }">
       <h2>Set Alarm</h2>
-      <form hx-post="/alarm_submit" hx-target="#response-div">
+      <form hx-post="/alarm/submit" hx-target="#response-div">
         <input type="number" name="hour" placeholder="Hour"  x-model="hour">
         <input type="number" name="min" placeholder="Minute" x-model="min">
         <input type="number" name="sec" placeholder="Second" x-model="sec">

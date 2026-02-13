@@ -2,7 +2,7 @@ use chrono::Timelike;
 use ds3231::Alarm1Config;
 use picoserve::{
     Router,
-    extract::{Form, Query},
+    extract::{Form, Json, Query},
     response::{DebugValue, IntoResponse},
     routing::{PathRouter, get, parse_path_segment, post},
 };
@@ -17,7 +17,8 @@ pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRou
     router
         .route("/alarm", get(get_alarm))
         .route("/alarm/clear", get(get_clear_flags))
-        .route("/alarm_submit", post(set_alarm_form))
+        .route("/alarm/submit", post(set_alarm_form))
+        .route("/alarm/json", post(set_alarm_json))
         .route(
             (
                 "/alarm",
@@ -71,7 +72,7 @@ async fn set_alarm(
     "Alarm Set!"
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, defmt::Format)]
 struct AlarmForm {
     pub hour: u8,
     pub min: u8,
@@ -80,7 +81,7 @@ struct AlarmForm {
 }
 
 async fn set_alarm_form(Form(form): Form<AlarmForm>) -> impl IntoResponse {
-    defmt::debug!("{}", defmt::Debug2Format(&form));
+    defmt::debug!("{}", &form);
     let AlarmForm {
         hour,
         min,
@@ -89,6 +90,122 @@ async fn set_alarm_form(Form(form): Form<AlarmForm>) -> impl IntoResponse {
     } = form;
 
     set_alarm_inner(hour, min, sec, is_utc == "on").await
+}
+
+/// Alarm 1 specific configurations.
+/// 1-to-1 mapping to Alarm1Config, but with serde
+#[derive(Debug, Clone, PartialEq, Deserialize, defmt::Format)]
+enum MyAlarm1Config {
+    /// Trigger every second (all mask bits set)
+    EverySecond,
+
+    /// Trigger when seconds match (A1M1=0, others=1)
+    AtSeconds {
+        /// Seconds value (0-59)
+        seconds: u8,
+    },
+
+    /// Trigger when minutes and seconds match (A1M1=0, A1M2=0, others=1)
+    AtMinutesSeconds {
+        /// Minutes value (0-59)
+        minutes: u8,
+        /// Seconds value (0-59)
+        seconds: u8,
+    },
+
+    /// Trigger when hours, minutes, and seconds match (A1M1=0, A1M2=0, A1M3=0, A1M4=1)
+    /// This creates a daily alarm at the specified time.
+    AtTime {
+        /// Hours value (0-23 for 24-hour, 1-12 for 12-hour)
+        hours: u8,
+        /// Minutes value (0-59)
+        minutes: u8,
+        /// Seconds value (0-59)
+        seconds: u8,
+        /// PM flag for 12-hour mode (None for 24-hour, Some(true/false) for 12-hour)
+        is_pm: Option<bool>,
+    },
+
+    /// Trigger at specific time on specific date of month (all mask bits=0, DY/DT=0)
+    AtTimeOnDate {
+        /// Hours value (0-23 for 24-hour, 1-12 for 12-hour)
+        hours: u8,
+        /// Minutes value (0-59)
+        minutes: u8,
+        /// Seconds value (0-59)
+        seconds: u8,
+        /// Date of month (1-31)
+        date: u8,
+        /// PM flag for 12-hour mode (None for 24-hour, Some(true/false) for 12-hour)
+        is_pm: Option<bool>,
+    },
+
+    /// Trigger at specific time on specific day of week (all mask bits=0, DY/DT=1)
+    AtTimeOnDay {
+        /// Hours value (0-23 for 24-hour, 1-12 for 12-hour)
+        hours: u8,
+        /// Minutes value (0-59)
+        minutes: u8,
+        /// Seconds value (0-59)
+        seconds: u8,
+        /// Day of week (1-7, where 1=Sunday)
+        day: u8,
+        /// PM flag for 12-hour mode (None for 24-hour, Some(true/false) for 12-hour)
+        is_pm: Option<bool>,
+    },
+}
+
+impl From<MyAlarm1Config> for Alarm1Config {
+    fn from(value: MyAlarm1Config) -> Self {
+        match value {
+            MyAlarm1Config::EverySecond => Alarm1Config::EverySecond,
+            MyAlarm1Config::AtSeconds { seconds } => Alarm1Config::AtSeconds { seconds },
+            MyAlarm1Config::AtMinutesSeconds { minutes, seconds } => {
+                Self::AtMinutesSeconds { minutes, seconds }
+            }
+            MyAlarm1Config::AtTime {
+                hours,
+                minutes,
+                seconds,
+                is_pm,
+            } => Self::AtTime {
+                hours,
+                minutes,
+                seconds,
+                is_pm,
+            },
+            MyAlarm1Config::AtTimeOnDate {
+                hours,
+                minutes,
+                seconds,
+                date,
+                is_pm,
+            } => Self::AtTimeOnDate {
+                hours,
+                minutes,
+                seconds,
+                date,
+                is_pm,
+            },
+            MyAlarm1Config::AtTimeOnDay {
+                hours,
+                minutes,
+                seconds,
+                day,
+                is_pm,
+            } => Self::AtTimeOnDay {
+                hours,
+                minutes,
+                seconds,
+                day,
+                is_pm,
+            },
+        }
+    }
+}
+
+async fn set_alarm_json(Json(json): Json<MyAlarm1Config>) -> impl IntoResponse {
+    SET_ALARM.signal(json.into());
 }
 
 async fn get_clear_flags() -> impl IntoResponse {

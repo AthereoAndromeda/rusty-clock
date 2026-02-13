@@ -1590,6 +1590,7 @@ dependencies = [
  "heapless 0.8.0",
  "picoserve_derive",
  "pin-project",
+ "ryu",
  "serde",
  "serde-json-core",
  "thiserror",
