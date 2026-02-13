@@ -6,6 +6,11 @@ use crate::mk_static;
 mod bt;
 mod wifi;
 
+/// Initialize the esp-radio Controller and
+/// WiFi/BLE functionality
+///
+/// # Panics
+/// Panics if [`esp_radio::init()`] fails to initialize the controller
 pub(crate) fn init(
     spawner: Spawner,
     wifi: peripherals::WIFI<'static>,

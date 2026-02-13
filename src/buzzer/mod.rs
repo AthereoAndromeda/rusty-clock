@@ -1,3 +1,6 @@
+//! # Buzzer
+//! This module holds all the logic regarding the buzzer.
+
 mod listener;
 use listener::*;
 
@@ -21,13 +24,16 @@ impl From<bool> for BuzzerAction {
     }
 }
 
-pub(crate) static BUZZER_SIGNAL: Signal<CriticalSectionRawMutex, BuzzerAction> = Signal::new();
+/// Use this to set the buzzer signal
+pub(crate) static BUZZER_ACTION_SIGNAL: Signal<CriticalSectionRawMutex, BuzzerAction> =
+    Signal::new();
 pub(crate) static TIMER_SIGNAL: Signal<CriticalSectionRawMutex, u32> = Signal::new();
 /// NOTE: ESP32-C3 does not natively support 8-bit atomics (rv32imc).
 /// portable_atomic supports fetch_not
 pub(crate) static IS_BUZZER_ON: portable_atomic::AtomicBool =
     portable_atomic::AtomicBool::new(false);
 
+/// Initialize the buzzer and beep to signal readiness
 pub(super) async fn init(
     spawner: Spawner,
     output_pin: peripherals::GPIO5<'static>,
@@ -42,7 +48,7 @@ pub(super) async fn init(
             .with_pull(esp_hal::gpio::Pull::Down),
     );
 
-    spawner.must_spawn(run(buzzer_output));
+    spawner.must_spawn(listen_for_action(buzzer_output));
     spawner.must_spawn(listen_for_alarm(alarm_pin));
     spawner.must_spawn(listen_for_button(button_pin));
     spawner.must_spawn(listen_for_timer());
@@ -50,28 +56,8 @@ pub(super) async fn init(
     // Beep 3 times
     for _ in 0..3 {
         Timer::after_millis(300).await;
-        BUZZER_SIGNAL.signal(BuzzerAction::Toggle);
+        BUZZER_ACTION_SIGNAL.signal(BuzzerAction::Toggle);
     }
 
-    BUZZER_SIGNAL.signal(BuzzerAction::Off);
-}
-
-#[embassy_executor::task]
-async fn run(mut output: Output<'static>) {
-    loop {
-        match BUZZER_SIGNAL.wait().await {
-            BuzzerAction::On => {
-                output.set_high();
-                IS_BUZZER_ON.store(true, core::sync::atomic::Ordering::Relaxed);
-            }
-            BuzzerAction::Off => {
-                output.set_low();
-                IS_BUZZER_ON.store(false, core::sync::atomic::Ordering::Relaxed);
-            }
-            BuzzerAction::Toggle => {
-                output.toggle();
-                IS_BUZZER_ON.fetch_not(core::sync::atomic::Ordering::Relaxed);
-            }
-        }
-    }
+    BUZZER_ACTION_SIGNAL.signal(BuzzerAction::Off);
 }

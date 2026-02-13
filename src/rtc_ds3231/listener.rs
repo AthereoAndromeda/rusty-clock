@@ -1,3 +1,7 @@
+//! # DS3231 RTC Listeners
+//! This module provides tasks related to our RTC module
+//!
+
 use crate::rtc_ds3231::{ALARM_CONFIG_RWLOCK, SET_ALARM, reset_alarm_flags};
 
 use super::{CLEAR_FLAGS_SIGNAL, RtcMutex, SET_DATETIME_SIGNAL};

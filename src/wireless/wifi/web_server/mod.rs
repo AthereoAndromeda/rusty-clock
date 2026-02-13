@@ -1,3 +1,9 @@
+//! # Web Server
+//! This module contains the logic for hosting a web server.
+//!
+//! Currently this sends a web page which is used as a control
+//! panel to remotely control and configure the device.
+
 mod routes;
 use defmt::info;
 use embassy_time::Duration;

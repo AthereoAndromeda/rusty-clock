@@ -1,3 +1,7 @@
+//! # I2C
+//! This module provides implementations for initializing and generating I2C buses
+//! that can be shared between tasks.
+
 use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use esp_hal::peripherals;
@@ -9,6 +13,9 @@ pub(crate) type I2cMutex = Mutex<CriticalSectionRawMutex, I2cAsync>;
 pub(crate) type I2cBus = I2cDevice<'static, CriticalSectionRawMutex, I2cAsync>;
 
 /// Initialize the I2C bus and return `N` buses
+///
+/// # Panics
+/// Panics if I2C bus fails to initialize
 pub(crate) fn init<const N: usize>(
     i2c_peripheral: peripherals::I2C0<'static>,
     sda_pin: peripherals::GPIO2<'static>,
@@ -21,7 +28,8 @@ pub(crate) fn init<const N: usize>(
             .with_scl(scl_pin)
             .into_async();
 
-    let i2c_mutex: &'static I2cMutex = mk_static!(Mutex<CriticalSectionRawMutex, I2cAsync>; Mutex::<CriticalSectionRawMutex, _>::new(i2c));
+    let i2c_mutex: &'static I2cMutex =
+        mk_static!(I2cMutex; Mutex::<CriticalSectionRawMutex, _>::new(i2c));
 
     let mut buses: heapless::Vec<I2cBus, N> = const { heapless::Vec::new() };
     for _ in 0..N {

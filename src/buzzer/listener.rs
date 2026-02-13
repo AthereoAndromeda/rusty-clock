@@ -1,12 +1,35 @@
-use crate::buzzer::{BUZZER_SIGNAL, BuzzerAction, TIMER_SIGNAL};
+use super::{BUZZER_ACTION_SIGNAL, BuzzerAction, IS_BUZZER_ON, TIMER_SIGNAL};
 use defmt::info;
 use embassy_time::Timer;
 use esp_hal::{
-    gpio::{Input, InputConfig, Pull},
+    gpio::{Input, InputConfig, Output, Pull},
     peripherals,
 };
 
 #[embassy_executor::task]
+/// Listens for [`BUZZER_SIGNAL`] and sets buzzer to
+/// the appropriate action
+pub(super) async fn listen_for_action(mut output: Output<'static>) {
+    loop {
+        match BUZZER_ACTION_SIGNAL.wait().await {
+            BuzzerAction::On => {
+                output.set_high();
+                IS_BUZZER_ON.store(true, core::sync::atomic::Ordering::Relaxed);
+            }
+            BuzzerAction::Off => {
+                output.set_low();
+                IS_BUZZER_ON.store(false, core::sync::atomic::Ordering::Relaxed);
+            }
+            BuzzerAction::Toggle => {
+                output.toggle();
+                IS_BUZZER_ON.fetch_not(core::sync::atomic::Ordering::Relaxed);
+            }
+        }
+    }
+}
+
+#[embassy_executor::task]
+/// Listens for [`TIMER_SIGNAL`] and sets timer accordingly
 pub(super) async fn listen_for_timer() {
     info!("[buzzer:listen_for_timer] Listening for timer");
 
@@ -14,12 +37,12 @@ pub(super) async fn listen_for_timer() {
         let secs = TIMER_SIGNAL.wait().await;
 
         Timer::after_secs(secs as u64).await;
-        BUZZER_SIGNAL.signal(BuzzerAction::On);
+        BUZZER_ACTION_SIGNAL.signal(BuzzerAction::On);
 
         // WARNING: Could potentially turn off the prematurely buzzer if
         // an alarm goes off between the interval of waiting
         Timer::after_secs(30).await;
-        BUZZER_SIGNAL.signal(BuzzerAction::Off);
+        BUZZER_ACTION_SIGNAL.signal(BuzzerAction::Off);
     }
 }
 
@@ -33,7 +56,7 @@ pub(super) async fn listen_for_button(input_pin: peripherals::GPIO7<'static>) {
         input.wait_for_falling_edge().await;
 
         info!("Alarm Button Pressed!");
-        BUZZER_SIGNAL.signal(BuzzerAction::Off);
+        BUZZER_ACTION_SIGNAL.signal(BuzzerAction::Off);
         Timer::after_millis(500).await;
     }
 }
@@ -49,13 +72,13 @@ pub(super) async fn listen_for_alarm(alarm_pin: peripherals::GPIO6<'static>) {
         alarm_input.wait_for_falling_edge().await;
 
         info!("DS3231 Interrupt Received!");
-        BUZZER_SIGNAL.signal(BuzzerAction::On);
+        BUZZER_ACTION_SIGNAL.signal(BuzzerAction::On);
 
         #[cfg(debug_assertions)]
         {
             // Stop it from bleeding my ears while devving
             Timer::after_secs(5).await;
-            BUZZER_SIGNAL.signal(BuzzerAction::Off);
+            BUZZER_ACTION_SIGNAL.signal(BuzzerAction::Off);
             info!("Buzzer set low");
         }
     }

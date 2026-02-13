@@ -1,3 +1,6 @@
+//! # Web Server Routes
+//! Holds all the routes for the web server
+
 use picoserve::{
     Router,
     routing::{PathRouter, get},

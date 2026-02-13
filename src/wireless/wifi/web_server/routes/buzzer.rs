@@ -1,4 +1,4 @@
-use crate::buzzer::{BUZZER_SIGNAL, BuzzerAction, IS_BUZZER_ON};
+use crate::buzzer::{BUZZER_ACTION_SIGNAL, BuzzerAction, IS_BUZZER_ON};
 use embassy_time::Timer;
 use picoserve::{
     Router,
@@ -41,11 +41,11 @@ async fn get_buzzer() -> impl IntoResponse {
 }
 
 async fn toggle_buzzer() -> impl IntoResponse {
-    BUZZER_SIGNAL.signal(BuzzerAction::Toggle);
+    BUZZER_ACTION_SIGNAL.signal(BuzzerAction::Toggle);
 }
 async fn toggle_buzzer_on() -> impl IntoResponse {
-    BUZZER_SIGNAL.signal(BuzzerAction::On);
+    BUZZER_ACTION_SIGNAL.signal(BuzzerAction::On);
 }
 async fn toggle_buzzer_off() -> impl IntoResponse {
-    BUZZER_SIGNAL.signal(BuzzerAction::Off);
+    BUZZER_ACTION_SIGNAL.signal(BuzzerAction::Off);
 }

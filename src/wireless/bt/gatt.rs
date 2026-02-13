@@ -1,3 +1,6 @@
+//! # GATT Server
+//! This module provides the GATT Server implementation for [`trouble_host`]
+
 use bt_hci::uuid::{characteristic, descriptors, service};
 use trouble_host::prelude::{FromGatt, gatt_server, gatt_service};
 
@@ -9,8 +12,8 @@ pub(super) struct Server {
     pub buzzer_service: BuzzerService,
 }
 
-/// Battery service
 #[gatt_service(uuid = service::BATTERY)]
+/// Battery service
 pub(super) struct BatteryService {
     #[descriptor(uuid = descriptors::VALID_RANGE, read, value = [0, 100])]
     #[descriptor(uuid = descriptors::MEASUREMENT_DESCRIPTION, name = "hello", read, value = "Battery Level")]
@@ -22,8 +25,8 @@ pub(super) struct BatteryService {
     pub status: bool,
 }
 
-/// Time Service
 #[gatt_service(uuid = service::DEVICE_TIME)]
+/// Time Service
 pub(super) struct TimeService {
     #[descriptor(uuid = descriptors::VALID_RANGE, read, value = [0, 100])]
     #[descriptor(uuid = descriptors::MEASUREMENT_DESCRIPTION, name = "epoch", read, value = "epoch")]
@@ -34,8 +37,8 @@ pub(super) struct TimeService {
     pub status: bool,
 }
 
-/// Buzzer Service
 #[gatt_service(uuid = service::COMMON_AUDIO)]
+/// Buzzer Service
 pub(super) struct BuzzerService {
     #[characteristic(uuid = characteristic::AUDIO_OUTPUT_DESCRIPTION, read, write, notify)]
     pub level: bool,

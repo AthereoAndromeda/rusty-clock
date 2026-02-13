@@ -6,7 +6,7 @@ use embassy_time::Timer;
 use trouble_host::prelude::*;
 
 use super::{BleController, BleStack};
-use crate::{buzzer::BUZZER_SIGNAL, mk_static, rtc_ds3231::TIME_WATCH};
+use crate::{buzzer::BUZZER_ACTION_SIGNAL, mk_static, rtc_ds3231::TIME_WATCH};
 
 #[embassy_executor::task]
 pub(super) async fn run_peripheral(
@@ -85,7 +85,7 @@ async fn gatt_events_task(
                             // server_write!(level, epoch, buzzer; event, server);
                             if event.handle() == buzzer.handle {
                                 let w = server.get(&buzzer).unwrap();
-                                BUZZER_SIGNAL.signal(w.into());
+                                BUZZER_ACTION_SIGNAL.signal(w.into());
                             }
                         }
                         _ => {}

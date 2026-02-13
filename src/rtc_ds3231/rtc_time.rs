@@ -1,3 +1,6 @@
+//! # RtcTime
+//! This module provides all functionalities regarding [`RtcTime`].
+
 use core::{fmt::Debug, ops::Deref};
 
 use chrono::{Datelike, FixedOffset, NaiveDateTime, TimeZone, Timelike};
@@ -5,7 +8,10 @@ use chrono::{Datelike, FixedOffset, NaiveDateTime, TimeZone, Timelike};
 use crate::TZ_OFFSET;
 
 #[derive(Debug, Copy, Clone)]
-/// A wrapper around `chrono::NaiveDateTime` and also implements `Deref`
+/// A wrapper around [`chrono::NaiveDateTime`]
+///
+/// This wrapper implements `Deref`. This wrapper also provides
+/// convenience methods, impls, and interfaces wih our web server
 pub(crate) struct RtcTime(pub NaiveDateTime);
 
 const MONTH_BY_INDEX: [&str; 12] = [

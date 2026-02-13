@@ -1,7 +1,5 @@
-//! embassy powered alarm clock
-//!
-//! This is an example of running the embassy executor with multiple tasks
-//! concurrently.
+//! # Rusty-Clock
+//! An Embassy powered alarm clock
 
 #![no_std]
 #![no_main]

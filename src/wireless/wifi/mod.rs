@@ -14,6 +14,10 @@ use esp_radio::wifi::{
 
 use crate::{PASSWORD, SSID, mk_static};
 
+/// Initialize WiFi Stack and attempt to connect to a network
+///
+/// # Panics
+/// Panics to WiFi Controller fails to initialize
 pub(super) fn init(
     spawner: Spawner,
     radio_init: &'static esp_radio::Controller<'static>,

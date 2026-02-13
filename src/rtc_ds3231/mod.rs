@@ -1,3 +1,10 @@
+//! # DS3231 RTC
+//! This module provides implementations for interfacing with our
+//! DS3231 Real Time Clock module
+//!
+//! The module also provides access to [`embassy_sync`] primitives
+//! that interface with the RTC module
+
 pub mod alarm;
 pub mod error;
 pub mod rtc_time;
