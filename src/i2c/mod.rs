@@ -8,6 +8,7 @@ pub(crate) type I2cAsync = esp_hal::i2c::master::I2c<'static, esp_hal::Async>;
 pub(crate) type I2cMutex = Mutex<CriticalSectionRawMutex, I2cAsync>;
 pub(crate) type I2cBus = I2cDevice<'static, CriticalSectionRawMutex, I2cAsync>;
 
+/// Initialize the I2C bus and return `N` buses
 pub(crate) fn init_i2c<const N: usize>(
     i2c_peripheral: peripherals::I2C0<'static>,
     sda_pin: peripherals::GPIO2<'static>,
@@ -21,7 +22,16 @@ pub(crate) fn init_i2c<const N: usize>(
             .into_async();
 
     let i2c_mutex: &'static I2cMutex = mk_static!(Mutex<CriticalSectionRawMutex, I2cAsync>; Mutex::<CriticalSectionRawMutex, _>::new(i2c));
-    create_buses(i2c_mutex)
+
+    let mut buses: heapless::Vec<I2cBus, N> = const { heapless::Vec::new() };
+    for _ in 0..N {
+        // SAFETY: N slots are alotted and we only push N times
+        unsafe {
+            buses.push_unchecked(I2cDevice::new(i2c_mutex));
+        }
+    }
+
+    buses
 }
 
 // /// Given N `usize` and `&I2cMutex`, it will create and return N `MaybeUninit<I2cDevice>`s
@@ -36,16 +46,3 @@ pub(crate) fn init_i2c<const N: usize>(
 
 //     arr
 // }
-
-pub(crate) fn create_buses<const N: usize>(mutex: &'static I2cMutex) -> heapless::Vec<I2cBus, N> {
-    let mut v: heapless::Vec<I2cBus, N> = const { heapless::Vec::new() };
-
-    for _ in 0..N {
-        // SAFETY: N slots are alotted and we only push N times
-        unsafe {
-            v.push_unchecked(I2cDevice::new(mutex));
-        }
-    }
-
-    v
-}
