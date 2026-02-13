@@ -17,7 +17,6 @@ use embassy_sync::{
     watch::Watch,
 };
 use embassy_time::Timer;
-use portable_atomic::AtomicI64;
 
 use crate::{i2c::I2cBus, mk_static, rtc_ds3231::rtc_time::RtcTime};
 
@@ -51,12 +50,14 @@ const ENV_TIME: Alarm1Config = {
 
 /// Contains the time from RTC module
 pub(crate) static TIME_WATCH: Watch<CriticalSectionRawMutex, RtcTime, 3> = Watch::new();
-/// Sets the RTC module alarm
-pub(crate) static SET_ALARM: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
 /// Clears the alarm flags for RTC
 pub(crate) static CLEAR_FLAGS_SIGNAL: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 
+/// Sets the RTC module alarm
+pub(crate) static SET_ALARM: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
+
 /// Globally accessible Alarm1Config
+/// Mostly for Reading the current config. For setting, use [`SET_ALARM`] instead.
 pub(crate) static ALARM_CONFIG_RWLOCK: RwLock<CriticalSectionRawMutex, Alarm1Config> =
     RwLock::new(ENV_TIME);
 
@@ -68,7 +69,7 @@ pub(crate) static SET_DATETIME_SIGNAL: Signal<CriticalSectionRawMutex, chrono::N
 /// This is used instead of pinging the RTC module every second
 ///
 /// NOTE: `portable_atomic` crate is used since native does not support 64 bit atomics
-pub(crate) static LOCAL_TIMESTAMP: AtomicI64 = AtomicI64::new(0);
+pub(crate) static LOCAL_TIMESTAMP: portable_atomic::AtomicU64 = portable_atomic::AtomicU64::new(0);
 
 pub(crate) type RtcDS3231 = DS3231<I2cBus>;
 pub(crate) type RtcMutex = Mutex<CriticalSectionRawMutex, RtcDS3231>;
@@ -136,7 +137,11 @@ async fn run(rtc_mutex: &'static RtcMutex) {
         let datetime = rtc_mutex.lock().await.datetime().await.unwrap();
         sender.send(datetime.into());
         LOCAL_TIMESTAMP.store(
-            datetime.and_utc().timestamp(),
+            datetime
+                .and_utc()
+                .timestamp()
+                .try_into()
+                .expect("Alarm must never be set before January 1, 1970"),
             core::sync::atomic::Ordering::SeqCst,
         );
 
