@@ -85,3 +85,6 @@ pub(super) async fn listen_for_alarm(alarm_pin: peripherals::GPIO6<'static>) {
         }
     }
 }
+
+#[embassy_executor::task]
+pub(super) async fn listen_for_volume() {}

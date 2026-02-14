@@ -71,6 +71,17 @@
       Clear Alarm Flags
     </button>
 
+    <div class="volume" x-data="{volume: 50}">
+      <form hx-post="/volume">
+        <input type="range" min="0" max="100" x-model="volume" class="slider" name="volume">
+        <p>
+          <span x-text="volume"></span>%
+        </p>
+        <button type="submit">Submit</button>
+      </form>
+
+    </div>
+
     <div x-data="{timer: null, timeout:null}">
       <form hx-post="/timer" hx-target="#response-div">
         <input type="number" name="timer" placeholder="Time in Seconds" x-model="timer">
