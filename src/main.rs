@@ -1,5 +1,9 @@
 //! # Rusty-Clock
 //! An Embassy powered alarm clock
+//!
+//! WARN: I accidentally shorted out my GPIO9, destroying the LED but somehow it still works??
+//! I'm assuming the LED acted like a fuse, however the GPIO9 might be damaged in some way
+//! that I am not aware of
 
 #![no_std]
 #![no_main]
@@ -15,11 +19,14 @@
 #![feature(const_trait_impl)]
 #![feature(const_result_trait_fn)]
 #![feature(const_result_unwrap_unchecked)]
+// NIGHTLY: Enum-based typestate pattern
+#![feature(adt_const_params)]
 
 extern crate alloc;
 
 mod buzzer;
 mod i2c;
+mod pwm;
 mod rtc_ds3231;
 mod wireless;
 
@@ -31,7 +38,11 @@ use defmt::info;
 use embassy_executor::Spawner;
 #[cfg(target_arch = "riscv32")]
 use esp_hal::interrupt::software::SoftwareInterruptControl;
-use esp_hal::{clock::CpuClock, timer::timg::TimerGroup};
+use esp_hal::{
+    clock::CpuClock,
+    gpio::{Output, OutputConfig},
+    timer::timg::TimerGroup,
+};
 
 // Found via `espflash`
 // pub const MAC_ADDR: &'static str = "10:20:ba:91:bb:b4";
@@ -101,14 +112,17 @@ async fn main(spawner: Spawner) {
     info!("Init RTC...");
     rtc_ds3231::init(spawner, i2c_rtc).await;
 
-    info!("Init Buzzer...");
-    buzzer::init(
-        spawner,
+    info!("Init PWM/LEDC");
+    let output = Output::new(
         peripherals.GPIO5,
-        peripherals.GPIO7,
-        peripherals.GPIO6,
-    )
-    .await;
+        esp_hal::gpio::Level::Low,
+        OutputConfig::default().with_drive_strength(esp_hal::gpio::DriveStrength::_5mA),
+    );
+
+    let chan = pwm::init(peripherals.LEDC, output).channel0();
+
+    info!("Init Buzzer...");
+    buzzer::init(spawner, chan, peripherals.GPIO7, peripherals.GPIO6).await;
 
     info!("Initializing Wireless...");
     wireless::init(spawner, peripherals.WIFI, peripherals.BT);

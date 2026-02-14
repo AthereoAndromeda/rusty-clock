@@ -1,14 +1,17 @@
 //! # Buzzer
 //! This module holds all the logic regarding the buzzer.
 
+mod buzzer_struct;
 mod listener;
+
+pub(crate) use buzzer_struct::*;
 use listener::*;
 
 use embassy_executor::Spawner;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_time::Timer;
 use esp_hal::{
-    gpio::Output,
+    ledc::LowSpeed,
     peripherals::{self},
 };
 
@@ -36,19 +39,14 @@ pub(crate) static IS_BUZZER_ON: portable_atomic::AtomicBool =
 /// Initialize the buzzer and beep to signal readiness
 pub(super) async fn init(
     spawner: Spawner,
-    output_pin: peripherals::GPIO5<'static>,
+    output_channel: esp_hal::ledc::channel::Channel<'static, LowSpeed>,
     button_pin: peripherals::GPIO7<'static>,
     alarm_pin: peripherals::GPIO6<'static>,
 ) {
-    let buzzer_output = Output::new(
-        output_pin,
-        esp_hal::gpio::Level::High,
-        esp_hal::gpio::OutputConfig::default()
-            .with_drive_strength(esp_hal::gpio::DriveStrength::_5mA)
-            .with_pull(esp_hal::gpio::Pull::Down),
-    );
+    let mut buzzer = Buzzer::new(output_channel);
+    buzzer.set_volume(100);
 
-    spawner.must_spawn(listen_for_action(buzzer_output));
+    spawner.must_spawn(listen_for_action(buzzer));
     spawner.must_spawn(listen_for_alarm(alarm_pin));
     spawner.must_spawn(listen_for_button(button_pin));
     spawner.must_spawn(listen_for_timer());

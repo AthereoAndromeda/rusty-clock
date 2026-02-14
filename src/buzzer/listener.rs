@@ -1,23 +1,25 @@
+use crate::buzzer::Buzzer;
+
 use super::{BUZZER_ACTION_SIGNAL, BuzzerAction, IS_BUZZER_ON, TIMER_SIGNAL};
 use defmt::info;
 use embassy_time::Timer;
 use esp_hal::{
-    gpio::{Input, InputConfig, Output, Pull},
+    gpio::{Input, InputConfig, Pull},
     peripherals,
 };
 
 #[embassy_executor::task]
 /// Listens for [`BUZZER_SIGNAL`] and sets buzzer to
 /// the appropriate action
-pub(super) async fn listen_for_action(mut output: Output<'static>) {
+pub(super) async fn listen_for_action(mut output: Buzzer) {
     loop {
         match BUZZER_ACTION_SIGNAL.wait().await {
             BuzzerAction::On => {
-                output.set_high();
+                output.activate();
                 IS_BUZZER_ON.store(true, core::sync::atomic::Ordering::Relaxed);
             }
             BuzzerAction::Off => {
-                output.set_low();
+                output.deactivate();
                 IS_BUZZER_ON.store(false, core::sync::atomic::Ordering::Relaxed);
             }
             BuzzerAction::Toggle => {
