@@ -72,12 +72,12 @@
     </button>
 
     <div class="volume" x-data="{volume: 50}">
-      <form hx-post="/volume">
+      <form hx-post="/volume" hx-target="#volume-response">
         <input type="range" min="0" max="100" x-model="volume" class="slider" name="volume">
-        <p>
-          <span x-text="volume"></span>%
-        </p>
+        <span x-text="volume"></span>%
         <button type="submit">Submit</button>
+
+        <p id="volume-response"></p>
       </form>
 
     </div>

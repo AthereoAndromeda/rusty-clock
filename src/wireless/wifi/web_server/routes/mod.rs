@@ -10,6 +10,7 @@ mod alarm;
 mod buzzer;
 mod time;
 mod timer;
+mod volume;
 
 // TODO: Dynamically generate help message
 // Attribute macro? #[help_msg = "message"]
@@ -40,6 +41,7 @@ pub(super) fn add_all_routes(router: Router<impl PathRouter>) -> Router<impl Pat
     let router = buzzer::add_routes(router);
     let router = time::add_routes(router);
     let router = timer::add_routes(router);
+    let router = volume::add_routes(router);
 
     router.route("/help", get(get_help))
 }

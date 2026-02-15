@@ -1,7 +1,7 @@
-use crate::buzzer::Buzzer;
+use crate::buzzer::VOLUME_SIGNAL;
 
 use super::{BUZZER_ACTION_SIGNAL, BuzzerAction, IS_BUZZER_ON, TIMER_SIGNAL};
-use defmt::info;
+use defmt::{debug, info};
 use embassy_time::Timer;
 use esp_hal::{
     gpio::{Input, InputConfig, Pull},
@@ -9,21 +9,21 @@ use esp_hal::{
 };
 
 #[embassy_executor::task]
-/// Listens for [`BUZZER_SIGNAL`] and sets buzzer to
+/// Listens for [`BUZZER_ACTION_SIGNAL`] and sets buzzer to
 /// the appropriate action
-pub(super) async fn listen_for_action(mut output: Buzzer) {
+pub(super) async fn listen_for_action(output: &'static super::BuzzerMutex) {
     loop {
         match BUZZER_ACTION_SIGNAL.wait().await {
             BuzzerAction::On => {
-                output.activate();
+                output.lock().await.activate();
                 IS_BUZZER_ON.store(true, core::sync::atomic::Ordering::Relaxed);
             }
             BuzzerAction::Off => {
-                output.deactivate();
+                output.lock().await.deactivate();
                 IS_BUZZER_ON.store(false, core::sync::atomic::Ordering::Relaxed);
             }
             BuzzerAction::Toggle => {
-                output.toggle();
+                output.lock().await.toggle();
                 IS_BUZZER_ON.fetch_not(core::sync::atomic::Ordering::Relaxed);
             }
         }
@@ -87,4 +87,10 @@ pub(super) async fn listen_for_alarm(alarm_pin: peripherals::GPIO6<'static>) {
 }
 
 #[embassy_executor::task]
-pub(super) async fn listen_for_volume() {}
+pub(super) async fn listen_for_volume(output: &'static super::BuzzerMutex) {
+    loop {
+        let volume = VOLUME_SIGNAL.wait().await;
+        debug!("Volume signal received");
+        output.lock().await.set_volume(volume);
+    }
+}
