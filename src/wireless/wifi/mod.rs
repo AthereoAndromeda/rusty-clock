@@ -1,8 +1,6 @@
 pub mod sntp;
 pub mod web_server;
 
-const MAX_NET_SOCKETS: usize = 6;
-
 use defmt::{debug, info, warn};
 use embassy_executor::Spawner;
 use embassy_net::StackResources;
@@ -52,6 +50,10 @@ fn get_stack(
     let seed = (rng.random() as u64) << 32 | rng.random() as u64;
 
     let embassy_config = embassy_net::Config::dhcpv4(Default::default());
+
+    // 3 web tasks + 1 sntp + ? + ?
+    // Currently requires 6 sockets minimum. Picoserve possibly adds 2 sockets?
+    const MAX_NET_SOCKETS: usize = web_server::WEB_TASK_POOL_SIZE + 3;
 
     // Init network stack
     embassy_net::new(
