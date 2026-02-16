@@ -12,6 +12,9 @@ version      = "0.1.0"
 name = "rusty-clock"
 path = "./src/main.rs"
 
+[features]
+ble = []
+
 [dependencies]
 # rusty-clock-macros = { path = "./rusty-clock-macros" }
 

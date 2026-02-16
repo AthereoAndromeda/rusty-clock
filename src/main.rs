@@ -45,6 +45,7 @@ use esp_hal::{
     timer::timg::TimerGroup,
 };
 
+#[cfg(feature = "ble")]
 // Found via `espflash`
 // pub const MAC_ADDR: &'static str = "10:20:ba:91:bb:b4";
 pub(crate) const MAC_ADDR: [u8; 6] = [0x10, 0x20, 0xba, 0x91, 0xbb, 0xb4];
@@ -121,7 +122,12 @@ async fn main(spawner: Spawner) {
     buzzer::init(spawner, chan, peripherals.GPIO7, peripherals.GPIO6).await;
 
     info!("Initializing Wireless...");
-    wireless::init(spawner, peripherals.WIFI, peripherals.BT);
+    wireless::init(
+        spawner,
+        peripherals.WIFI,
+        #[cfg(feature = "ble")]
+        peripherals.BT,
+    );
 
     info!("All Systems Go!");
     info!("Running.... ");

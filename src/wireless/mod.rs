@@ -3,6 +3,7 @@ use esp_hal::peripherals;
 
 use crate::utils::mk_static;
 
+#[cfg(feature = "ble")]
 mod bt;
 mod wifi;
 
@@ -14,7 +15,7 @@ mod wifi;
 pub(crate) fn init(
     spawner: Spawner,
     wifi: peripherals::WIFI<'static>,
-    bt: peripherals::BT<'static>,
+    #[cfg(feature = "ble")] bt: peripherals::BT<'static>,
 ) {
     let radio_init: &'static esp_radio::Controller<'static> = mk_static!(
         esp_radio::Controller<'static>;
@@ -22,5 +23,7 @@ pub(crate) fn init(
     );
 
     wifi::init(spawner, radio_init, wifi);
+
+    #[cfg(feature = "ble")]
     bt::init(spawner, radio_init, bt);
 }
