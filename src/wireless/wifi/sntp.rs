@@ -10,8 +10,15 @@ use static_cell::ConstStaticCell;
 use crate::rtc_ds3231::{SET_DATETIME_SIGNAL, TIME_WATCH};
 
 pub(crate) static NTP_SYNC: Signal<CriticalSectionRawMutex, ()> = Signal::new();
-const NTP_SERVER_ADDR: &str = "pool.ntp.org";
-const SNTP_PORT: u16 = 123;
+
+const NTP_SERVER_ADDR: &str = option_env!("NTP_SERVER_ADDR").unwrap_or("pool.ntp.org");
+
+const SNTP_PORT: u16 = {
+    let port = option_env!("SNTP_PORT").unwrap_or("123");
+    u16::from_str_radix(port, 10)
+        .ok()
+        .expect("Failed to parse .env: SNTP_PORT")
+};
 
 #[derive(Copy, Clone, Default)]
 /// Time in us
