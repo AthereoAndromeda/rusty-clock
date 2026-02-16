@@ -6,7 +6,7 @@ use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use esp_hal::peripherals;
 
-use crate::mk_static;
+use crate::utils::mk_static;
 
 pub(crate) type I2cAsync = esp_hal::i2c::master::I2c<'static, esp_hal::Async>;
 pub(crate) type I2cMutex = Mutex<CriticalSectionRawMutex, I2cAsync>;

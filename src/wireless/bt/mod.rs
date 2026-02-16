@@ -16,7 +16,7 @@ use trouble_host::{
     prelude::DefaultPacketPool,
 };
 
-use crate::{MAC_ADDR, mk_static};
+use crate::{MAC_ADDR, utils::mk_static};
 
 /// Max number of connections for Bluetooth
 const BLE_CONNECTIONS_MAX: usize = 2;

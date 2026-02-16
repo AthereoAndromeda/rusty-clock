@@ -1,7 +1,7 @@
 use embassy_executor::Spawner;
 use esp_hal::peripherals;
 
-use crate::mk_static;
+use crate::utils::mk_static;
 
 mod bt;
 mod wifi;

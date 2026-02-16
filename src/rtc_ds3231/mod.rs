@@ -25,7 +25,7 @@ use embassy_sync::{
 };
 use embassy_time::Timer;
 
-use crate::{i2c::I2cBus, mk_static, rtc_ds3231::rtc_time::RtcTime};
+use crate::{i2c::I2cBus, rtc_ds3231::rtc_time::RtcTime, utils::mk_static};
 
 /// The alarm time set through env
 const ENV_TIME: Alarm1Config = {

@@ -8,7 +8,7 @@ use esp_hal::{
     peripherals,
 };
 
-use crate::mk_static;
+use crate::utils::mk_static;
 
 pub(crate) struct ChannelBuilder {
     lstimer0: &'static Timer<'static, LowSpeed>,

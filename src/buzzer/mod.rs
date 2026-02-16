@@ -15,7 +15,7 @@ use esp_hal::{
     peripherals::{self},
 };
 
-use crate::mk_static;
+use crate::utils::mk_static;
 
 pub(crate) enum BuzzerAction {
     On,

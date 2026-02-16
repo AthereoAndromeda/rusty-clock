@@ -12,7 +12,7 @@ use esp_radio::wifi::{
     ClientConfig, ModeConfig, WifiController, WifiDevice, WifiEvent, WifiStaState,
 };
 
-use crate::{PASSWORD, SSID, mk_static};
+use crate::{PASSWORD, SSID, utils::mk_static};
 
 /// Initialize WiFi Stack and attempt to connect to a network
 ///

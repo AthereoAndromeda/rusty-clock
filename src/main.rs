@@ -28,6 +28,7 @@ mod buzzer;
 mod i2c;
 mod pwm;
 mod rtc_ds3231;
+mod utils;
 mod wireless;
 
 use defmt_rtt as _;
@@ -66,23 +67,6 @@ pub(crate) const TZ_OFFSET: i8 = {
 // TEST: Within UTC Offset range
 static_assertions::const_assert!(TZ_OFFSET <= 12 && TZ_OFFSET >= -12);
 esp_bootloader_esp_idf::esp_app_desc!();
-
-/// Convert a `T` to a `&'static mut T`.
-///
-/// The macro declares a `static StaticCell` and then initializes it when run, returning the `&'static mut`.
-/// Therefore, each instance can only be run once. Next runs will panic. The `static` can additionally be
-/// decorated with attributes, such as `#[link_section]`, `#[used]`, et al.
-pub(crate) macro mk_static {
-    ($t:ty; $val:expr) => (mk_static!($t, $val, )),
-    ($t:ty, $val:expr) => (mk_static!($t, $val, )),
-    ($t:ty, $val:expr, $(#[$m:meta])*) => {{
-        $(#[$m])*
-        static STATIC_CELL: static_cell::StaticCell<$t> = static_cell::StaticCell::new();
-        #[deny(unused_attributes)]
-        let x = STATIC_CELL.uninit().write($val);
-        x
-    }}
-}
 
 #[esp_rtos::main]
 async fn main(spawner: Spawner) {

@@ -6,7 +6,7 @@ use embassy_time::Timer;
 use trouble_host::prelude::*;
 
 use super::{BleController, BleStack};
-use crate::{buzzer::BUZZER_ACTION_SIGNAL, mk_static, rtc_ds3231::TIME_WATCH};
+use crate::{buzzer::BUZZER_ACTION_SIGNAL, rtc_ds3231::TIME_WATCH, utils::mk_static};
 
 #[embassy_executor::task]
 pub(super) async fn run_peripheral(
