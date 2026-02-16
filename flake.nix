@@ -42,6 +42,8 @@
               espflash
               probe-rs-tools
               cargo-expand
+              cargo-binutils
+              cargo-bloat
             ]);
         };
       }
