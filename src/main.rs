@@ -83,9 +83,11 @@ async fn main(spawner: Spawner) {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
 
-    esp_alloc::heap_allocator!(#[unsafe(link_section = ".dram2_uninit")] size: 66320);
+    // Previously 66320
+    // Any lower may cause issues with WiFi/BLE connections
+    esp_alloc::heap_allocator!(#[unsafe(link_section = ".dram2_uninit")] size: 60000);
     // COEX needs more RAM - so we've added some more
-    esp_alloc::heap_allocator!(size: 64 * 1024);
+    esp_alloc::heap_allocator!(size: 32 * 1024); // Previously 64 * 1024
 
     #[cfg(target_arch = "riscv32")]
     let sw_int = SoftwareInterruptControl::new(peripherals.SW_INTERRUPT);
