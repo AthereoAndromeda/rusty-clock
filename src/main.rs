@@ -59,9 +59,19 @@ pub(crate) const PASSWORD: &str = env!("PASSWORD");
 pub(crate) const TZ_OFFSET: i8 = {
     let tz = option_env!("TZ_OFFSET").unwrap_or("0");
 
-    // SAFETY: Caller is required to guarantee valid number
-    // NOTE: Result::unwrap cannot be used since it is non-const
-    unsafe { i8::from_str_radix(tz, 10).unwrap_unchecked() }
+    // This also works
+    // match i8::from_str_radix(tz, 10) {
+    //     Ok(n) => n,
+    //     Err(_) => {
+    //         panic!("Failed to parse .env: TZ_OFFSET");
+    //     }
+    // }
+
+    // We convert to `Option` since `Result::unwrap` is not const fn,
+    // but `Option::unwrap` is.
+    i8::from_str_radix(tz, 10)
+        .ok()
+        .expect("Failed to parse .env: TZ_OFFSET")
 };
 
 // TEST: Within UTC Offset range

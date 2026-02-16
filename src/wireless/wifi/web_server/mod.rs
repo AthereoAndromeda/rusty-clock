@@ -75,8 +75,10 @@ pub(super) async fn web_task(
 
     const PORT: u16 = {
         let s = option_env!("WEB_PORT").unwrap_or("80");
-        // SAFETY: User must ensure WEB_PORT is a valid number
-        unsafe { u16::from_str_radix(s, 10).unwrap_unchecked() }
+
+        u16::from_str_radix(s, 10)
+            .ok()
+            .expect("Failed to parse .env: WEB_PORT")
     };
 
     stack.wait_config_up().await;

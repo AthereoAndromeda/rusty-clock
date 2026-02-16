@@ -33,11 +33,16 @@ const ENV_TIME: Alarm1Config = {
     const MIN: &str = option_env!("ALARM_MINUTES").unwrap_or("0");
     const SEC: &str = option_env!("ALARM_SECONDS").unwrap_or("0");
 
-    // SAFETY: Caller is required to guarantee valid number
-    const TUP: (u8, u8, u8) = unsafe {
-        let h = u8::from_str_radix(HOUR, 10).unwrap_unchecked();
-        let m = u8::from_str_radix(MIN, 10).unwrap_unchecked();
-        let s = u8::from_str_radix(SEC, 10).unwrap_unchecked();
+    const TUP: (u8, u8, u8) = {
+        let h = u8::from_str_radix(HOUR, 10)
+            .ok()
+            .expect("Failed to parse .env: ALARM_HOUR");
+        let m = u8::from_str_radix(MIN, 10)
+            .ok()
+            .expect("Failed to parse .env: ALARM_MINUTES");
+        let s = u8::from_str_radix(SEC, 10)
+            .ok()
+            .expect("Failed to parse .env: ALARM_SECONDS");
         (h, m, s)
     };
 
@@ -83,7 +88,9 @@ pub(crate) type RtcMutex = Mutex<CriticalSectionRawMutex, RtcDS3231>;
 
 pub(crate) const RTC_I2C_ADDR: u8 = {
     let addr = option_env!("RTC_I2C_ADDR").unwrap_or(/*0x*/ "68");
-    unsafe { u8::from_str_radix(addr, 16).unwrap_unchecked() }
+    u8::from_str_radix(addr, 16)
+        .ok()
+        .expect("Failed to parse .env: RTC_I2C_ADDR")
 };
 
 /// Initialize the DS3231 Instance and spawn tasks
