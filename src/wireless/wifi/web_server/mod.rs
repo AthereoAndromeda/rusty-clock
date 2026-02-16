@@ -8,6 +8,7 @@ mod routes;
 use defmt::info;
 use embassy_time::Duration;
 use picoserve::{AppBuilder, AppRouter, Router, make_static, response::File, routing::get_service};
+use static_cell::ConstStaticCell;
 
 pub(super) const WEB_TASK_POOL_SIZE: usize = 3;
 
@@ -50,6 +51,17 @@ impl AppBuilder for App {
     }
 }
 
+// This is used since simply using `static` inside the function
+// will cause a runtime panic since the cell would be taken twice.
+//
+// This method ensures that each buffer has a unique memory address
+static RX_BUFFERS: [ConstStaticCell<[u8; 1024]>; WEB_TASK_POOL_SIZE] =
+    [const { ConstStaticCell::new([0; _]) }; WEB_TASK_POOL_SIZE];
+static TX_BUFFERS: [ConstStaticCell<[u8; 1024]>; WEB_TASK_POOL_SIZE] =
+    [const { ConstStaticCell::new([0; _]) }; WEB_TASK_POOL_SIZE];
+static HTTP_BUFFERS: [ConstStaticCell<[u8; 2048]>; WEB_TASK_POOL_SIZE] =
+    [const { ConstStaticCell::new([0; _]) }; WEB_TASK_POOL_SIZE];
+
 #[embassy_executor::task(pool_size = WEB_TASK_POOL_SIZE)]
 pub(super) async fn web_task(
     task_id: usize,
@@ -57,9 +69,9 @@ pub(super) async fn web_task(
     app: &'static AppRouter<App>,
     config: &'static picoserve::Config,
 ) -> ! {
-    let mut tcp_rx_buffer = [0; 1024];
-    let mut tcp_tx_buffer = [0; 1024];
-    let mut http_buffer = [0; 2048];
+    let tcp_rx_buffer = RX_BUFFERS[task_id].take();
+    let tcp_tx_buffer = TX_BUFFERS[task_id].take();
+    let http_buffer = HTTP_BUFFERS[task_id].take();
 
     const PORT: u16 = {
         let s = option_env!("WEB_PORT").unwrap_or("80");
@@ -74,8 +86,8 @@ pub(super) async fn web_task(
         "[task-id:{}] Serving and listening at {}:{}",
         task_id, addr, PORT
     );
-    picoserve::Server::new(app, config, &mut http_buffer)
-        .listen_and_serve(task_id, stack, PORT, &mut tcp_rx_buffer, &mut tcp_tx_buffer)
+    picoserve::Server::new(app, config, http_buffer)
+        .listen_and_serve(task_id, stack, PORT, tcp_rx_buffer, tcp_tx_buffer)
         .await
         .into_never()
 }

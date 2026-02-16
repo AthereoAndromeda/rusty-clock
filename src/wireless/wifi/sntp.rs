@@ -5,6 +5,7 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal}
 use embassy_time::{Duration, WithTimeout};
 use sntpc::NtpContext;
 use sntpc_net_embassy::UdpSocketWrapper;
+use static_cell::ConstStaticCell;
 
 use crate::rtc_ds3231::{SET_DATETIME_SIGNAL, TIME_WATCH};
 
@@ -27,20 +28,30 @@ impl sntpc::NtpTimestampGenerator for SntpTimestamp {
     }
 }
 
+static UDP_RX_META: ConstStaticCell<[PacketMetadata; 16]> =
+    ConstStaticCell::new([PacketMetadata::EMPTY; 16]);
+static UDP_TX_META: ConstStaticCell<[PacketMetadata; 16]> =
+    ConstStaticCell::new([PacketMetadata::EMPTY; 16]);
+static UDP_RX_BUFFER: ConstStaticCell<[u8; 1024]> = ConstStaticCell::new([0; 1024]);
+static UDP_TX_BUFFER: ConstStaticCell<[u8; 1024]> = ConstStaticCell::new([0; 1024]);
+
 #[embassy_executor::task]
 pub(crate) async fn fetch_sntp(net_stack: embassy_net::Stack<'static>) {
     // Create UDP socket
-    let mut udp_rx_meta = [PacketMetadata::EMPTY; 16];
-    let mut udp_tx_meta = [PacketMetadata::EMPTY; 16];
-    let mut udp_tx_buffer = [0u8; 1024];
-    let mut udp_rx_buffer = [0u8; 1024];
+    //
+    // NOTE: Using `ConstStaticCell` means these buffers are stored in .bss, thus does
+    // not take up any flash space.
+    let udp_rx_meta = UDP_RX_META.take();
+    let udp_tx_meta = UDP_TX_META.take();
+    let udp_tx_buffer = UDP_TX_BUFFER.take();
+    let udp_rx_buffer = UDP_RX_BUFFER.take();
 
     let mut udp_socket = UdpSocket::new(
         net_stack,
-        &mut udp_rx_meta,
-        &mut udp_rx_buffer,
-        &mut udp_tx_meta,
-        &mut udp_tx_buffer,
+        udp_rx_meta,
+        udp_rx_buffer,
+        udp_tx_meta,
+        udp_tx_buffer,
     );
 
     udp_socket.bind(SNTP_PORT).unwrap();
