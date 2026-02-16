@@ -21,6 +21,11 @@
 // NIGHTLY: Enum-based typestate pattern
 // #![feature(adt_const_params)]
 
+// CLIPPY: `Result::unwrap` is not const fn, while `Option::unwrap` is.
+// Thus it is necessary to convert `Result` to `Option` in const contexts
+// if we want to avoid using unsafe.
+#![allow(clippy::ok_expect)]
+
 extern crate alloc;
 
 mod buzzer;
