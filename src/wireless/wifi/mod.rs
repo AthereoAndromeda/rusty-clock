@@ -47,7 +47,7 @@ fn get_stack(
     let wifi_interface_station = wifi_interface.sta;
 
     let rng = Rng::new();
-    let seed = (rng.random() as u64) << 32 | rng.random() as u64;
+    let seed = u64::from(rng.random()) << 32 | u64::from(rng.random());
 
     let embassy_config = embassy_net::Config::dhcpv4(Default::default());
 

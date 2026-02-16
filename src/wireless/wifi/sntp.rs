@@ -160,11 +160,11 @@ async fn fetch_sntp_inner(
                 debug!("[sntp] NTP: {}", time.seconds);
                 debug!("[sntp] RTC: {}", rtc_time);
 
-                let diff = (time.seconds as i64).saturating_sub(rtc_time);
+                let diff = i64::from(time.seconds).saturating_sub(rtc_time);
                 debug!("[sntp] Difference: {}", diff);
             }
 
-            let datetime = chrono::DateTime::from_timestamp_secs(time.seconds as i64)
+            let datetime = chrono::DateTime::from_timestamp_secs(time.seconds.into())
                 .unwrap()
                 .naive_utc();
 

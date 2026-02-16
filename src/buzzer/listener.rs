@@ -38,7 +38,7 @@ pub(super) async fn listen_for_timer() {
     loop {
         let secs = TIMER_SIGNAL.wait().await;
 
-        Timer::after_secs(secs as u64).await;
+        Timer::after_secs(secs.into()).await;
         BUZZER_ACTION_SIGNAL.signal(BuzzerAction::On);
 
         // WARNING: Could potentially turn off the prematurely buzzer if

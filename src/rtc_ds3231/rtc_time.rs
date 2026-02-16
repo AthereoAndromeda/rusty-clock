@@ -51,7 +51,7 @@ impl RtcTime {
     pub fn to_human_local(self) -> heapless::String<50> {
         let time = self
             .0
-            .and_local_timezone(FixedOffset::east_opt(TZ_OFFSET as i32 * 3600).unwrap())
+            .and_local_timezone(FixedOffset::east_opt(i32::from(TZ_OFFSET) * 3600).unwrap())
             .unwrap();
 
         Self::human_inner(time)
@@ -73,7 +73,7 @@ impl RtcTime {
     pub fn to_iso8601_local(self) -> heapless::String<25> {
         let time = self
             .0
-            .and_local_timezone(FixedOffset::east_opt(TZ_OFFSET as i32 * 3600).unwrap())
+            .and_local_timezone(FixedOffset::east_opt(i32::from(TZ_OFFSET) * 3600).unwrap())
             .unwrap();
 
         let sign = if TZ_OFFSET >= 0 { "+" } else { "-" };

@@ -25,6 +25,7 @@
 // Thus it is necessary to convert `Result` to `Option` in const contexts
 // if we want to avoid using unsafe.
 #![allow(clippy::ok_expect)]
+#![warn(clippy::cast_lossless)]
 
 extern crate alloc;
 
