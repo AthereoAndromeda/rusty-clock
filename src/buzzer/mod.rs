@@ -8,14 +8,12 @@ pub(crate) use buzzer_struct::*;
 use listener::*;
 
 use embassy_executor::Spawner;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex, signal::Signal};
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_time::Timer;
 use esp_hal::{
     ledc::LowSpeed,
     peripherals::{self},
 };
-
-use crate::utils::mk_static;
 
 pub(crate) enum BuzzerAction {
     On,
@@ -43,8 +41,6 @@ pub(crate) static IS_BUZZER_ON: portable_atomic::AtomicBool =
 
 pub(crate) static VOLUME_SIGNAL: Signal<CriticalSectionRawMutex, u8> = Signal::new();
 
-type BuzzerMutex = Mutex<CriticalSectionRawMutex, Buzzer>;
-
 /// Initialize the buzzer and beep to signal readiness
 pub(super) async fn init(
     spawner: Spawner,
@@ -55,13 +51,10 @@ pub(super) async fn init(
     let mut buzzer = Buzzer::new(output_channel);
     buzzer.set_volume(100);
 
-    let buzzer_mutex = mk_static!(BuzzerMutex; Mutex::new(buzzer));
-
-    spawner.must_spawn(listen_for_action(buzzer_mutex));
+    spawner.must_spawn(listen_for_action_and_volume(buzzer));
     spawner.must_spawn(listen_for_alarm(alarm_pin));
     spawner.must_spawn(listen_for_button(button_pin));
     spawner.must_spawn(listen_for_timer());
-    spawner.must_spawn(listen_for_volume(buzzer_mutex));
 
     // Beep 3 times
     for _ in 0..3 {

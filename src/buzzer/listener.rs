@@ -1,7 +1,8 @@
-use crate::buzzer::VOLUME_SIGNAL;
+use crate::buzzer::{Buzzer, VOLUME_SIGNAL};
 
 use super::{BUZZER_ACTION_SIGNAL, BuzzerAction, IS_BUZZER_ON, TIMER_SIGNAL};
-use defmt::{debug, info};
+use defmt::info;
+use embassy_futures::select;
 use embassy_time::Timer;
 use esp_hal::{
     gpio::{Input, InputConfig, Pull},
@@ -9,23 +10,40 @@ use esp_hal::{
 };
 
 #[embassy_executor::task]
-/// Listens for [`BUZZER_ACTION_SIGNAL`] and sets buzzer to
+/// This task handles two functions:
+///
+/// - Listens for [`BUZZER_ACTION_SIGNAL`] and sets buzzer to
 /// the appropriate action
-pub(super) async fn listen_for_action(output: &'static super::BuzzerMutex) {
+///
+/// - Listens to [`VOLUME_SIGNAL`] and sets the appropriate duty cycle
+///
+/// These functions are combined so that we can take ownership of [`Buzzer`] as opposed
+/// to wrapping it in a [`Mutex`] to share it between tasks.
+pub(super) async fn listen_for_action_and_volume(mut output: Buzzer) {
     loop {
-        match BUZZER_ACTION_SIGNAL.wait().await {
-            BuzzerAction::On => {
-                output.lock().await.activate();
-                IS_BUZZER_ON.store(true, core::sync::atomic::Ordering::Relaxed);
-            }
-            BuzzerAction::Off => {
-                output.lock().await.deactivate();
-                IS_BUZZER_ON.store(false, core::sync::atomic::Ordering::Relaxed);
-            }
-            BuzzerAction::Toggle => {
-                output.lock().await.toggle();
-                IS_BUZZER_ON.fetch_not(core::sync::atomic::Ordering::Relaxed);
-            }
+        let task = select::select(BUZZER_ACTION_SIGNAL.wait(), VOLUME_SIGNAL.wait()).await;
+
+        match task {
+            select::Either::First(action) => handle_buzzer_action(&mut output, action),
+            select::Either::Second(volume) => output.set_volume(volume),
+        };
+    }
+}
+
+#[inline]
+fn handle_buzzer_action(output: &mut Buzzer, action: BuzzerAction) {
+    match action {
+        BuzzerAction::On => {
+            output.activate();
+            IS_BUZZER_ON.store(true, core::sync::atomic::Ordering::Relaxed);
+        }
+        BuzzerAction::Off => {
+            output.deactivate();
+            IS_BUZZER_ON.store(false, core::sync::atomic::Ordering::Relaxed);
+        }
+        BuzzerAction::Toggle => {
+            output.toggle();
+            IS_BUZZER_ON.fetch_not(core::sync::atomic::Ordering::Relaxed);
         }
     }
 }
@@ -86,11 +104,11 @@ pub(super) async fn listen_for_alarm(alarm_pin: peripherals::GPIO6<'static>) {
     }
 }
 
-#[embassy_executor::task]
-pub(super) async fn listen_for_volume(output: &'static super::BuzzerMutex) {
-    loop {
-        let volume = VOLUME_SIGNAL.wait().await;
-        debug!("Volume signal received");
-        output.lock().await.set_volume(volume);
-    }
-}
+// #[embassy_executor::task]
+// pub(super) async fn listen_for_volume(output: &'static super::BuzzerMutex) {
+//     loop {
+//         let volume = VOLUME_SIGNAL.wait().await;
+//         debug!("Volume signal received");
+//         output.lock().await.set_volume(volume);
+//     }
+// }
