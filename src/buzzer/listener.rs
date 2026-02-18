@@ -18,7 +18,7 @@ use esp_hal::{
 /// - Listens to [`VOLUME_SIGNAL`] and sets the appropriate duty cycle
 ///
 /// These functions are combined so that we can take ownership of [`Buzzer`] as opposed
-/// to wrapping it in a [`Mutex`] to share it between tasks.
+/// to wrapping it in a [`Mutex`](`embassy_sync::mutex::Mutex`) to share it between tasks.
 pub(super) async fn listen_for_action_and_volume(mut output: Buzzer) {
     loop {
         let task = select::select(BUZZER_ACTION_SIGNAL.wait(), VOLUME_SIGNAL.wait()).await;

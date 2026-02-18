@@ -39,6 +39,7 @@ pub(crate) static TIMER_SIGNAL: Signal<CriticalSectionRawMutex, u32> = Signal::n
 pub(crate) static IS_BUZZER_ON: portable_atomic::AtomicBool =
     portable_atomic::AtomicBool::new(false);
 
+/// Sets the volume of the buzzer
 pub(crate) static VOLUME_SIGNAL: Signal<CriticalSectionRawMutex, u8> = Signal::new();
 
 /// Initialize the buzzer and beep to signal readiness
