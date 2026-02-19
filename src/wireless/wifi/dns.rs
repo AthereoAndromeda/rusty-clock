@@ -26,7 +26,7 @@ impl From<embassy_net::dns::Error> for DnsError {
 
 /// Fallibly send a DNS request and return addresses.
 ///
-/// WARN: Will not retry if a DNS error occurs. Up to the caller to retry
+/// WARN: Will not retry if a DNS error occurs. Up to the caller to retry.
 pub(crate) async fn resolve(
     server_name: &str,
     net_stack: embassy_net::Stack<'_>,

@@ -11,9 +11,10 @@ use crate::rtc_ds3231::{SET_DATETIME_SIGNAL, TIME_WATCH};
 
 pub(crate) static NTP_SYNC: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 
+/// Default NTP server to ping.
 const NTP_SERVER_ADDR: &str = option_env!("NTP_SERVER_ADDR").unwrap_or("pool.ntp.org");
 
-const SNTP_PORT: u16 = {
+const NTP_SERVER_PORT: u16 = {
     let port = option_env!("SNTP_PORT").unwrap_or("123");
     u16::from_str_radix(port, 10)
         .ok()
@@ -35,19 +36,18 @@ impl sntpc::NtpTimestampGenerator for SntpTimestamp {
     }
 }
 
-static UDP_RX_META: ConstStaticCell<[PacketMetadata; 16]> =
-    ConstStaticCell::new([PacketMetadata::EMPTY; 16]);
-static UDP_TX_META: ConstStaticCell<[PacketMetadata; 16]> =
-    ConstStaticCell::new([PacketMetadata::EMPTY; 16]);
-static UDP_RX_BUFFER: ConstStaticCell<[u8; 1024]> = ConstStaticCell::new([0; 1024]);
-static UDP_TX_BUFFER: ConstStaticCell<[u8; 1024]> = ConstStaticCell::new([0; 1024]);
-
 #[embassy_executor::task]
+// Task should only be spawned once
 pub(crate) async fn fetch_sntp(net_stack: embassy_net::Stack<'static>) -> ! {
-    // Create UDP socket
-    //
     // NOTE: Using `ConstStaticCell` means these buffers are stored in .bss, thus does
     // not take up any flash space.
+    static UDP_RX_META: ConstStaticCell<[PacketMetadata; 16]> =
+        ConstStaticCell::new([PacketMetadata::EMPTY; 16]);
+    static UDP_TX_META: ConstStaticCell<[PacketMetadata; 16]> =
+        ConstStaticCell::new([PacketMetadata::EMPTY; 16]);
+    static UDP_RX_BUFFER: ConstStaticCell<[u8; 1024]> = ConstStaticCell::new([0; 1024]);
+    static UDP_TX_BUFFER: ConstStaticCell<[u8; 1024]> = ConstStaticCell::new([0; 1024]);
+
     let udp_rx_meta = UDP_RX_META.take();
     let udp_tx_meta = UDP_TX_META.take();
     let udp_tx_buffer = UDP_TX_BUFFER.take();
@@ -61,7 +61,7 @@ pub(crate) async fn fetch_sntp(net_stack: embassy_net::Stack<'static>) -> ! {
         udp_tx_buffer,
     );
 
-    udp_socket.bind(SNTP_PORT).unwrap();
+    udp_socket.bind(NTP_SERVER_PORT).unwrap();
     let wrapper = UdpSocketWrapper::new(udp_socket);
 
     loop {
@@ -122,7 +122,7 @@ async fn fetch_sntp_inner(
     let current_timestamp = recv.get().await.and_utc().timestamp_micros();
 
     let result = sntpc::get_time(
-        SocketAddr::from((addr, SNTP_PORT)),
+        SocketAddr::from((addr, NTP_SERVER_PORT)),
         udp_socket,
         NtpContext::new(SntpTimestamp(current_timestamp.cast_unsigned())),
     )
