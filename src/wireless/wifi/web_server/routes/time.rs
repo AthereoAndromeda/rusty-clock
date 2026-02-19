@@ -73,7 +73,7 @@ async fn get_time(Query(query): Query<TimeQueryParams>) -> impl IntoResponse {
         a.into()
     };
 
-    DebugValue(res.to_human_local())
+    DebugValue(res.to_human().local_short())
 }
 
 async fn get_sync() -> impl IntoResponse {

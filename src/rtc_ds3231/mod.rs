@@ -24,7 +24,7 @@ use embassy_sync::{
 };
 use embassy_time::Timer;
 
-use crate::{i2c::I2cBus, rtc_ds3231::rtc_time::RtcTime, utils::mk_static};
+use crate::{i2c::I2cBus, rtc_ds3231::rtc_time::RtcDateTime, utils::mk_static};
 
 /// The alarm time set through env.
 const ENV_TIME: Alarm1Config = {
@@ -60,7 +60,7 @@ const ENV_TIME: Alarm1Config = {
 };
 
 /// Contains the time from RTC module.
-pub(crate) static TIME_WATCH: Watch<CriticalSectionRawMutex, RtcTime, 3> = Watch::new();
+pub(crate) static TIME_WATCH: Watch<CriticalSectionRawMutex, RtcDateTime, 3> = Watch::new();
 /// Clears the alarm flags for RTC.
 pub(crate) static CLEAR_FLAGS_SIGNAL: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 
@@ -161,8 +161,8 @@ async fn run(rtc_mutex: &'static RtcMutex) -> ! {
         #[cfg(debug_assertions)]
         {
             if count >= 10 {
-                use crate::rtc_ds3231::rtc_time::RtcTime;
-                let ts: RtcTime = datetime.into();
+                use crate::rtc_ds3231::rtc_time::RtcDateTime;
+                let ts: RtcDateTime = datetime.into();
                 defmt::debug!("{}", ts);
                 defmt::debug!(
                     "{}",

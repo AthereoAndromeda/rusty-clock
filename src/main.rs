@@ -18,6 +18,7 @@
 #![feature(const_option_ops)]
 #![feature(const_trait_impl)]
 #![feature(const_result_trait_fn)]
+#![feature(const_index)]
 // NIGHTLY: Enum-based typestate pattern
 // #![feature(adt_const_params)]
 
