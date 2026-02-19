@@ -1,3 +1,4 @@
+pub mod dns;
 pub mod sntp;
 pub mod web_server;
 

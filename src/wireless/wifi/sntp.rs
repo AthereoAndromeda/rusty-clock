@@ -103,35 +103,22 @@ async fn fetch_sntp_inner(
         return;
     }
 
-    // TODO: Retry and connect to multiple NTP servers
-    let ntp_addrs_future = net_stack
-        .dns_query(NTP_SERVER_ADDR, smoltcp::wire::DnsQueryType::A)
-        .with_timeout(Duration::from_secs(180))
-        .await;
-
-    let Ok(ntp_addrs_response) = ntp_addrs_future else {
-        warn!("[sntp] DNS Request Timeout!");
-        return;
-    };
-
-    let ntp_addrs = match ntp_addrs_response {
-        Ok(addr) => addr,
-        Err(e) => {
-            warn!("[sntp] DNS Request Failed: {}", e);
+    let ntp_addrs = match super::dns::resolve(NTP_SERVER_ADDR, net_stack).await {
+        Ok(addrs) => addrs,
+        Err(err) => {
+            warn!("DNS Error Received: {}", err);
             return;
         }
     };
 
-    if ntp_addrs.is_empty() {
-        warn!("[sntp] DNS Resolution Failed: No addrs received\nFalling back to stored RTC time");
-        return;
-    }
+    let mut recv = TIME_WATCH
+        .receiver()
+        .expect("[sntp] Max `TIME_WATCH` rx reached");
 
-    let mut recv = TIME_WATCH.receiver().expect("Maximum reached");
     info!("[sntp] Sending SNTP Request...");
 
     #[expect(clippy::indexing_slicing, reason = "Guaranteed to be non-empty")]
-    let addr: IpAddr = ntp_addrs[0].into();
+    let addr: IpAddr = ntp_addrs[0];
     let current_timestamp = recv.get().await.and_utc().timestamp_micros();
 
     let result = sntpc::get_time(
@@ -144,7 +131,8 @@ async fn fetch_sntp_inner(
     info!("[sntp] Received a response!");
     match result {
         Ok(time) => {
-            debug!("[sntp] Response: {:?}", time);
+            #[cfg(debug_assertions)]
+            debug!("[sntp] Response: {}", time);
             info!("[rtc:update-timestamp] Setting RTC Datetime to NTP...");
 
             #[cfg(debug_assertions)]
@@ -166,7 +154,7 @@ async fn fetch_sntp_inner(
             info!("[rtc:update-timestamp] Succesfully Set RTC Datetime!");
         }
         Err(e) => {
-            warn!("[sntp] Failed to get NTP Time!: {:?}", e);
+            warn!("[sntp] NTP Error: {}", e);
         }
     }
 
