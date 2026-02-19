@@ -1,9 +1,8 @@
 //! # `RtcTime`
 //! This module provides all functionalities regarding [`RtcTime`].
 
-use core::{fmt::Debug, ops::Deref};
-
 use chrono::{Datelike, FixedOffset, NaiveDateTime, TimeZone as _, Timelike};
+use core::{fmt::Debug, hint::assert_unchecked, ops::Deref};
 
 use crate::TZ_OFFSET;
 
@@ -31,15 +30,23 @@ const MONTH_BY_INDEX: [&str; 12] = [
 
 impl RtcTime {
     fn to_human_inner(dt: &(impl Datelike + Timelike)) -> heapless::String<50> {
+        let month_idx = dt.month0() as usize;
+
+        // SAFETY: There is always 12 months. If not, something has gone
+        // terribly wrong or you have transported to a parallel dimension
+        unsafe {
+            assert_unchecked(month_idx < 12);
+        }
+
         // TODO: Shorten Months and add Day of the week
-        #[expect(clippy::indexing_slicing, reason = "Guaranteed to be <=12")]
+        #[expect(clippy::indexing_slicing, reason = "Guaranteed to be < 12")]
         heapless::format!(
             "{:02}:{:02}:{:02} | {:02} {} {}",
             dt.hour(),
             dt.minute(),
             dt.second(),
             dt.day(),
-            MONTH_BY_INDEX[dt.month() as usize],
+            MONTH_BY_INDEX[month_idx],
             dt.year(),
         )
         .unwrap()
