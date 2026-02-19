@@ -1,5 +1,6 @@
-use chrono::Timelike;
+use chrono::Timelike as _;
 use ds3231::Alarm1Config;
+use explicit_cast::prelude::*;
 use picoserve::{
     Router,
     extract::{Form, Json, Query},
@@ -40,8 +41,9 @@ async fn get_alarm() -> impl IntoResponse {
     DebugValue(response)
 }
 
-async fn set_alarm_inner(hour: u8, min: u8, sec: u8, is_utc: bool) {
-    let base_time = chrono::NaiveTime::from_hms_opt(u32::from(hour), u32::from(min), u32::from(sec)).unwrap();
+fn set_alarm_inner(hour: u8, min: u8, sec: u8, is_utc: bool) {
+    let base_time =
+        chrono::NaiveTime::from_hms_opt(u32::from(hour), u32::from(min), u32::from(sec)).unwrap();
 
     let time = if is_utc {
         base_time
@@ -55,9 +57,9 @@ async fn set_alarm_inner(hour: u8, min: u8, sec: u8, is_utc: bool) {
     defmt::debug!("{} {} {}", time.hour(), time.minute(), time.second());
 
     let conf = Alarm1Config::AtTime {
-        hours: time.hour() as u8,
-        minutes: time.minute() as u8,
-        seconds: time.second() as u8,
+        hours: time.hour().truncate(),
+        minutes: time.minute().truncate(),
+        seconds: time.second().truncate(),
         is_pm: None,
     };
 
@@ -68,7 +70,7 @@ async fn set_alarm(
     (hour, min, sec): (u8, u8, u8),
     Query(query): Query<AlarmQueryParams>,
 ) -> impl IntoResponse {
-    set_alarm_inner(hour, min, sec, query.utc.is_some_and(|x| x)).await;
+    set_alarm_inner(hour, min, sec, query.utc.is_some_and(|x| x));
     "Alarm Set!"
 }
 
@@ -89,68 +91,68 @@ async fn set_alarm_form(Form(form): Form<AlarmForm>) -> impl IntoResponse {
         is_utc,
     } = form;
 
-    set_alarm_inner(hour, min, sec, is_utc == "on").await
+    set_alarm_inner(hour, min, sec, is_utc == "on");
 }
 
 /// Alarm 1 specific configurations.
-/// 1-to-1 mapping to Alarm1Config, but with serde
+/// 1-to-1 mapping to [`Alarm1Config`], but with serde.
 #[derive(Debug, Clone, PartialEq, Deserialize, defmt::Format)]
 enum MyAlarm1Config {
-    /// Trigger every second (all mask bits set)
+    /// Trigger every second (all mask bits set).
     EverySecond,
 
-    /// Trigger when seconds match (A1M1=0, others=1)
+    /// Trigger when seconds match (A1M1=0, others=1).
     AtSeconds {
-        /// Seconds value (0-59)
+        /// Seconds value (0-59).
         seconds: u8,
     },
 
-    /// Trigger when minutes and seconds match (A1M1=0, A1M2=0, others=1)
+    /// Trigger when minutes and seconds match (A1M1=0, A1M2=0, others=1).
     AtMinutesSeconds {
-        /// Minutes value (0-59)
+        /// Minutes value (0-59).
         minutes: u8,
-        /// Seconds value (0-59)
+        /// Seconds value (0-59).
         seconds: u8,
     },
 
     /// Trigger when hours, minutes, and seconds match (A1M1=0, A1M2=0, A1M3=0, A1M4=1)
     /// This creates a daily alarm at the specified time.
     AtTime {
-        /// Hours value (0-23 for 24-hour, 1-12 for 12-hour)
+        /// Hours value (0-23 for 24-hour, 1-12 for 12-hour).
         hours: u8,
-        /// Minutes value (0-59)
+        /// Minutes value (0-59).
         minutes: u8,
-        /// Seconds value (0-59)
+        /// Seconds value (0-59).
         seconds: u8,
-        /// PM flag for 12-hour mode (None for 24-hour, Some(true/false) for 12-hour)
+        /// PM flag for 12-hour mode (None for 24-hour, Some(true/false) for 12-hour).
         is_pm: Option<bool>,
     },
 
-    /// Trigger at specific time on specific date of month (all mask bits=0, DY/DT=0)
+    /// Trigger at specific time on specific date of month (all mask bits=0, DY/DT=0).
     AtTimeOnDate {
-        /// Hours value (0-23 for 24-hour, 1-12 for 12-hour)
+        /// Hours value (0-23 for 24-hour, 1-12 for 12-hour).
         hours: u8,
-        /// Minutes value (0-59)
+        /// Minutes value (0-59).
         minutes: u8,
-        /// Seconds value (0-59)
+        /// Seconds value (0-59).
         seconds: u8,
-        /// Date of month (1-31)
+        /// Date of month (1-31).
         date: u8,
-        /// PM flag for 12-hour mode (None for 24-hour, Some(true/false) for 12-hour)
+        /// PM flag for 12-hour mode (None for 24-hour, Some(true/false) for 12-hour).
         is_pm: Option<bool>,
     },
 
-    /// Trigger at specific time on specific day of week (all mask bits=0, DY/DT=1)
+    /// Trigger at specific time on specific day of week (all mask bits=0, DY/DT=1).
     AtTimeOnDay {
-        /// Hours value (0-23 for 24-hour, 1-12 for 12-hour)
+        /// Hours value (0-23 for 24-hour, 1-12 for 12-hour).
         hours: u8,
-        /// Minutes value (0-59)
+        /// Minutes value (0-59).
         minutes: u8,
-        /// Seconds value (0-59)
+        /// Seconds value (0-59).
         seconds: u8,
-        /// Day of week (1-7, where 1=Sunday)
+        /// Day of week (1-7, where 1=Sunday).
         day: u8,
-        /// PM flag for 12-hour mode (None for 24-hour, Some(true/false) for 12-hour)
+        /// PM flag for 12-hour mode (None for 24-hour, Some(true/false) for 12-hour).
         is_pm: Option<bool>,
     },
 }

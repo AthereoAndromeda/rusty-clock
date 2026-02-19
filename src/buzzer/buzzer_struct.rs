@@ -1,11 +1,15 @@
-use esp_hal::ledc::{LowSpeed, channel::ChannelIFace};
+//! # `Buzzer`
+//!
+//! Holds implementation details of the [`Buzzer`] struct.
+
+use esp_hal::ledc::{LowSpeed, channel::ChannelIFace as _};
 
 pub(crate) enum BuzzerState {
     On,
     Off,
 }
 
-/// Represents the buzzer with adjustable volume levels
+/// Represents the buzzer with adjustable volume levels.
 pub(crate) struct Buzzer {
     output: esp_hal::ledc::channel::Channel<'static, LowSpeed>,
     volume: u8,

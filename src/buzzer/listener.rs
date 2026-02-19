@@ -13,20 +13,20 @@ use esp_hal::{
 /// This task handles two functions:
 ///
 /// - Listens for [`BUZZER_ACTION_SIGNAL`] and sets buzzer to
-/// the appropriate action
+/// the appropriate action.
 ///
-/// - Listens to [`VOLUME_SIGNAL`] and sets the appropriate duty cycle
+/// - Listens to [`VOLUME_SIGNAL`] and sets the appropriate duty cycle.
 ///
 /// These functions are combined so that we can take ownership of [`Buzzer`] as opposed
 /// to wrapping it in a [`Mutex`](`embassy_sync::mutex::Mutex`) to share it between tasks.
-pub(super) async fn listen_for_action_and_volume(mut output: Buzzer) {
+pub(super) async fn listen_for_action_and_volume(mut output: Buzzer) -> ! {
     loop {
         let task = select::select(BUZZER_ACTION_SIGNAL.wait(), VOLUME_SIGNAL.wait()).await;
 
         match task {
             select::Either::First(action) => handle_buzzer_action(&mut output, action),
             select::Either::Second(volume) => output.set_volume(volume),
-        };
+        }
     }
 }
 
@@ -50,7 +50,7 @@ fn handle_buzzer_action(output: &mut Buzzer, action: BuzzerAction) {
 
 #[embassy_executor::task]
 /// Listens for [`TIMER_SIGNAL`] and sets timer accordingly
-pub(super) async fn listen_for_timer() {
+pub(super) async fn listen_for_timer() -> ! {
     info!("[buzzer:listen_for_timer] Listening for timer");
 
     loop {
@@ -68,7 +68,7 @@ pub(super) async fn listen_for_timer() {
 
 #[embassy_executor::task]
 /// Listens for a button press which sets buzzer low
-pub(super) async fn listen_for_button(input_pin: peripherals::GPIO7<'static>) {
+pub(super) async fn listen_for_button(input_pin: peripherals::GPIO7<'static>) -> ! {
     let mut input = Input::new(input_pin, InputConfig::default().with_pull(Pull::Up));
 
     loop {
@@ -83,7 +83,7 @@ pub(super) async fn listen_for_button(input_pin: peripherals::GPIO7<'static>) {
 
 #[embassy_executor::task]
 /// Listen for the alarm interrupt from DS3231 RTC
-pub(super) async fn listen_for_alarm(alarm_pin: peripherals::GPIO6<'static>) {
+pub(super) async fn listen_for_alarm(alarm_pin: peripherals::GPIO6<'static>) -> ! {
     info!("Initializing Alarm Listener...");
     let mut alarm_input = Input::new(alarm_pin, InputConfig::default().with_pull(Pull::Up));
 

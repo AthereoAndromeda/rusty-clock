@@ -1,9 +1,9 @@
 //! # Rusty-Clock
-//! An Embassy powered alarm clock
+//! An Embassy powered alarm clock.
 //!
 //! WARN: I accidentally shorted out my GPIO9, destroying the LED but somehow it still works??
 //! I'm assuming the LED acted like a fuse, however the GPIO9 might be damaged in some way
-//! that I am not aware of
+//! that I am not aware of.
 
 #![no_std]
 #![no_main]
@@ -21,11 +21,27 @@
 // NIGHTLY: Enum-based typestate pattern
 // #![feature(adt_const_params)]
 
+// CLIPPY: Use pedantic
+#![warn(clippy::pedantic)]
+#![warn(clippy::undocumented_unsafe_blocks)]
+#![warn(clippy::doc_paragraphs_missing_punctuation)]
+#![warn(clippy::unused_trait_names)]
+#![warn(clippy::allow_attributes)]
+#![warn(clippy::allow_attributes_without_reason)]
+#![warn(clippy::clone_on_ref_ptr)]
+#![warn(clippy::if_then_some_else_none)]
+#![warn(clippy::missing_assert_message)]
+#![warn(clippy::lossy_float_literal)]
+#![deny(clippy::map_with_unused_argument_over_ranges)]
+#![deny(clippy::empty_enum_variants_with_brackets)]
+#![deny(clippy::infinite_loop)] // Forces us to explicity use ! as return type
+#![deny(clippy::get_unwrap)]
+#![allow(clippy::similar_names, reason = "Using TX/RX naming convention")]
+#![allow(clippy::large_futures, reason = "Cannot use heap or `Box::pin`")]
 // CLIPPY: `Result::unwrap` is not const fn, while `Option::unwrap` is.
 // Thus it is necessary to convert `Result` to `Option` in const contexts
 // if we want to avoid using unsafe.
-#![allow(clippy::ok_expect)]
-#![warn(clippy::cast_lossless)]
+#![allow(clippy::ok_expect, reason = "`Result::unwrap` is not const")]
 
 extern crate alloc;
 
@@ -109,6 +125,7 @@ async fn main(spawner: Spawner) {
     info!("Initializing I2C...");
     let mut i2c_buses: heapless::Vec<i2c::I2cBus, 2> =
         i2c::init(peripherals.I2C0, peripherals.GPIO2, peripherals.GPIO3);
+    // SAFETY: Caller must ensure not to pop `i2c_buses` when empty
     let i2c_rtc = unsafe { i2c_buses.pop_unchecked() };
 
     info!("Init RTC...");

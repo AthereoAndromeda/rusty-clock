@@ -1,5 +1,5 @@
 //! # Web Server Routes
-//! Holds all the routes for the web server
+//! Holds all the routes for the web server.
 
 use picoserve::{
     Router,
@@ -15,8 +15,7 @@ mod volume;
 // TODO: Dynamically generate help message
 // Attribute macro? #[help_msg = "message"]
 async fn get_help() -> &'static str {
-    r#"
-Hello from ESP32! This is the web server for rusty clock
+    r"Hello from ESP32! This is the web server for rusty clock
 
 All paths use GET unless otherwise specified
 
@@ -33,7 +32,7 @@ Paths:
 /alarm/toggle                
 
 /timer                    - Set a timer to buzz
-"#
+"
 }
 
 pub(super) fn add_all_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {

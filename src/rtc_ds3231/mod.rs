@@ -1,17 +1,16 @@
 //! # DS3231 RTC
 //! This module provides implementations for interfacing with our
-//! DS3231 Real Time Clock module
+//! DS3231 Real Time Clock module.
 //!
 //! The module also provides access to [`embassy_sync`] primitives
-//! that interface with the RTC module
+//! that interface with the RTC module.
 
 pub mod alarm;
 pub mod error;
 pub mod rtc_time;
-use alarm::*;
+use alarm::reset_alarm_flags;
 
 mod listener;
-use listener::*;
 
 use defmt::debug;
 use ds3231::{
@@ -27,7 +26,7 @@ use embassy_time::Timer;
 
 use crate::{i2c::I2cBus, rtc_ds3231::rtc_time::RtcTime, utils::mk_static};
 
-/// The alarm time set through env
+/// The alarm time set through env.
 const ENV_TIME: Alarm1Config = {
     const HOUR: &str = option_env!("ALARM_HOUR").unwrap_or("0");
     const MIN: &str = option_env!("ALARM_MINUTES").unwrap_or("0");
@@ -60,27 +59,27 @@ const ENV_TIME: Alarm1Config = {
     }
 };
 
-/// Contains the time from RTC module
+/// Contains the time from RTC module.
 pub(crate) static TIME_WATCH: Watch<CriticalSectionRawMutex, RtcTime, 3> = Watch::new();
-/// Clears the alarm flags for RTC
+/// Clears the alarm flags for RTC.
 pub(crate) static CLEAR_FLAGS_SIGNAL: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 
-/// Sets the RTC module alarm
+/// Sets the RTC module alarm.
 pub(crate) static SET_ALARM: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
 
-/// Globally accessible Alarm1Config
+/// Globally accessible [`Alarm1Config`].\
 /// Mostly for Reading the current config. For setting, use [`SET_ALARM`] instead.
 pub(crate) static ALARM_CONFIG_RWLOCK: RwLock<CriticalSectionRawMutex, Alarm1Config> =
     RwLock::new(ENV_TIME);
 
-/// Sets datetime for RTC
+/// Sets datetime for RTC.
 pub(crate) static SET_DATETIME_SIGNAL: Signal<CriticalSectionRawMutex, chrono::NaiveDateTime> =
     Signal::new();
 
 /// This is the timestamp held in-memory.
-/// This is used instead of pinging the RTC module every second
+/// This is used instead of pinging the RTC module every second.
 ///
-/// NOTE: `portable_atomic` crate is used since native does not support 64 bit atomics
+/// NOTE: [`portable_atomic`] crate is used since native does not support 64 bit atomics.
 pub(crate) static LOCAL_TIMESTAMP: portable_atomic::AtomicU64 = portable_atomic::AtomicU64::new(0);
 
 pub(crate) type RtcDS3231 = DS3231<I2cBus>;
@@ -93,7 +92,7 @@ pub(crate) const RTC_I2C_ADDR: u8 = {
         .expect("Failed to parse .env: RTC_I2C_ADDR")
 };
 
-/// Initialize the DS3231 Instance and spawn tasks
+/// Initialize the DS3231 Instance and spawn tasks.
 pub(crate) async fn init(spawner: Spawner, i2c: I2cBus) {
     let config = Config {
         time_representation: TimeRepresentation::TwentyFourHour,
@@ -130,18 +129,18 @@ pub(crate) async fn init(spawner: Spawner, i2c: I2cBus) {
     // Cannot use RwLock since reading requires &mut self
     let rtc_mutex = mk_static!(RtcMutex; Mutex::new(rtc));
     spawner.must_spawn(run(rtc_mutex));
-    spawner.must_spawn(listen_for_clear_flag(rtc_mutex));
-    spawner.must_spawn(listen_for_datetime_set(rtc_mutex));
-    spawner.must_spawn(listen_for_alarm_set(rtc_mutex));
+    spawner.must_spawn(listener::listen_for_clear_flag(rtc_mutex));
+    spawner.must_spawn(listener::listen_for_datetime_set(rtc_mutex));
+    spawner.must_spawn(listener::listen_for_alarm_set(rtc_mutex));
 }
 
 // TODO: Restructure such that it only gets time at init
 // and when requested. saves on cycles
 #[embassy_executor::task]
-/// Runner for DS3231
+/// Runner for DS3231.
 ///
-/// Keeps the time
-async fn run(rtc_mutex: &'static RtcMutex) {
+/// Keeps the time.
+async fn run(rtc_mutex: &'static RtcMutex) -> ! {
     let sender = TIME_WATCH.sender();
 
     #[cfg(debug_assertions)]

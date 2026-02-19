@@ -3,7 +3,7 @@ pub mod web_server;
 
 use defmt::{debug, info, warn};
 use embassy_executor::Spawner;
-use embassy_net::StackResources;
+use embassy_net::{DhcpConfig, StackResources};
 use embassy_time::Timer;
 use esp_hal::rng::Rng;
 use esp_radio::wifi::{
@@ -12,17 +12,18 @@ use esp_radio::wifi::{
 
 use crate::{PASSWORD, SSID, utils::mk_static};
 
-/// Initialize WiFi Stack and attempt to connect to a network
+/// Initialize Wifi Stack and attempt to connect to a network.
 ///
 /// # Panics
-/// Panics to WiFi Controller fails to initialize
+/// Panics to Wifi Controller fails to initialize.
 pub(super) fn init(
     spawner: Spawner,
     radio_init: &'static esp_radio::Controller<'static>,
     wifi: esp_hal::peripherals::WIFI<'static>,
 ) {
-    let (wifi_controller, interfaces) = esp_radio::wifi::new(radio_init, wifi, Default::default())
-        .expect("Failed to initialize Wi-Fi controller");
+    let (wifi_controller, interfaces) =
+        esp_radio::wifi::new(radio_init, wifi, esp_radio::wifi::Config::default())
+            .expect("Failed to initialize Wi-Fi controller");
 
     let (net_stack, net_runner) = get_stack(interfaces);
 
@@ -37,6 +38,10 @@ pub(super) fn init(
     }
 }
 
+// 3 web tasks + 1 sntp + ? + ?
+// Currently requires 6 sockets minimum. Picoserve possibly adds 2 sockets?
+const MAX_NET_SOCKETS: usize = web_server::WEB_TASK_POOL_SIZE + 3;
+
 fn get_stack(
     wifi_interface: esp_radio::wifi::Interfaces<'_>,
 ) -> (
@@ -49,11 +54,7 @@ fn get_stack(
     let rng = Rng::new();
     let seed = u64::from(rng.random()) << 32 | u64::from(rng.random());
 
-    let embassy_config = embassy_net::Config::dhcpv4(Default::default());
-
-    // 3 web tasks + 1 sntp + ? + ?
-    // Currently requires 6 sockets minimum. Picoserve possibly adds 2 sockets?
-    const MAX_NET_SOCKETS: usize = web_server::WEB_TASK_POOL_SIZE + 3;
+    let embassy_config = embassy_net::Config::dhcpv4(DhcpConfig::default());
 
     // Init network stack
     embassy_net::new(
@@ -69,12 +70,12 @@ fn get_stack(
 
 #[embassy_executor::task]
 async fn runner_task(mut runner: embassy_net::Runner<'static, WifiDevice<'static>>) {
-    runner.run().await
+    runner.run().await;
 }
 
 #[embassy_executor::task]
 /// Connect to Wi-Fi
-async fn connect_to_wifi(mut controller: WifiController<'static>) {
+async fn connect_to_wifi(mut controller: WifiController<'static>) -> ! {
     debug!("start connection task");
     debug!("Device capabilities: {:?}", controller.capabilities());
 
@@ -83,7 +84,7 @@ async fn connect_to_wifi(mut controller: WifiController<'static>) {
             WifiStaState::Connected => {
                 // wait until we're no longer connected
                 controller.wait_for_event(WifiEvent::StaDisconnected).await;
-                Timer::after_millis(5000).await
+                Timer::after_millis(5000).await;
             }
             _ => {
                 info!("Wifi Not Connected!");
@@ -104,22 +105,22 @@ async fn connect_to_wifi(mut controller: WifiController<'static>) {
 
             let scan_config = esp_radio::wifi::ScanConfig::default().with_max(10);
 
-            let _result = controller
+            let scan_result = controller
                 .scan_with_config_async(scan_config)
                 .await
                 .unwrap();
 
             #[cfg(debug_assertions)]
-            for ap in _result {
-                debug!("{:?}", ap);
+            for ap in scan_result {
+                defmt::debug!("{:?}", ap);
             }
         }
 
         match controller.connect_async().await {
-            Ok(_) => info!("Wifi connected!"),
+            Ok(()) => info!("Wifi connected!"),
             Err(e) => {
                 warn!("Failed to connect to wifi: {:?}", e);
-                Timer::after_millis(5000).await
+                Timer::after_millis(5000).await;
             }
         }
     }

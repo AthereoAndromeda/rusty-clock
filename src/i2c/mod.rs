@@ -8,14 +8,14 @@ use esp_hal::peripherals;
 
 use crate::utils::mk_static;
 
-pub(crate) type I2cAsync = esp_hal::i2c::master::I2c<'static, esp_hal::Async>;
-pub(crate) type I2cMutex = Mutex<CriticalSectionRawMutex, I2cAsync>;
+type I2cAsync = esp_hal::i2c::master::I2c<'static, esp_hal::Async>;
+type I2cMutex = Mutex<CriticalSectionRawMutex, I2cAsync>;
 pub(crate) type I2cBus = I2cDevice<'static, CriticalSectionRawMutex, I2cAsync>;
 
-/// Initialize the I2C bus and return `N` buses
+/// Initialize the I2C bus and return `N` buses.
 ///
 /// # Panics
-/// Panics if I2C bus fails to initialize
+/// Panics if I2C bus fails to initialize.
 pub(crate) fn init<const N: usize>(
     i2c_peripheral: peripherals::I2C0<'static>,
     sda_pin: peripherals::GPIO2<'static>,

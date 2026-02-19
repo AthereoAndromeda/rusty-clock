@@ -12,7 +12,7 @@ use static_cell::ConstStaticCell;
 
 pub(super) const WEB_TASK_POOL_SIZE: usize = 3;
 
-/// Our Web server App
+/// Our Web server App.
 pub(super) struct App;
 
 impl AppBuilder for App {
@@ -62,6 +62,14 @@ static TX_BUFFERS: [ConstStaticCell<[u8; 1024]>; WEB_TASK_POOL_SIZE] =
 static HTTP_BUFFERS: [ConstStaticCell<[u8; 2048]>; WEB_TASK_POOL_SIZE] =
     [const { ConstStaticCell::new([0; _]) }; WEB_TASK_POOL_SIZE];
 
+const PORT: u16 = {
+    let s = option_env!("WEB_PORT").unwrap_or("80");
+
+    u16::from_str_radix(s, 10)
+        .ok()
+        .expect("Failed to parse .env: WEB_PORT")
+};
+
 #[embassy_executor::task(pool_size = WEB_TASK_POOL_SIZE)]
 pub(super) async fn web_task(
     task_id: usize,
@@ -72,14 +80,6 @@ pub(super) async fn web_task(
     let tcp_rx_buffer = RX_BUFFERS[task_id].take();
     let tcp_tx_buffer = TX_BUFFERS[task_id].take();
     let http_buffer = HTTP_BUFFERS[task_id].take();
-
-    const PORT: u16 = {
-        let s = option_env!("WEB_PORT").unwrap_or("80");
-
-        u16::from_str_radix(s, 10)
-            .ok()
-            .expect("Failed to parse .env: WEB_PORT")
-    };
 
     stack.wait_config_up().await;
     let addr = stack.config_v4().unwrap().address;

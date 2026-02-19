@@ -1,17 +1,17 @@
-//! # RtcTime
+//! # `RtcTime`
 //! This module provides all functionalities regarding [`RtcTime`].
 
 use core::{fmt::Debug, ops::Deref};
 
-use chrono::{Datelike, FixedOffset, NaiveDateTime, TimeZone, Timelike};
+use chrono::{Datelike, FixedOffset, NaiveDateTime, TimeZone as _, Timelike};
 
 use crate::TZ_OFFSET;
 
 #[derive(Debug, Copy, Clone)]
-/// A wrapper around [`chrono::NaiveDateTime`]
+/// A wrapper around [`chrono::NaiveDateTime`].
 ///
 /// This wrapper implements `Deref`. This wrapper also provides
-/// convenience methods, impls, and interfaces wih our web server
+/// convenience methods, impls, and interfaces wih our web server.
 pub(crate) struct RtcTime(pub NaiveDateTime);
 
 const MONTH_BY_INDEX: [&str; 12] = [
@@ -30,7 +30,7 @@ const MONTH_BY_INDEX: [&str; 12] = [
 ];
 
 impl RtcTime {
-    fn human_inner(dt: impl Datelike + Timelike) -> heapless::String<50> {
+    fn to_human_inner(dt: &(impl Datelike + Timelike)) -> heapless::String<50> {
         // TODO: Shorten Months and add Day of the week
         heapless::format!(
             "{:02}:{:02}:{:02} | {:02} {} {}",
@@ -44,9 +44,9 @@ impl RtcTime {
         .unwrap()
     }
 
-    pub fn to_human_utc(self) -> heapless::String<50> {
-        Self::human_inner(self.0)
-    }
+    // pub fn to_human_utc(self) -> heapless::String<50> {
+    //     Self::human_inner(self.0)
+    // }
 
     pub fn to_human_local(self) -> heapless::String<50> {
         let time = self
@@ -54,21 +54,21 @@ impl RtcTime {
             .and_local_timezone(FixedOffset::east_opt(i32::from(TZ_OFFSET) * 3600).unwrap())
             .unwrap();
 
-        Self::human_inner(time)
+        Self::to_human_inner(&time)
     }
 
-    pub fn to_iso8601_utc(self) -> heapless::String<20> {
-        heapless::format!(
-            "{}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
-            self.0.year(),
-            self.0.month(),
-            self.0.day(),
-            self.0.hour(),
-            self.0.minute(),
-            self.0.second(),
-        )
-        .unwrap()
-    }
+    // pub fn to_iso8601_utc(&self) -> heapless::String<20> {
+    //     heapless::format!(
+    //         "{}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
+    //         self.0.year(),
+    //         self.0.month(),
+    //         self.0.day(),
+    //         self.0.hour(),
+    //         self.0.minute(),
+    //         self.0.second(),
+    //     )
+    //     .unwrap()
+    // }
 
     pub fn to_iso8601_local(self) -> heapless::String<25> {
         let time = self

@@ -2,7 +2,7 @@ use core::net::{IpAddr, SocketAddr};
 use defmt::{debug, info, warn};
 use embassy_net::udp::{PacketMetadata, UdpSocket};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
-use embassy_time::{Duration, WithTimeout};
+use embassy_time::{Duration, WithTimeout as _};
 use sntpc::NtpContext;
 use sntpc_net_embassy::UdpSocketWrapper;
 use static_cell::ConstStaticCell;
@@ -21,7 +21,7 @@ const SNTP_PORT: u16 = {
 };
 
 #[derive(Copy, Clone, Default)]
-/// Time in us
+/// Time in us.
 struct SntpTimestamp(u64);
 
 impl sntpc::NtpTimestampGenerator for SntpTimestamp {
@@ -43,7 +43,7 @@ static UDP_RX_BUFFER: ConstStaticCell<[u8; 1024]> = ConstStaticCell::new([0; 102
 static UDP_TX_BUFFER: ConstStaticCell<[u8; 1024]> = ConstStaticCell::new([0; 1024]);
 
 #[embassy_executor::task]
-pub(crate) async fn fetch_sntp(net_stack: embassy_net::Stack<'static>) {
+pub(crate) async fn fetch_sntp(net_stack: embassy_net::Stack<'static>) -> ! {
     // Create UDP socket
     //
     // NOTE: Using `ConstStaticCell` means these buffers are stored in .bss, thus does
@@ -75,53 +75,46 @@ async fn fetch_sntp_inner(
     udp_socket: &UdpSocketWrapper<'_>,
 ) {
     info!("[sntp] Waiting for Network Link...");
-    match net_stack
+    if let Ok(()) = net_stack
         .wait_link_up()
         .with_timeout(Duration::from_secs(180))
         .await
     {
-        Ok(_) => {
-            info!("[sntp] Network Link is Up!");
-        }
-        Err(_) => {
-            warn!("[sntp] Network Link Timed Out!");
-            return;
-        }
-    };
+        info!("[sntp] Network Link is Up!");
+    } else {
+        warn!("[sntp] Network Link Timed Out!");
+        return;
+    }
 
     info!("[sntp] Waiting to get IP address...");
-    match net_stack
+
+    if let Ok(()) = net_stack
         .wait_config_up()
         .with_timeout(Duration::from_secs(180))
         .await
     {
-        Ok(_) => {
-            let config = net_stack
-                .config_v4()
-                .expect("Should be here since we waited for config");
-            info!("[sntp] Got IP: {}", config.address);
-        }
-        Err(_) => {
-            warn!("[sntp] DHCP IP Address Request Timed Out!");
-            return;
-        }
-    };
+        let config = net_stack
+            .config_v4()
+            .expect("IP Config not found despite awaiting it");
+
+        info!("[sntp] Got IP: {}", config.address);
+    } else {
+        warn!("[sntp] DHCP IP Address Request Timed Out!");
+        return;
+    }
 
     // TODO: Retry and connect to multiple NTP servers
-    let ntp_addrs_response = net_stack
+    let ntp_addrs_future = net_stack
         .dns_query(NTP_SERVER_ADDR, smoltcp::wire::DnsQueryType::A)
         .with_timeout(Duration::from_secs(180))
         .await;
 
-    let ntp_addrs = match ntp_addrs_response {
-        Ok(addrs) => addrs,
-        Err(_) => {
-            warn!("[sntp] DNS Request Timeout!");
-            return;
-        }
+    let Ok(ntp_addrs_response) = ntp_addrs_future else {
+        warn!("[sntp] DNS Request Timeout!");
+        return;
     };
 
-    let ntp_addrs = match ntp_addrs {
+    let ntp_addrs = match ntp_addrs_response {
         Ok(addr) => addr,
         Err(e) => {
             warn!("[sntp] No Addresses received: {}", e);
@@ -143,7 +136,7 @@ async fn fetch_sntp_inner(
     let result = sntpc::get_time(
         SocketAddr::from((addr, SNTP_PORT)),
         udp_socket,
-        NtpContext::new(SntpTimestamp(current_timestamp as u64)),
+        NtpContext::new(SntpTimestamp(current_timestamp.cast_unsigned())),
     )
     .await;
 
@@ -176,5 +169,5 @@ async fn fetch_sntp_inner(
         }
     }
 
-    info!("[sntp] Task Complete!")
+    info!("[sntp] Task Complete!");
 }

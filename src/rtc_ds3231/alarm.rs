@@ -1,7 +1,7 @@
 use super::{RtcDS3231, error::RtcError};
 use defmt::info;
 
-/// Clears and Sets Alarm1 Flag
+/// Clears and Sets Alarm1 Flag.
 pub(super) async fn reset_alarm_flags(rtc: &mut RtcDS3231) -> Result<(), RtcError> {
     let mut status = rtc.status().await?;
     status.set_alarm1_flag(false);

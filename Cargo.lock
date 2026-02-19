@@ -1180,6 +1180,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "explicit_cast"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc2b0a9dcbe001a5047e9c433b173f7cd02fdd6ac766bf8a4c664b899805374e"
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1864,6 +1870,7 @@ dependencies = [
  "esp-println",
  "esp-radio",
  "esp-rtos",
+ "explicit_cast",
  "futures",
  "heapless 0.9.2",
  "html-minifier",
