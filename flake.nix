@@ -44,6 +44,7 @@
               cargo-expand
               cargo-binutils
               cargo-bloat
+              cargo-insta
             ]);
         };
       }

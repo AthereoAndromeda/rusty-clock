@@ -11,6 +11,7 @@ version      = "0.1.0"
 [[bin]]
 name = "rusty-clock"
 path = "./src/main.rs"
+harness = false
 
 [features]
 ble = []
@@ -106,6 +107,10 @@ embassy-embedded-hal = { version = "0.5.0", features = ["defmt"] }
 portable-atomic = { version = "1.13.0", default-features = false, features = ["serde",  "unsafe-assume-single-core"] }
 explicit_cast = "1.0.0"
 
+[build-dependencies]
+brotli = { version = "8.0.2", features = ["simd"] }
+html-minifier = "5.0.0"
+
 [profile.dev.package.esp-radio]
 opt-level = 3
 [profile.release.package.esp-radio]
@@ -128,6 +133,3 @@ overflow-checks  = false
 panic            = 'abort'
 strip            = 'debuginfo' # Symbols required for defmt
 
-[build-dependencies]
-brotli = { version = "8.0.2", features = ["simd"] }
-html-minifier = "5.0.0"
