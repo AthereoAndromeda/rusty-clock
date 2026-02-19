@@ -29,6 +29,7 @@
 #![warn(clippy::allow_attributes)]
 #![warn(clippy::allow_attributes_without_reason)]
 #![warn(clippy::clone_on_ref_ptr)]
+#![warn(clippy::indexing_slicing)]
 #![warn(clippy::if_then_some_else_none)]
 #![warn(clippy::missing_assert_message)]
 #![warn(clippy::lossy_float_literal)]

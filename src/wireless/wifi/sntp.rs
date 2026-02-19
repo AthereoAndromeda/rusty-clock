@@ -117,19 +117,20 @@ async fn fetch_sntp_inner(
     let ntp_addrs = match ntp_addrs_response {
         Ok(addr) => addr,
         Err(e) => {
-            warn!("[sntp] No Addresses received: {}", e);
+            warn!("[sntp] DNS Request Failed: {}", e);
             return;
         }
     };
 
     if ntp_addrs.is_empty() {
-        warn!("[sntp] Failed to resolve DNS! Falling back to stored RTC time");
+        warn!("[sntp] DNS Resolution Failed: No addrs received\nFalling back to stored RTC time");
         return;
     }
 
     let mut recv = TIME_WATCH.receiver().expect("Maximum reached");
-
     info!("[sntp] Sending SNTP Request...");
+
+    #[expect(clippy::indexing_slicing, reason = "Guaranteed to be non-empty")]
     let addr: IpAddr = ntp_addrs[0].into();
     let current_timestamp = recv.get().await.and_utc().timestamp_micros();
 

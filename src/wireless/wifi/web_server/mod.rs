@@ -77,21 +77,24 @@ pub(super) async fn web_task(
     app: &'static AppRouter<App>,
     config: &'static picoserve::Config,
 ) -> ! {
-    let tcp_rx_buffer = RX_BUFFERS[task_id].take();
-    let tcp_tx_buffer = TX_BUFFERS[task_id].take();
-    let http_buffer = HTTP_BUFFERS[task_id].take();
+    #[expect(clippy::indexing_slicing, reason = "Will never go out of bounds")]
+    {
+        let tcp_rx_buffer = RX_BUFFERS[task_id].take();
+        let tcp_tx_buffer = TX_BUFFERS[task_id].take();
+        let http_buffer = HTTP_BUFFERS[task_id].take();
 
-    stack.wait_config_up().await;
-    let addr = stack.config_v4().unwrap().address;
+        stack.wait_config_up().await;
+        let addr = stack.config_v4().unwrap().address;
 
-    info!(
-        "[task-id:{}] Serving and listening at {}:{}",
-        task_id, addr, PORT
-    );
-    picoserve::Server::new(app, config, http_buffer)
-        .listen_and_serve(task_id, stack, PORT, tcp_rx_buffer, tcp_tx_buffer)
-        .await
-        .into_never()
+        info!(
+            "[task-id:{}] Serving and listening at {}:{}",
+            task_id, addr, PORT
+        );
+        picoserve::Server::new(app, config, http_buffer)
+            .listen_and_serve(task_id, stack, PORT, tcp_rx_buffer, tcp_tx_buffer)
+            .await
+            .into_never()
+    }
 }
 
 pub(super) fn init() -> (

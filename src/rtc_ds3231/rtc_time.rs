@@ -32,6 +32,7 @@ const MONTH_BY_INDEX: [&str; 12] = [
 impl RtcTime {
     fn to_human_inner(dt: &(impl Datelike + Timelike)) -> heapless::String<50> {
         // TODO: Shorten Months and add Day of the week
+        #[expect(clippy::indexing_slicing, reason = "Guaranteed to be <=12")]
         heapless::format!(
             "{:02}:{:02}:{:02} | {:02} {} {}",
             dt.hour(),
