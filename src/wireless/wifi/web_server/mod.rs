@@ -71,12 +71,18 @@ const PORT: u16 = {
 };
 
 #[embassy_executor::task(pool_size = WEB_TASK_POOL_SIZE)]
+/// Serves the control panel via web
 pub(super) async fn web_task(
     task_id: usize,
     stack: embassy_net::Stack<'static>,
     app: &'static AppRouter<App>,
     config: &'static picoserve::Config,
 ) -> ! {
+    assert!(
+        task_id < WEB_TASK_POOL_SIZE,
+        "`task_id` greater than allocated pool_size"
+    );
+
     #[expect(clippy::indexing_slicing, reason = "Will never go out of bounds")]
     {
         let tcp_rx_buffer = RX_BUFFERS[task_id].take();
