@@ -84,7 +84,30 @@ struct AlarmForm {
     pub hour: u8,
     pub min: u8,
     pub sec: u8,
-    pub is_utc: heapless::String<3>,
+    pub is_utc: FormCheckbox,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, defmt::Format)]
+/// Representation of an HTML Checkbox input.
+///
+/// Can be automatically parsed from a [`heapless::String`].
+enum FormCheckbox {
+    On,
+    Off,
+}
+
+impl TryFrom<heapless::String<3>> for FormCheckbox {
+    type Error = ();
+
+    fn try_from(value: heapless::String<3>) -> Result<Self, Self::Error> {
+        if value == "on" {
+            Ok(Self::On)
+        } else if value == "off" {
+            Ok(Self::Off)
+        } else {
+            Err(())
+        }
+    }
 }
 
 async fn set_alarm_form(Form(form): Form<AlarmForm>) -> impl IntoResponse {
@@ -96,7 +119,7 @@ async fn set_alarm_form(Form(form): Form<AlarmForm>) -> impl IntoResponse {
         is_utc,
     } = form;
 
-    set_alarm_inner(hour, min, sec, is_utc == "on");
+    set_alarm_inner(hour, min, sec, matches!(is_utc, FormCheckbox::On));
 }
 
 /// Alarm 1 specific configurations.
