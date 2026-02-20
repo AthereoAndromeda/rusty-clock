@@ -4,7 +4,7 @@ use explicit_cast::prelude::*;
 use picoserve::{
     Router,
     extract::{Form, Json, Query},
-    response::{DebugValue, IntoResponse},
+    response::{DebugValue, IntoResponse, StatusCode},
     routing::{PathRouter, get, parse_path_segment, post},
 };
 use serde::Deserialize;
@@ -84,10 +84,10 @@ struct AlarmForm {
     pub hour: u8,
     pub min: u8,
     pub sec: u8,
-    pub is_utc: FormCheckbox,
+    pub is_utc: Option<heapless::String<3>>,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, defmt::Format)]
+#[derive(Debug, Clone, Copy, defmt::Format)]
 /// Representation of an HTML Checkbox input.
 ///
 /// Can be automatically parsed from a [`heapless::String`].
@@ -119,7 +119,20 @@ async fn set_alarm_form(Form(form): Form<AlarmForm>) -> impl IntoResponse {
         is_utc,
     } = form;
 
-    set_alarm_inner(hour, min, sec, matches!(is_utc, FormCheckbox::On));
+    match is_utc {
+        Some(utc) => {
+            if let Ok(input) = utc.try_into() {
+                set_alarm_inner(hour, min, sec, matches!(input, FormCheckbox::On));
+                Ok(StatusCode::OK)
+            } else {
+                Err(StatusCode::BAD_REQUEST)
+            }
+        }
+        None => {
+            set_alarm_inner(hour, min, sec, false);
+            Ok(StatusCode::OK)
+        }
+    }
 }
 
 /// Alarm 1 specific configurations.
