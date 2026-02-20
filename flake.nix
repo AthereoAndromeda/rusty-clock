@@ -1,8 +1,8 @@
 {
-  description = "A very basic flake";
+  description = "Development flake for Rusty-Clock";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-25.05";
+    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-25.11";
     flake-utils.url = "github:numtide/flake-utils";
 
     fenix.url = "github:nix-community/fenix";
@@ -37,14 +37,12 @@
             ]
             ++ (with pkgs; [
               bacon
-              mprocs
               pkg-config
               espflash
               probe-rs-tools
               cargo-expand
               cargo-binutils
               cargo-bloat
-              cargo-insta
             ]);
         };
       }
