@@ -1,6 +1,4 @@
 use core::net::IpAddr;
-
-use defmt::warn;
 use embassy_time::{Duration, WithTimeout as _};
 
 #[derive(Debug, defmt::Format, thiserror::Error)]
@@ -37,23 +35,14 @@ pub(crate) async fn resolve(
         .await;
 
     let Ok(ntp_addrs_response) = ntp_addrs_future else {
-        warn!("[sntp] DNS Request Timeout!");
         return Err(DnsError::Timeout);
     };
 
     let ntp_addrs = match ntp_addrs_response {
+        Err(e) => return Err(DnsError::DnsSocketError(e)),
         Ok(addr) if addr.is_empty() => return Err(DnsError::NoAddrs),
         Ok(addr) => addr,
-        Err(e) => {
-            warn!("[sntp] DNS Request Failed: {}", e);
-            return Err(DnsError::DnsSocketError(e));
-        }
     };
-
-    // if ntp_addrs.is_empty() {
-    //     warn!("[sntp] DNS Resolution Failed: No addrs received\nFalling back to stored RTC time");
-    //     return Err(DnsError::NoAddrs);
-    // }
 
     // Converts `smoltcp Address` to `IpAddr`
     Ok(ntp_addrs.into_iter().map(Into::into).collect())

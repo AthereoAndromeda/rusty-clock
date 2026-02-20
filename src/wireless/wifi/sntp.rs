@@ -93,11 +93,11 @@ async fn fetch_sntp_inner(
         .with_timeout(Duration::from_secs(180))
         .await
     {
-        let config = net_stack
-            .config_v4()
-            .expect("IP Config not found despite awaiting it");
-
-        info!("[sntp] Got IP: {}", config.address);
+        // SAFETY: We just awaited for the config to be up
+        unsafe {
+            let config = net_stack.config_v4().unwrap_unchecked();
+            info!("[sntp] Got IP: {}", config.address);
+        }
     } else {
         warn!("[sntp] DHCP IP Address Request Timed Out!");
         return;
@@ -106,7 +106,7 @@ async fn fetch_sntp_inner(
     let ntp_addrs = match super::dns::resolve(NTP_SERVER_ADDR, net_stack).await {
         Ok(addrs) => addrs,
         Err(err) => {
-            warn!("DNS Error Received: {}", err);
+            warn!("[sntp] DNS Error Received: {}", err);
             return;
         }
     };
