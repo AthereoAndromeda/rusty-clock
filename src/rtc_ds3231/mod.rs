@@ -82,7 +82,7 @@ pub(crate) static SET_DATETIME_SIGNAL: Signal<CriticalSectionRawMutex, chrono::N
 /// NOTE: [`portable_atomic`] crate is used since native does not support 64 bit atomics.
 pub(crate) static LOCAL_TIMESTAMP: portable_atomic::AtomicU64 = portable_atomic::AtomicU64::new(0);
 
-pub(crate) type RtcDS3231 = DS3231<I2cBus>;
+type RtcDS3231 = DS3231<I2cBus>;
 pub(crate) type RtcMutex = Mutex<CriticalSectionRawMutex, RtcDS3231>;
 
 pub(crate) const RTC_I2C_ADDR: u8 = {
@@ -115,6 +115,7 @@ pub(crate) async fn init(spawner: Spawner, i2c: I2cBus) {
         ENV_TIME
     };
 
+    #[cfg(debug_assertions)]
     debug!("{:?}", alarm1_config);
 
     rtc.set_alarm1(&alarm1_config)
@@ -165,7 +166,7 @@ async fn run(rtc_mutex: &'static RtcMutex) -> ! {
                 let ts: RtcDateTime = datetime.into();
                 defmt::debug!("{}", ts);
                 defmt::debug!(
-                    "{}",
+                    "{=u64}",
                     LOCAL_TIMESTAMP.load(core::sync::atomic::Ordering::SeqCst)
                 );
                 count = 0;

@@ -79,7 +79,7 @@ pub(crate) const PASSWORD: &str = env!("PASSWORD");
 
 // NOTE: Using TZ_OFFSET since IANA Timezones adds unnecessary weight
 // PERF: Faster and leaner than LazyLock if you're
-// okay with using unsafe and nightly features
+// okay with using nightly features
 pub(crate) const TZ_OFFSET: i8 = {
     let tz = option_env!("TZ_OFFSET").unwrap_or("0");
 

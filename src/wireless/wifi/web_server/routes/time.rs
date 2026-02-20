@@ -25,7 +25,7 @@ impl picoserve::response::sse::EventSource for TimeEvent {
 
         loop {
             #[cfg(debug_assertions)]
-            defmt::debug!("[sse:time] Writing Event...");
+            defmt::trace!("[sse:time] Writing Event...");
 
             let time = anon_recv.try_get();
             if time.is_none() {
@@ -37,7 +37,7 @@ impl picoserve::response::sse::EventSource for TimeEvent {
             writer.write_event("", time.unwrap()).await?;
 
             #[cfg(debug_assertions)]
-            defmt::debug!("[sse:time] Event Written!");
+            defmt::trace!("[sse:time] Event Written!");
             Timer::after_secs(1).await;
         }
     }

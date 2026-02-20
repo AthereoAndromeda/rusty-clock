@@ -10,6 +10,7 @@ use embassy_time::Duration;
 use picoserve::{AppBuilder, AppRouter, Router, make_static, response::File, routing::get_service};
 use static_cell::ConstStaticCell;
 
+/// The number of web tasks to be ran.
 pub(super) const WEB_TASK_POOL_SIZE: usize = 3;
 
 /// Our Web server App.
@@ -103,6 +104,7 @@ pub(super) async fn web_task(
     }
 }
 
+/// Initializes [`picoserve`] and the web app.
 pub(super) fn init() -> (
     &'static mut Router<<App as AppBuilder>::PathRouter>,
     &'static mut picoserve::Config,

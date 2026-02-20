@@ -1,7 +1,7 @@
 use crate::buzzer::{Buzzer, VOLUME_SIGNAL};
 
 use super::{BUZZER_ACTION_SIGNAL, BuzzerAction, IS_BUZZER_ON, TIMER_SIGNAL};
-use defmt::info;
+use defmt::{debug, info};
 use embassy_futures::select;
 use embassy_time::Timer;
 use esp_hal::{
@@ -49,7 +49,7 @@ fn handle_buzzer_action(output: &mut Buzzer, action: BuzzerAction) {
 }
 
 #[embassy_executor::task]
-/// Listens for [`TIMER_SIGNAL`] and sets timer accordingly
+/// Listens for [`TIMER_SIGNAL`] and sets timer accordingly.
 pub(super) async fn listen_for_timer() -> ! {
     info!("[buzzer:listen_for_timer] Listening for timer");
 
@@ -67,28 +67,30 @@ pub(super) async fn listen_for_timer() -> ! {
 }
 
 #[embassy_executor::task]
-/// Listens for a button press which sets buzzer low
+/// Listens for a button press which sets buzzer low.
 pub(super) async fn listen_for_button(input_pin: peripherals::GPIO7<'static>) -> ! {
     let mut input = Input::new(input_pin, InputConfig::default().with_pull(Pull::Up));
 
     loop {
-        info!("Waiting for alarm button press");
+        #[cfg(debug_assertions)]
+        debug!("Waiting for alarm button press");
         input.wait_for_falling_edge().await;
 
-        info!("Alarm Button Pressed!");
+        debug!("Alarm Button Pressed!");
         BUZZER_ACTION_SIGNAL.signal(BuzzerAction::Off);
         Timer::after_millis(500).await;
     }
 }
 
 #[embassy_executor::task]
-/// Listen for the alarm interrupt from DS3231 RTC
+/// Listen for the alarm interrupt from DS3231 RTC.
 pub(super) async fn listen_for_alarm(alarm_pin: peripherals::GPIO6<'static>) -> ! {
     info!("Initializing Alarm Listener...");
     let mut alarm_input = Input::new(alarm_pin, InputConfig::default().with_pull(Pull::Up));
 
     loop {
-        info!("Waiting for alarm...");
+        #[cfg(debug_assertions)]
+        debug!("Waiting for alarm...");
         alarm_input.wait_for_falling_edge().await;
 
         info!("DS3231 Interrupt Received!");
@@ -103,12 +105,3 @@ pub(super) async fn listen_for_alarm(alarm_pin: peripherals::GPIO6<'static>) -> 
         }
     }
 }
-
-// #[embassy_executor::task]
-// pub(super) async fn listen_for_volume(output: &'static super::BuzzerMutex) {
-//     loop {
-//         let volume = VOLUME_SIGNAL.wait().await;
-//         debug!("Volume signal received");
-//         output.lock().await.set_volume(volume);
-//     }
-// }

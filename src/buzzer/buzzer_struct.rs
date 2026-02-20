@@ -4,6 +4,9 @@
 
 use esp_hal::ledc::{LowSpeed, channel::ChannelIFace as _};
 
+/// The [`Buzzer`] can only be `On` or `Off`.
+///
+/// Volume levels are handled differently.
 pub(crate) enum BuzzerState {
     On,
     Off,
@@ -17,10 +20,7 @@ pub(crate) struct Buzzer {
 }
 
 impl Buzzer {
-    pub fn new(output: esp_hal::ledc::channel::Channel<'static, LowSpeed>) -> Self
-    where
-        Self: Sized,
-    {
+    pub fn new(output: esp_hal::ledc::channel::Channel<'static, LowSpeed>) -> Self {
         Self {
             output,
             volume: 0,

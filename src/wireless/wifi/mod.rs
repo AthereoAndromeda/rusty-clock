@@ -30,7 +30,6 @@ pub(super) fn init(
 
     spawner.must_spawn(runner_task(net_runner));
     spawner.must_spawn(connect_to_wifi(wifi_controller));
-
     spawner.must_spawn(sntp::fetch_sntp(net_stack));
 
     let (app, conf) = web_server::init();
@@ -49,7 +48,7 @@ fn get_stack(
     embassy_net::Stack<'static>,
     embassy_net::Runner<'_, WifiDevice<'_>>,
 ) {
-    info!("Creating Network Stack...");
+    debug!("Creating Network Stack...");
     let wifi_interface_station = wifi_interface.sta;
 
     let rng = Rng::new();

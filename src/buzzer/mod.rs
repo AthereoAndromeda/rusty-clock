@@ -59,7 +59,7 @@ pub(super) async fn init(
 
     // Beep 3 times
     for _ in 0..3 {
-        Timer::after_millis(300).await;
+        Timer::after_millis(500).await;
         BUZZER_ACTION_SIGNAL.signal(BuzzerAction::Toggle);
     }
 

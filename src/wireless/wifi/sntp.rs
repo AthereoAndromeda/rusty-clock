@@ -42,11 +42,11 @@ pub(crate) async fn fetch_sntp(net_stack: embassy_net::Stack<'static>) -> ! {
     // NOTE: Using `ConstStaticCell` means these buffers are stored in .bss, thus does
     // not take up any flash space.
     static UDP_RX_META: ConstStaticCell<[PacketMetadata; 16]> =
-        ConstStaticCell::new([PacketMetadata::EMPTY; 16]);
+        ConstStaticCell::new([PacketMetadata::EMPTY; _]);
     static UDP_TX_META: ConstStaticCell<[PacketMetadata; 16]> =
-        ConstStaticCell::new([PacketMetadata::EMPTY; 16]);
-    static UDP_RX_BUFFER: ConstStaticCell<[u8; 1024]> = ConstStaticCell::new([0; 1024]);
-    static UDP_TX_BUFFER: ConstStaticCell<[u8; 1024]> = ConstStaticCell::new([0; 1024]);
+        ConstStaticCell::new([PacketMetadata::EMPTY; _]);
+    static UDP_RX_BUFFER: ConstStaticCell<[u8; 1024]> = ConstStaticCell::new([0; _]);
+    static UDP_TX_BUFFER: ConstStaticCell<[u8; 1024]> = ConstStaticCell::new([0; _]);
 
     let udp_rx_meta = UDP_RX_META.take();
     let udp_tx_meta = UDP_TX_META.take();

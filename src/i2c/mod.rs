@@ -4,7 +4,10 @@
 
 use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
-use esp_hal::peripherals;
+use esp_hal::{
+    i2c::master::{Config, I2c},
+    peripherals,
+};
 
 use crate::utils::mk_static;
 
@@ -21,17 +24,15 @@ pub(crate) fn init<const N: usize>(
     sda_pin: peripherals::GPIO2<'static>,
     scl_pin: peripherals::GPIO3<'static>,
 ) -> heapless::Vec<I2cBus, N> {
-    let i2c =
-        esp_hal::i2c::master::I2c::new(i2c_peripheral, esp_hal::i2c::master::Config::default())
-            .expect("I2C Failed to Initialize!")
-            .with_sda(sda_pin) // Might change later since these are for UART
-            .with_scl(scl_pin)
-            .into_async();
+    let i2c = I2c::new(i2c_peripheral, Config::default())
+        .expect("I2C Failed to Initialize!")
+        .with_sda(sda_pin) // Might change later since these are for UART
+        .with_scl(scl_pin)
+        .into_async();
 
-    let i2c_mutex: &'static I2cMutex =
-        mk_static!(I2cMutex; Mutex::<CriticalSectionRawMutex, _>::new(i2c));
-
+    let i2c_mutex: &'static I2cMutex = mk_static!(I2cMutex; Mutex::new(i2c));
     let mut buses: heapless::Vec<I2cBus, N> = const { heapless::Vec::new() };
+
     for _ in 0..N {
         // SAFETY: N slots are alotted and we only push N times
         unsafe {

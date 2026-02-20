@@ -54,7 +54,12 @@ fn set_alarm_inner(hour: u8, min: u8, sec: u8, is_utc: bool) {
     };
 
     #[cfg(debug_assertions)]
-    defmt::debug!("{} {} {}", time.hour(), time.minute(), time.second());
+    defmt::debug!(
+        "{=u32}:{=u32}:{=u32}",
+        time.hour(),
+        time.minute(),
+        time.second()
+    );
 
     let conf = Alarm1Config::AtTime {
         hours: time.hour().truncate(),
