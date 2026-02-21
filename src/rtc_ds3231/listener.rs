@@ -10,8 +10,9 @@ use super::{CLEAR_FLAGS_SIGNAL, RtcMutex, SET_DATETIME_SIGNAL};
 pub(super) async fn listen_for_datetime_set(rtc: &'static RtcMutex) -> ! {
     loop {
         let datetime = SET_DATETIME_SIGNAL.wait().await;
+        defmt::debug!("{=str}", datetime.local().to_human());
 
-        match rtc.lock().await.set_datetime(&datetime).await {
+        match rtc.lock().await.set_datetime(&datetime.naive_utc()).await {
             Ok(()) => {}
             Err(e) => defmt::error!(
                 "[rtc] Failed to set new datetime: {}",

@@ -12,6 +12,7 @@ use alarm::reset_alarm_flags;
 
 mod listener;
 
+use chrono::Utc;
 use defmt::debug;
 use ds3231::{
     Alarm1Config, Config, DS3231, InterruptControl, Oscillator, SquareWaveFrequency,
@@ -60,7 +61,8 @@ const ENV_TIME: Alarm1Config = {
 };
 
 /// Contains the time from RTC module.
-pub(crate) static TIME_WATCH: Watch<CriticalSectionRawMutex, RtcDateTime, 3> = Watch::new();
+pub(crate) static TIME_WATCH: Watch<CriticalSectionRawMutex, RtcDateTime<Utc>, 3> = Watch::new();
+
 /// Clears the alarm flags for RTC.
 pub(crate) static CLEAR_FLAGS_SIGNAL: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 
@@ -73,7 +75,7 @@ pub(crate) static ALARM_CONFIG_RWLOCK: RwLock<CriticalSectionRawMutex, Alarm1Con
     RwLock::new(ENV_TIME);
 
 /// Sets datetime for RTC.
-pub(crate) static SET_DATETIME_SIGNAL: Signal<CriticalSectionRawMutex, chrono::NaiveDateTime> =
+pub(crate) static SET_DATETIME_SIGNAL: Signal<CriticalSectionRawMutex, RtcDateTime<Utc>> =
     Signal::new();
 
 /// This is the timestamp held in-memory.
@@ -149,10 +151,18 @@ async fn run(rtc_mutex: &'static RtcMutex) -> ! {
     let mut count = 0;
 
     loop {
-        let datetime = rtc_mutex.lock().await.datetime().await.unwrap();
-        sender.send(datetime.into());
+        let datetime: RtcDateTime<Utc> = rtc_mutex
+            .lock()
+            .await
+            .datetime()
+            .await
+            .unwrap()
+            .and_utc()
+            .into();
 
-        let ts = datetime.and_utc().timestamp();
+        let ts = datetime.timestamp();
+        sender.send(datetime);
+
         assert!(
             !ts.is_negative(),
             "The timestamp should never be negative, i.e. never set before January 1 1970"
@@ -165,10 +175,11 @@ async fn run(rtc_mutex: &'static RtcMutex) -> ! {
         {
             // Only print time every 10 seconds instead of every second
             if count >= 10 {
-                use crate::rtc_ds3231::rtc_time::RtcDateTime;
-                let rtc_ts: RtcDateTime = datetime.into();
-                defmt::debug!("{=str}", rtc_ts.to_iso8601().local());
-                defmt::debug!("{=u64}", ts);
+                defmt::debug!("Local: {=str}", datetime.local().to_iso8601());
+                defmt::debug!("Local: {=str}", datetime.local().to_human());
+                defmt::debug!("UTC  : {=str}", datetime.to_iso8601());
+                defmt::debug!("UTC  : {=str}", datetime.to_human());
+                defmt::debug!("TS   : {=u64}", ts);
                 count = 0;
             }
 

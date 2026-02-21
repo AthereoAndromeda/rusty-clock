@@ -21,7 +21,6 @@
 #![feature(const_index)]
 // NIGHTLY: Enum-based typestate pattern
 // #![feature(adt_const_params)]
-
 // CLIPPY: Use pedantic
 #![warn(clippy::pedantic)]
 #![warn(clippy::undocumented_unsafe_blocks)]

@@ -1,3 +1,4 @@
+use chrono::Utc;
 use core::net::SocketAddr;
 use defmt::{debug, info, warn};
 use embassy_net::udp::{PacketMetadata, UdpSocket};
@@ -7,7 +8,7 @@ use sntpc::NtpContext;
 use sntpc_net_embassy::UdpSocketWrapper;
 use static_cell::ConstStaticCell;
 
-use crate::rtc_ds3231::{SET_DATETIME_SIGNAL, TIME_WATCH};
+use crate::rtc_ds3231::{SET_DATETIME_SIGNAL, TIME_WATCH, rtc_time::RtcDateTime};
 
 pub(crate) static NTP_SYNC: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 
@@ -116,7 +117,7 @@ async fn fetch_sntp_inner(
         .expect("[sntp] Max `TIME_WATCH` rx reached");
 
     info!("[sntp] Sending SNTP Request...");
-    let current_timestamp = recv.get().await.and_utc().timestamp_micros();
+    let current_timestamp = recv.get().await.timestamp_micros();
 
     let result = sntpc::get_time(
         SocketAddr::from((addr, NTP_SERVER_PORT)),
@@ -143,9 +144,7 @@ async fn fetch_sntp_inner(
                 debug!("[sntp] Difference: {=u64}", diff);
             }
 
-            let datetime = chrono::DateTime::from_timestamp_secs(time.seconds.into())
-                .unwrap()
-                .naive_utc();
+            let datetime = RtcDateTime::<Utc>::from_timestamp(time.seconds.into());
 
             SET_DATETIME_SIGNAL.signal(datetime);
             info!("[rtc:update-timestamp] Succesfully Set RTC Datetime!");
