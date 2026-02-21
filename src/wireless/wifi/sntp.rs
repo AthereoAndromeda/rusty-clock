@@ -1,4 +1,4 @@
-use core::net::{IpAddr, SocketAddr};
+use core::net::SocketAddr;
 use defmt::{debug, info, warn};
 use embassy_net::udp::{PacketMetadata, UdpSocket};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
@@ -103,7 +103,7 @@ async fn fetch_sntp_inner(
         return;
     }
 
-    let ntp_addrs = match super::dns::resolve(NTP_SERVER_ADDR, net_stack).await {
+    let addr = match super::dns::resolve(NTP_SERVER_ADDR, net_stack).await {
         Ok(addrs) => addrs,
         Err(err) => {
             warn!("[sntp] DNS Error Received: {}", err);
@@ -116,9 +116,6 @@ async fn fetch_sntp_inner(
         .expect("[sntp] Max `TIME_WATCH` rx reached");
 
     info!("[sntp] Sending SNTP Request...");
-
-    #[expect(clippy::indexing_slicing, reason = "Guaranteed to be non-empty")]
-    let addr: IpAddr = ntp_addrs[0];
     let current_timestamp = recv.get().await.and_utc().timestamp_micros();
 
     let result = sntpc::get_time(
