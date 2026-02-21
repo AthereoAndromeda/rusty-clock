@@ -13,6 +13,69 @@ use crate::TZ_OFFSET;
 /// convenience methods, impls, and interfaces wih our web server.
 pub(crate) struct RtcDateTime(pub NaiveDateTime);
 
+impl RtcDateTime {
+    /// Converts [`RtcDateTime`] to a human-readable format.
+    pub fn to_human(self) -> HumanDateTime {
+        HumanDateTime(self.0)
+    }
+
+    /// Converts [`RtcDateTime`] to conform to ISO8601.
+    pub fn to_iso8601(self) -> Iso8601DateTime {
+        Iso8601DateTime(self.0)
+    }
+
+    /// Returns seconds since Unix Epoch.
+    pub fn to_timestamp(self) -> u64 {
+        self.0.and_utc().timestamp().cast_unsigned()
+    }
+
+    /// Generate a [`RtcDateTime`] from seconds since Unix Epoch.
+    pub fn from_timestamp(ts: i64) -> Self {
+        chrono::Utc.timestamp_opt(ts, 0).unwrap().naive_utc().into()
+    }
+}
+
+impl Deref for RtcDateTime {
+    type Target = NaiveDateTime;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<chrono::NaiveDateTime> for RtcDateTime {
+    fn from(value: chrono::NaiveDateTime) -> Self {
+        Self(value)
+    }
+}
+
+impl From<RtcDateTime> for chrono::NaiveDateTime {
+    fn from(value: RtcDateTime) -> Self {
+        value.0
+    }
+}
+
+impl From<i64> for RtcDateTime {
+    fn from(value: i64) -> Self {
+        RtcDateTime::from_timestamp(value)
+    }
+}
+
+// impl defmt::Format for RtcDateTime {
+//     fn format(&self, fmt: defmt::Formatter) {
+//         defmt::write!(fmt, "{=str}", self.to_iso8601().local());
+//     }
+// }
+
+impl picoserve::response::sse::EventData for RtcDateTime {
+    async fn write_to<W: picoserve::io::Write>(self, writer: &mut W) -> Result<(), W::Error> {
+        writer
+            .write_all(self.to_human().local_short().as_bytes())
+            .await?;
+        Ok(())
+    }
+}
+
 const MONTH_BY_INDEX: [&str; 12] = [
     "January",
     "February",
@@ -125,7 +188,7 @@ impl Iso8601DateTime {
             .and_local_timezone(FixedOffset::east_opt(i32::from(TZ_OFFSET) * 3600).unwrap())
             .unwrap();
 
-        let sign = if TZ_OFFSET >= 0 { "+" } else { "-" };
+        let sign = if TZ_OFFSET.is_positive() { "+" } else { "-" };
 
         heapless::format!(
             "{}-{:02}-{:02}T{:02}:{:02}:{:02}{}{:02}:00",
@@ -139,68 +202,5 @@ impl Iso8601DateTime {
             TZ_OFFSET
         )
         .unwrap()
-    }
-}
-
-impl RtcDateTime {
-    /// Converts [`RtcDateTime`] to a human-readable format.
-    pub fn to_human(self) -> HumanDateTime {
-        HumanDateTime(self.0)
-    }
-
-    /// Converts [`RtcDateTime`] to conform to ISO8601.
-    pub fn to_iso8601(self) -> Iso8601DateTime {
-        Iso8601DateTime(self.0)
-    }
-
-    /// Returns seconds since Unix Epoch.
-    pub fn to_timestamp(self) -> u64 {
-        self.0.and_utc().timestamp().cast_unsigned()
-    }
-
-    /// Generate a [`RtcDateTime`] from seconds since Unix Epoch.
-    pub fn from_timestamp(ts: i64) -> Self {
-        chrono::Utc.timestamp_opt(ts, 0).unwrap().naive_utc().into()
-    }
-}
-
-impl Deref for RtcDateTime {
-    type Target = NaiveDateTime;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl From<chrono::NaiveDateTime> for RtcDateTime {
-    fn from(value: chrono::NaiveDateTime) -> Self {
-        Self(value)
-    }
-}
-
-impl From<RtcDateTime> for chrono::NaiveDateTime {
-    fn from(value: RtcDateTime) -> Self {
-        value.0
-    }
-}
-
-impl From<i64> for RtcDateTime {
-    fn from(value: i64) -> Self {
-        RtcDateTime::from_timestamp(value)
-    }
-}
-
-// impl defmt::Format for RtcDateTime {
-//     fn format(&self, fmt: defmt::Formatter) {
-//         defmt::write!(fmt, "{=str}", self.to_iso8601().local());
-//     }
-// }
-
-impl picoserve::response::sse::EventData for RtcDateTime {
-    async fn write_to<W: picoserve::io::Write>(self, writer: &mut W) -> Result<(), W::Error> {
-        writer
-            .write_all(self.to_human().local_short().as_bytes())
-            .await?;
-        Ok(())
     }
 }
