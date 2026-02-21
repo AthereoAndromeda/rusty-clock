@@ -135,12 +135,12 @@ async fn fetch_sntp_inner(
             #[cfg(debug_assertions)]
             {
                 use defmt::debug;
-                let rtc_time = recv.get().await.and_utc().timestamp();
-                debug!("[sntp] NTP: {}", time.seconds);
-                debug!("[sntp] RTC: {}", rtc_time);
+                let rtc_time = recv.get().await.to_timestamp();
+                debug!("[sntp] NTP: {=u32}", time.seconds);
+                debug!("[sntp] RTC: {=u64}", rtc_time);
 
-                let diff = i64::from(time.seconds).saturating_sub(rtc_time);
-                debug!("[sntp] Difference: {}", diff);
+                let diff = u64::from(time.seconds).saturating_sub(rtc_time);
+                debug!("[sntp] Difference: {=u64}", diff);
             }
 
             let datetime = chrono::DateTime::from_timestamp_secs(time.seconds.into())

@@ -112,14 +112,14 @@ async fn connect_to_wifi(mut controller: WifiController<'static>) -> ! {
 
             #[cfg(debug_assertions)]
             for ap in scan_result {
-                defmt::debug!("{:?}", ap);
+                defmt::debug!("{}", ap);
             }
         }
 
         match controller.connect_async().await {
             Ok(()) => info!("Wifi connected!"),
             Err(e) => {
-                warn!("Failed to connect to wifi: {:?}", e);
+                warn!("Failed to connect to wifi: {}", e);
                 Timer::after_millis(5000).await;
             }
         }
