@@ -190,11 +190,11 @@ impl From<i64> for RtcDateTime {
     }
 }
 
-impl defmt::Format for RtcDateTime {
-    fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(fmt, "{}", self.to_iso8601().local());
-    }
-}
+// impl defmt::Format for RtcDateTime {
+//     fn format(&self, fmt: defmt::Formatter) {
+//         defmt::write!(fmt, "{=str}", self.to_iso8601().local());
+//     }
+// }
 
 impl picoserve::response::sse::EventData for RtcDateTime {
     async fn write_to<W: picoserve::io::Write>(self, writer: &mut W) -> Result<(), W::Error> {

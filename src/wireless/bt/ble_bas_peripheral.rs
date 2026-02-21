@@ -65,9 +65,9 @@ async fn gatt_events_task(
             let time = recv.get().await;
             let sec = time.second() as i64;
 
-            info!("[time_task] notifying connection of time {}", time);
+            info!("[ble:time_task] notifying connection of time");
             if time_epoch_char.notify(conn, &sec).await.is_err() {
-                error!("[time_task] error notifying connection");
+                error!("[ble:time_task] error notifying connection");
             };
         };
 
