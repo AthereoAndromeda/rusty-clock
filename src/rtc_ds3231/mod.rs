@@ -121,6 +121,7 @@ pub(crate) async fn init(spawner: Spawner, i2c: I2cBus) {
     rtc.set_alarm1(&alarm1_config)
         .await
         .expect("[rtc] Failed to set alarm");
+
     reset_alarm_flags(&mut rtc)
         .await
         .expect("[rtc] Failed to reset flags");
@@ -150,25 +151,24 @@ async fn run(rtc_mutex: &'static RtcMutex) -> ! {
     loop {
         let datetime = rtc_mutex.lock().await.datetime().await.unwrap();
         sender.send(datetime.into());
-        LOCAL_TIMESTAMP.store(
-            datetime
-                .and_utc()
-                .timestamp()
-                .try_into()
-                .expect("Alarm must never be set before January 1, 1970"),
-            core::sync::atomic::Ordering::SeqCst,
+
+        let ts = datetime.and_utc().timestamp();
+        assert!(
+            !ts.is_negative(),
+            "The timestamp should never be negative, i.e. never set before January 1 1970"
         );
+        let ts = ts.cast_unsigned();
+
+        LOCAL_TIMESTAMP.store(ts, core::sync::atomic::Ordering::Release);
 
         #[cfg(debug_assertions)]
         {
+            // Only print time every 10 seconds instead of every second
             if count >= 10 {
                 use crate::rtc_ds3231::rtc_time::RtcDateTime;
-                let ts: RtcDateTime = datetime.into();
-                defmt::debug!("{}", ts);
-                defmt::debug!(
-                    "{=u64}",
-                    LOCAL_TIMESTAMP.load(core::sync::atomic::Ordering::SeqCst)
-                );
+                let rtc_ts: RtcDateTime = datetime.into();
+                defmt::debug!("{=str}", rtc_ts.to_iso8601().local());
+                defmt::debug!("{=u64}", ts);
                 count = 0;
             }
 
