@@ -1,5 +1,5 @@
-//! # `RtcTime`
-//! This module provides all functionalities regarding [`RtcTime`].
+//! # `RtcDateTime`
+//! This module provides all functionalities regarding [`RtcDateTime`].
 
 use chrono::{Datelike, FixedOffset, NaiveDateTime, TimeZone as _, Timelike};
 use core::{fmt::Debug, hint::assert_unchecked, ops::Deref};
@@ -143,14 +143,22 @@ impl Iso8601DateTime {
 }
 
 impl RtcDateTime {
+    /// Converts [`RtcDateTime`] to a human-readable format.
     pub fn to_human(self) -> HumanDateTime {
         HumanDateTime(self.0)
     }
 
+    /// Converts [`RtcDateTime`] to conform to ISO8601.
     pub fn to_iso8601(self) -> Iso8601DateTime {
         Iso8601DateTime(self.0)
     }
 
+    /// Returns seconds since Unix Epoch.
+    pub fn to_timestamp(self) -> u64 {
+        self.0.and_utc().timestamp().cast_unsigned()
+    }
+
+    /// Generate a [`RtcDateTime`] from seconds since Unix Epoch.
     pub fn from_timestamp(ts: i64) -> Self {
         chrono::Utc.timestamp_opt(ts, 0).unwrap().naive_utc().into()
     }
