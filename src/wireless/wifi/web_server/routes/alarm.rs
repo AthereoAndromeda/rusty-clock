@@ -110,8 +110,10 @@ impl TryFrom<heapless::String<3>> for FormCheckbox {
     }
 }
 
-async fn set_alarm_form(Form(form): Form<AlarmForm>) -> impl IntoResponse {
+async fn set_alarm_form(Form(form): Form<AlarmForm>) -> Result<StatusCode, StatusCode> {
+    #[cfg(debug_assertions)]
     defmt::debug!("{}", &form);
+
     let AlarmForm {
         hour,
         min,
@@ -119,19 +121,13 @@ async fn set_alarm_form(Form(form): Form<AlarmForm>) -> impl IntoResponse {
         is_utc,
     } = form;
 
-    match is_utc {
-        Some(utc) => {
-            if let Ok(input) = utc.try_into() {
-                set_alarm_inner(hour, min, sec, matches!(input, FormCheckbox::On));
-                Ok(StatusCode::OK)
-            } else {
-                Err(StatusCode::BAD_REQUEST)
-            }
-        }
-        None => {
-            set_alarm_inner(hour, min, sec, false);
-            Ok(StatusCode::OK)
-        }
+    if let Some(utc) = is_utc {
+        let input: FormCheckbox = utc.try_into().map_err(|()| StatusCode::BAD_REQUEST)?;
+        set_alarm_inner(hour, min, sec, matches!(input, FormCheckbox::On));
+        Ok(StatusCode::OK)
+    } else {
+        set_alarm_inner(hour, min, sec, false);
+        Ok(StatusCode::OK)
     }
 }
 
