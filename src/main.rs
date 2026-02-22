@@ -53,9 +53,10 @@ mod rtc_ds3231;
 mod utils;
 mod wireless;
 
-use defmt_rtt as _;
-use esp_backtrace as _;
+// use defmt_rtt as _;
+// use esp_backtrace as _;
 // use esp_println as _;
+use panic_rtt_target as _;
 
 use defmt::info;
 use embassy_executor::Spawner;
@@ -106,6 +107,7 @@ pub(crate) static BOOT_TIME: esp_hal::time::Instant = esp_hal::time::Instant::EP
 
 #[esp_rtos::main]
 async fn main(spawner: Spawner) {
+    rtt_target::rtt_init_defmt!();
     defmt::timestamp!("[{=u64}ms]", { BOOT_TIME.elapsed().as_millis() });
 
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
@@ -158,5 +160,4 @@ async fn main(spawner: Spawner) {
     );
 
     info!("All Systems Go!");
-    info!("Running.... ");
 }

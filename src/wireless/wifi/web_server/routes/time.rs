@@ -8,7 +8,7 @@ use picoserve::{
 };
 
 use crate::{
-    TZ_OFFSET,
+    BOOT_TIME, TZ_OFFSET,
     rtc_ds3231::{TIME_WATCH, rtc_time::RtcDateTime},
     wireless::wifi::sntp::NTP_SYNC,
 };
@@ -52,10 +52,15 @@ pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRou
         .route("/time", get(get_time))
         .route("/epoch", get(get_epoch))
         .route("/sync", get(get_sync))
+        .route("/uptime", get(get_uptime))
         .route(
             "/time/stream",
             get(async || picoserve::response::EventStream(TimeEvent)),
         )
+}
+
+async fn get_uptime() -> impl IntoResponse {
+    DebugValue(BOOT_TIME.elapsed().as_minutes())
 }
 
 async fn get_epoch() -> impl IntoResponse {
