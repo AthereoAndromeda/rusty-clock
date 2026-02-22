@@ -101,8 +101,13 @@ pub(crate) const TZ_OFFSET: i8 = {
 static_assertions::const_assert!(TZ_OFFSET <= 12 && TZ_OFFSET >= -12);
 esp_bootloader_esp_idf::esp_app_desc!();
 
+/// Represent time since boot.
+pub(crate) static BOOT_TIME: esp_hal::time::Instant = esp_hal::time::Instant::EPOCH;
+
 #[esp_rtos::main]
 async fn main(spawner: Spawner) {
+    defmt::timestamp!("[{=u64}ms]", { BOOT_TIME.elapsed().as_millis() });
+
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
 
