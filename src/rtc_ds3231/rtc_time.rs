@@ -1,7 +1,7 @@
 //! # `RtcDateTime`
 //! This module provides all functionalities regarding [`RtcDateTime`].
 
-use chrono::{DateTime, Datelike, FixedOffset, NaiveDateTime, TimeZone, Timelike, Utc};
+use chrono::{DateTime, Datelike, FixedOffset, TimeZone, Timelike, Utc};
 use core::{fmt::Debug, hint::assert_unchecked, ops::Deref};
 
 use crate::TZ_OFFSET;
@@ -81,7 +81,6 @@ impl<TZ: TimeZone + Copy> RtcDateTime<TZ> {
     #[inline]
     /// Returns seconds since Unix Epoch.
     pub fn to_timestamp(&self) -> u64 {
-        // self.0.and_utc().timestamp().cast_unsigned()
         self.0.timestamp().cast_unsigned()
     }
 
@@ -98,7 +97,6 @@ impl RtcDateTime<Utc> {
     pub fn local(self) -> RtcDateTime<FixedOffset> {
         let offset = FixedOffset::east_opt(i32::from(TZ_OFFSET) * 3600).unwrap();
         let time = self.0.with_timezone(&offset);
-
         RtcDateTime(time)
     }
 
@@ -123,7 +121,6 @@ impl RtcDateTime<FixedOffset> {
     #[expect(unused, reason = "Will use later")]
     /// Converts itself to `Utc` variant.
     pub fn utc(self) -> RtcDateTime<Utc> {
-        // Not sure if this works
         RtcDateTime(self.0.to_utc())
     }
 
@@ -167,16 +164,6 @@ impl<TZ: TimeZone + Copy> From<RtcDateTime<TZ>> for DateTime<TZ> {
     #[inline]
     fn from(value: RtcDateTime<TZ>) -> Self {
         value.0
-    }
-}
-
-impl From<NaiveDateTime> for RtcDateTime<FixedOffset> {
-    fn from(value: NaiveDateTime) -> Self {
-        let dt = value
-            .and_local_timezone(FixedOffset::east_opt(i32::from(TZ_OFFSET) * 3600).unwrap())
-            .unwrap();
-
-        Self(dt)
     }
 }
 

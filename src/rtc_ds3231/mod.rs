@@ -164,7 +164,7 @@ async fn run(rtc_mutex: &'static RtcMutex) -> ! {
         sender.send(datetime);
 
         assert!(
-            !ts.is_negative(),
+            ts.is_positive(),
             "The timestamp should never be negative, i.e. never set before January 1 1970"
         );
         let ts = ts.cast_unsigned();

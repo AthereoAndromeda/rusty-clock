@@ -77,11 +77,10 @@ async fn get_time(Query(query): Query<TimeQueryParams>) -> impl IntoResponse {
         Ch::A(time)
     } else {
         let offset = FixedOffset::east_opt(i32::from(TZ_OFFSET) * 3600).unwrap();
-        let a = time.to_utc().with_timezone(&offset).naive_local();
+        let a = time.to_utc().with_timezone(&offset);
         Ch::B(a.into())
     };
 
-    // DebugValue(res.local().to_human_short())
     match res {
         Ch::A(rtc) => DebugValue(rtc.to_human()),
         Ch::B(rtc) => DebugValue(rtc.to_human()),

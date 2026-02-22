@@ -131,7 +131,10 @@ async fn fetch_sntp_inner(
         Ok(time) => {
             #[cfg(debug_assertions)]
             debug!("[sntp] Response: {}", time);
+
             info!("[rtc:update-timestamp] Setting RTC Datetime to NTP...");
+            let datetime = RtcDateTime::<Utc>::from_timestamp(time.seconds.into());
+            SET_DATETIME_SIGNAL.signal(datetime);
 
             #[cfg(debug_assertions)]
             {
@@ -144,9 +147,6 @@ async fn fetch_sntp_inner(
                 debug!("[sntp] Difference: {=u64}", diff);
             }
 
-            let datetime = RtcDateTime::<Utc>::from_timestamp(time.seconds.into());
-
-            SET_DATETIME_SIGNAL.signal(datetime);
             info!("[rtc:update-timestamp] Succesfully Set RTC Datetime!");
         }
         Err(e) => {
