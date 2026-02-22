@@ -4,6 +4,7 @@ use defmt::{debug, info, warn};
 use embassy_net::udp::{PacketMetadata, UdpSocket};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_time::{Duration, WithTimeout as _};
+use explicit_cast::Truncate as _;
 use sntpc::NtpContext;
 use sntpc_net_embassy::UdpSocketWrapper;
 use static_cell::ConstStaticCell;
@@ -33,7 +34,7 @@ impl sntpc::NtpTimestampGenerator for SntpTimestamp {
         self.0 / 1_000_000
     }
     fn timestamp_subsec_micros(&self) -> u32 {
-        (self.0 % 1_000_000) as u32
+        (self.0 % 1_000_000).truncate()
     }
 }
 

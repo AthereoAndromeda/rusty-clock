@@ -10,9 +10,9 @@
 #![recursion_limit = "256"]
 // #![feature(allocator_api)]
 #![feature(decl_macro)]
-// NIGHTLY: Required for Picoserve
+// NIGHTLY: Required by Picoserve
 #![feature(impl_trait_in_assoc_type)]
-// NIGHTLY: Required for `static_cell::make_static!`
+// NIGHTLY: Required by `static_cell::make_static!`
 // #![feature(type_alias_impl_trait)]
 // NIGHTLY: Allows env vars to be parsed at compile time
 #![feature(const_option_ops)]
@@ -21,28 +21,61 @@
 #![feature(const_index)]
 // NIGHTLY: Enum-based typestate pattern
 // #![feature(adt_const_params)]
-// CLIPPY: Use pedantic
-#![warn(clippy::pedantic)]
-#![warn(clippy::undocumented_unsafe_blocks)]
-#![warn(clippy::doc_paragraphs_missing_punctuation)]
-#![warn(clippy::unused_trait_names)]
-#![warn(clippy::allow_attributes)]
-#![warn(clippy::allow_attributes_without_reason)]
-#![warn(clippy::clone_on_ref_ptr)]
-#![warn(clippy::indexing_slicing)]
-#![warn(clippy::if_then_some_else_none)]
-#![warn(clippy::missing_assert_message)]
-#![warn(clippy::lossy_float_literal)]
+// Clippy Lints
+#![deny(
+    clippy::mem_forget,
+    reason = "mem::forget is generally not safe to do with esp_hal types, especially those \
+    holding buffers for the duration of a data transfer."
+)]
 #![deny(clippy::map_with_unused_argument_over_ranges)]
 #![deny(clippy::empty_enum_variants_with_brackets)]
-#![deny(clippy::infinite_loop)] // Forces us to explicity use ! as return type
 #![deny(clippy::get_unwrap)]
+#![deny(clippy::large_stack_frames)]
+#![deny(clippy::lossy_float_literal)]
+#![deny(
+    clippy::infinite_loop,
+    reason = "Force usage of ! to denote infinite loops."
+)]
+#![deny(
+    clippy::undocumented_unsafe_blocks,
+    reason = "All unsafe blocks must be documented."
+)]
+#![deny(
+    clippy::indexing_slicing,
+    reason = "Prefer `.get()` unless absolutely sure index cannot be out of bounds"
+)]
+#![deny(
+    clippy::as_conversions,
+    reason = "`as` conversions are not explicit enough."
+)]
+#![deny(clippy::cast_lossless)]
+#![deny(clippy::cast_possible_truncation)]
+#![deny(clippy::cast_possible_wrap)]
+#![deny(clippy::cast_precision_loss)]
+#![deny(clippy::cast_sign_loss)]
+#![deny(clippy::char_lit_as_u8)]
+#![deny(clippy::fn_to_numeric_cast)]
+#![deny(clippy::fn_to_numeric_cast_with_truncation)]
+#![deny(clippy::ptr_as_ptr)]
+// CLIPPY: Use pedantic
+#![warn(clippy::pedantic)]
+#![warn(clippy::doc_paragraphs_missing_punctuation)]
+#![warn(clippy::unused_trait_names)]
+#![warn(clippy::allow_attributes, reason = "Prefer `expect` macros")]
+#![warn(
+    clippy::allow_attributes_without_reason,
+    reason = "All `expect` macros should be documented"
+)]
+#![warn(clippy::clone_on_ref_ptr)]
+#![warn(clippy::if_then_some_else_none)]
+#![warn(clippy::missing_assert_message)]
 #![allow(clippy::similar_names, reason = "Using TX/RX naming convention")]
 #![allow(clippy::large_futures, reason = "Cannot use heap or `Box::pin`")]
-// CLIPPY: `Result::unwrap` is not const fn, while `Option::unwrap` is.
-// Thus it is necessary to convert `Result` to `Option` in const contexts
-// if we want to avoid using unsafe.
-#![allow(clippy::ok_expect, reason = "`Result::unwrap` is not const")]
+#![allow(
+    clippy::ok_expect,
+    reason = "`Result::unwrap` is not const fn, while `Option::unwrap` is.\
+    Thus it is necessary to convert `Result` to `Option` in const contexts if we want to avoid using unsafe."
+)]
 
 extern crate alloc;
 
@@ -105,6 +138,10 @@ esp_bootloader_esp_idf::esp_app_desc!();
 /// Represent time since boot.
 pub(crate) static BOOT_TIME: esp_hal::time::Instant = esp_hal::time::Instant::EPOCH;
 
+// #[expect(
+//     clippy::large_stack_frames,
+//     reason = "it's not unusual to allocate larger buffers etc. in main"
+// )]
 #[esp_rtos::main]
 async fn main(spawner: Spawner) {
     rtt_target::rtt_init_defmt!();

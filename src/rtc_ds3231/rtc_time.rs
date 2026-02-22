@@ -39,6 +39,10 @@ impl<TZ: TimeZone + Copy> RtcDateTime<TZ> {
         dt: &(impl Datelike + Timelike),
         use_full_month: bool,
     ) -> heapless::String<N> {
+        #[expect(
+            clippy::as_conversions,
+            reason = "Month is guaranteed to fit inside of `usize`"
+        )]
         let month_idx = dt.month0() as usize;
 
         // SAFETY: There is always 12 months. If not, something has gone
