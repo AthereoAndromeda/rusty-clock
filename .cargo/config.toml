@@ -14,6 +14,7 @@ rustflags = [
   # NOTE: May negatively impact performance of produced code
   "-C", "force-frame-pointers",
   "-Z", "threads=8",
+  "-Z", "macro-backtrace",
 ]
 
 target = "riscv32imc-unknown-none-elf"
