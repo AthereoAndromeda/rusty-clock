@@ -21,6 +21,8 @@
 #![feature(const_index)]
 // NIGHTLY: Enum-based typestate pattern
 // #![feature(adt_const_params)]
+//
+//
 // Clippy Lints
 #![deny(
     clippy::mem_forget,
@@ -42,7 +44,7 @@
 )]
 #![deny(
     clippy::indexing_slicing,
-    reason = "Prefer `.get()` unless absolutely sure index cannot be out of bounds"
+    reason = "Prefer `.get()` unless absolutely sure index cannot be out of bounds."
 )]
 #![deny(
     clippy::as_conversions,
@@ -64,7 +66,7 @@
 #![warn(clippy::allow_attributes, reason = "Prefer `expect` macros")]
 #![warn(
     clippy::allow_attributes_without_reason,
-    reason = "All `expect` macros should be documented"
+    reason = "All `allow/expect` macros should be documented"
 )]
 #![warn(clippy::clone_on_ref_ptr)]
 #![warn(clippy::if_then_some_else_none)]
@@ -73,7 +75,7 @@
 #![allow(clippy::large_futures, reason = "Cannot use heap or `Box::pin`")]
 #![allow(
     clippy::ok_expect,
-    reason = "`Result::unwrap` is not const fn, while `Option::unwrap` is.\
+    reason = "`Result::unwrap` is not const fn, while `Option::unwrap` is. \
     Thus it is necessary to convert `Result` to `Option` in const contexts if we want to avoid using unsafe."
 )]
 
@@ -196,5 +198,5 @@ async fn main(spawner: Spawner) {
         peripherals.BT,
     );
 
-    info!("All Systems Go!");
+    info!("All System Tasks Spawned!");
 }

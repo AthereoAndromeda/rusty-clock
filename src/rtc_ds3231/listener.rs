@@ -10,14 +10,12 @@ use super::{CLEAR_FLAGS_SIGNAL, RtcMutex, SET_DATETIME_SIGNAL};
 pub(super) async fn listen_for_datetime_set(rtc: &'static RtcMutex) -> ! {
     loop {
         let datetime = SET_DATETIME_SIGNAL.wait().await;
-        defmt::debug!("{=str}", datetime.local().to_human());
 
-        match rtc.lock().await.set_datetime(&datetime.naive_utc()).await {
-            Ok(()) => {}
-            Err(e) => defmt::error!(
+        if let Err(err) = rtc.lock().await.set_datetime(&datetime.naive_utc()).await {
+            defmt::error!(
                 "[rtc] Failed to set new datetime: {}",
-                defmt::Debug2Format(&e)
-            ),
+                defmt::Debug2Format(&err)
+            );
         }
     }
 }
@@ -28,9 +26,8 @@ pub(super) async fn listen_for_clear_flag(rtc: &'static RtcMutex) -> ! {
         CLEAR_FLAGS_SIGNAL.wait().await;
 
         let mut rtc = rtc.lock().await;
-        match reset_alarm_flags(&mut rtc).await {
-            Ok(()) => {}
-            Err(e) => defmt::error!("[rtc] Failed to reset flags: {}", defmt::Debug2Format(&e)),
+        if let Err(err) = reset_alarm_flags(&mut rtc).await {
+            defmt::error!("[rtc] Failed to reset flags: {}", defmt::Debug2Format(&err));
         }
     }
 }
@@ -39,12 +36,15 @@ pub(super) async fn listen_for_clear_flag(rtc: &'static RtcMutex) -> ! {
 pub(super) async fn listen_for_alarm_set(rtc: &'static RtcMutex) -> ! {
     loop {
         let config = SET_ALARM.wait().await;
-        defmt::debug!("Set New Alarm: {}", config);
+        defmt::info!("New Alarm Set: {}", config);
 
         {
             let mut rtc = rtc.lock().await;
             rtc.set_alarm1(&config).await.unwrap();
-            reset_alarm_flags(&mut rtc).await.unwrap();
+            if let Err(err) = reset_alarm_flags(&mut rtc).await {
+                defmt::error!("[rtc] Failed to reset flags: {}", defmt::Debug2Format(&err));
+                continue;
+            }
         }
 
         *ALARM_CONFIG_RWLOCK.write().await = config;

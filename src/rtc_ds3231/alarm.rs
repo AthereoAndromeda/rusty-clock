@@ -1,5 +1,5 @@
 use super::{RtcDS3231, error::RtcError};
-use defmt::info;
+use defmt::debug;
 
 /// Clears and Sets Alarm1 Flag.
 pub(super) async fn reset_alarm_flags(rtc: &mut RtcDS3231) -> Result<(), RtcError> {
@@ -8,7 +8,8 @@ pub(super) async fn reset_alarm_flags(rtc: &mut RtcDS3231) -> Result<(), RtcErro
     status.set_alarm2_flag(false);
     rtc.set_status(status).await?;
 
-    info!("[rtc:init] Alarm flags cleared");
+    #[cfg(debug_assertions)]
+    debug!("[rtc:init] Alarm flags cleared");
 
     // Enable Alarm 1 interrupt
     let mut control = rtc.control().await?;
@@ -16,6 +17,7 @@ pub(super) async fn reset_alarm_flags(rtc: &mut RtcDS3231) -> Result<(), RtcErro
     control.set_alarm2_interrupt_enable(false);
     rtc.set_control(control).await?;
 
-    info!("[rtc:init] Alarm 1 interrupt enabled");
+    #[cfg(debug_assertions)]
+    debug!("[rtc:init] Alarm 1 interrupt enabled");
     Ok(())
 }

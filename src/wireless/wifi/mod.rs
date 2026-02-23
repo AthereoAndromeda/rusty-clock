@@ -2,7 +2,7 @@ pub mod dns;
 pub mod sntp;
 pub mod web_server;
 
-use defmt::{debug, info, warn};
+use defmt::{debug, info, trace, warn};
 use embassy_executor::Spawner;
 use embassy_net::{DhcpConfig, StackResources};
 use embassy_time::Timer;
@@ -48,12 +48,12 @@ fn get_stack(
     embassy_net::Stack<'static>,
     embassy_net::Runner<'_, WifiDevice<'_>>,
 ) {
+    #[cfg(debug_assertions)]
     debug!("Creating Network Stack...");
-    let wifi_interface_station = wifi_interface.sta;
 
+    let wifi_interface_station = wifi_interface.sta;
     let rng = Rng::new();
     let seed = u64::from(rng.random()) << 32 | u64::from(rng.random());
-
     let embassy_config = embassy_net::Config::dhcpv4(DhcpConfig::default());
 
     // Init network stack
@@ -61,7 +61,7 @@ fn get_stack(
         wifi_interface_station,
         embassy_config,
         mk_static!(
-            StackResources<MAX_NET_SOCKETS>,
+            StackResources<MAX_NET_SOCKETS>;
             StackResources::<MAX_NET_SOCKETS>::new()
         ),
         seed,
@@ -76,8 +76,14 @@ async fn runner_task(mut runner: embassy_net::Runner<'static, WifiDevice<'static
 #[embassy_executor::task]
 /// Connect to Wi-Fi
 async fn connect_to_wifi(mut controller: WifiController<'static>) -> ! {
-    debug!("start connection task");
-    debug!("Device capabilities: {:?}", controller.capabilities());
+    #[cfg(debug_assertions)]
+    {
+        trace!("[wifi:connect] start connection task");
+        debug!(
+            "[wifi:connect] Device capabilities: {:?}",
+            controller.capabilities()
+        );
+    }
 
     loop {
         match esp_radio::wifi::sta_state() {
@@ -87,7 +93,7 @@ async fn connect_to_wifi(mut controller: WifiController<'static>) -> ! {
                 Timer::after_millis(5000).await;
             }
             _ => {
-                info!("Wifi Not Connected!");
+                info!("[wifi:connect] Wifi Not Connected!");
             }
         }
 
@@ -99,19 +105,21 @@ async fn connect_to_wifi(mut controller: WifiController<'static>) -> ! {
             );
 
             controller.set_config(&station_config).unwrap();
-            info!("Starting wifi");
+            info!("[wifi:connect] Starting wifi and scan");
             controller.start_async().await.unwrap();
-            info!("Wifi started! Scanning for available networks...");
+            #[cfg(debug_assertions)]
+            trace!("[wifi:connect] Wifi started! Scanning for available networks...");
 
             let scan_config = esp_radio::wifi::ScanConfig::default().with_max(10);
 
-            let scan_result = controller
+            #[expect(clippy::used_underscore_binding, reason = "Used for debugging")]
+            let _scan_result = controller
                 .scan_with_config_async(scan_config)
                 .await
                 .unwrap();
 
             #[cfg(debug_assertions)]
-            for ap in scan_result {
+            for ap in _scan_result {
                 defmt::debug!("{}", ap);
             }
         }
@@ -119,7 +127,7 @@ async fn connect_to_wifi(mut controller: WifiController<'static>) -> ! {
         match controller.connect_async().await {
             Ok(()) => info!("Wifi connected!"),
             Err(e) => {
-                warn!("Failed to connect to wifi: {}", e);
+                warn!("[wifi:connect] Failed to connect to wifi: {}", e);
                 Timer::after_millis(5000).await;
             }
         }

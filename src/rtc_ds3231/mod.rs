@@ -118,7 +118,7 @@ pub(crate) async fn init(spawner: Spawner, i2c: I2cBus) {
     };
 
     #[cfg(debug_assertions)]
-    debug!("{:?}", alarm1_config);
+    debug!("Alarm1 Config: {:?}", alarm1_config);
 
     rtc.set_alarm1(&alarm1_config)
         .await
