@@ -16,8 +16,22 @@ harness = false
 [features]
 ble = []
 
+
+[dependencies.pcf857x]
+git = "https://github.com/AthereoAndromeda/pcf857x-rs"
+branch = "refcell"
+features = ["async"]
+
+
+[dependencies.lcd]
+git = "https://github.com/AthereoAndromeda/lcd"
+branch = "async"
+features = ["async"]
+
 [dependencies]
 # rusty-clock-macros = { path = "./rusty-clock-macros" }
+#
+
 
 esp-hal = { version = "~1.0", features = [
   "defmt",
@@ -107,12 +121,13 @@ sntpc-net-embassy = "*"
 futures = { version = "0.3.31", default-features = false }
 picoserve = { version = "0.18", features = ["defmt", "embassy", "json"] }
 serde = { version = "1.0.228", features = ["derive"], default-features = false }
-# bilge = "0.3.0"
+bilge = "0.3.0"
 # bumpalo = { version = "3.19.1", features = ["collections", "boxed", "allocator_api"] }
 # konst = "0.3.16"
 static_assertions = { version = "1.1.0", features = ["nightly"] }
 portable-atomic = { version = "1.13.0", default-features = false, features = ["serde",  "unsafe-assume-single-core"] }
 explicit_cast = "1.0.0"
+embedded-hal-async = { version = "1.0.0", features = ["defmt-03"] }
 
 [build-dependencies]
 brotli = { version = "8.0.2", features = ["simd"] }

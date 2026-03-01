@@ -83,6 +83,7 @@ extern crate alloc;
 
 mod buzzer;
 mod i2c;
+mod lcd;
 mod pwm;
 mod rtc_ds3231;
 mod utils;
@@ -174,6 +175,11 @@ async fn main(spawner: Spawner) {
         i2c::init(peripherals.I2C0, peripherals.GPIO2, peripherals.GPIO3);
     // SAFETY: Caller must ensure not to pop `i2c_buses` when empty
     let i2c_rtc = unsafe { i2c_buses.pop_unchecked() };
+    // SAFETY: Caller must ensure not to pop `i2c_buses` when empty
+    let i2c_lcd = unsafe { i2c_buses.pop_unchecked() };
+
+    info!("Init LCD Display...");
+    lcd::init(spawner, i2c_lcd).await;
 
     info!("Init RTC...");
     rtc_ds3231::init(spawner, i2c_rtc).await;
