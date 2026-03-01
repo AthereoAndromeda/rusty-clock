@@ -55,3 +55,13 @@ pub(crate) fn init<const N: usize>(
 
 //     arr
 // }
+
+#[cfg(debug_assertions)]
+#[expect(unused, reason = "This only used for diagnostics")]
+pub(crate) async fn scan_i2c_addrs(mut i2c: impl embedded_hal_async::i2c::I2c) {
+    for address in 1..128 {
+        if let Ok(()) = i2c.write(address, &[]).await {
+            defmt::println!("Device found at address 0x{:02x}", address);
+        }
+    }
+}
