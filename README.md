@@ -1,17 +1,18 @@
 # Rusty Alarm Clock
 An alarm clock using an ESP32-C3 written with Rust and Embassy
 
+![Picture of the Circuit](./media/circuit.avif)
+
 # WIP
 This project is still a work in progress
 
 # Highlights
 - Uses external RTC to keep time and to set alarms
 - Connects to (S)NTP to correct RTC time
+- 16x2 LCD Screen
+- Remote control via Web Server
 - [WIP] Remote control via Bluetooth
-- [WIP] Remote control via Web Server
 - [WIP] Volume control via PWM
-- [Planned] 16x2 LCD Screen
-- [Planned] Deep Sleep
 
 ## Components Used
 - ESP32-C3 Mini
