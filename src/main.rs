@@ -170,7 +170,7 @@ async fn main(spawner: Spawner) {
 
     info!("ESP-RTOS Started!");
 
-    info!("Initializing I2C...");
+    info!("Init I2C...");
     let mut i2c_buses: heapless::Vec<i2c::I2cBus, 2> =
         i2c::init(peripherals.I2C0, peripherals.GPIO2, peripherals.GPIO3);
     // SAFETY: Caller must ensure not to pop `i2c_buses` when empty
@@ -184,7 +184,7 @@ async fn main(spawner: Spawner) {
     info!("Init RTC...");
     rtc_ds3231::init(spawner, i2c_rtc).await;
 
-    info!("Init PWM/LEDC");
+    info!("Init PWM/LEDC...");
     let output = Output::new(
         peripherals.GPIO5,
         esp_hal::gpio::Level::Low,
@@ -196,7 +196,7 @@ async fn main(spawner: Spawner) {
     info!("Init Buzzer...");
     buzzer::init(spawner, chan, peripherals.GPIO7, peripherals.GPIO6).await;
 
-    info!("Initializing Wireless...");
+    info!("Init Wireless...");
     wireless::init(
         spawner,
         peripherals.WIFI,
