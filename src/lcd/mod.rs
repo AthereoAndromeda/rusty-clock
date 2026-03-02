@@ -10,7 +10,7 @@ use lcd::Backlight as _;
 use pcf857x::{PcAsync, SlaveAddr};
 
 use crate::{i2c::I2cBus, utils::mk_static};
-use error::LcdDisplayError;
+// use error::LcdDisplayError;
 
 type LcdDisplay<B> = lcd::Display<LcdHardware<B>>;
 type LcdDisplayMutex = Mutex<CriticalSectionRawMutex, LcdDisplay<I2cBus>>;
@@ -53,19 +53,10 @@ pub async fn init(spawner: Spawner, i2c: I2cBus) {
 ///
 /// # Errors
 /// This will return an error if `s1.len() > 40`.
-async fn print_lines(
-    display: &mut LcdDisplay<impl I2c>,
-    s1: &str,
-    s2: &str,
-) -> Result<(), LcdDisplayError> {
-    // defmt::assert!(s1.len() <= 40, "String in LCD must be less than 40");
-    if s1.len() > 40 {
-        return Err(LcdDisplayError::OverflowingLines);
-    }
-
+async fn print_lines(display: &mut LcdDisplay<impl I2c>, s1: &str, s2: &str) {
+    defmt::assert!(s1.len() <= 40, "String in LCD must be less than 40");
     display.clear().await;
     display.print(s1).await;
     display.position(0, 1).await;
     display.print(s2).await;
-    Ok(())
 }
