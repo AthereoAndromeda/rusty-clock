@@ -33,27 +33,17 @@ enum Pins {
 
 impl<B: I2c> lcd::Hardware for LcdHardware<B> {
     async fn rs(&mut self, bit: bool) {
-        if bit {
-            let m = self.last_mask | u8::from(Pins::P0);
-            self.driver.set(m).await.unwrap();
-            self.last_mask = m;
-        } else {
-            let m = self.last_mask & !u8::from(Pins::P0);
-            self.driver.set(m).await.unwrap();
-            self.last_mask = m;
-        }
+        let bit = u8::from(bit);
+        let mask = (self.last_mask & !u8::from(Pins::P0)) | bit;
+        self.driver.set(mask).await.unwrap();
+        self.last_mask = mask;
     }
 
     async fn enable(&mut self, bit: bool) {
-        if bit {
-            let m = self.last_mask & !u8::from(Pins::P2);
-            self.driver.set(m).await.unwrap();
-            self.last_mask = m;
-        } else {
-            let m = self.last_mask | u8::from(Pins::P2);
-            self.driver.set(m).await.unwrap();
-            self.last_mask = m;
-        }
+        let bit = u8::from(bit);
+        let mask = (self.last_mask & !u8::from(Pins::P2)) | bit << 2;
+        self.driver.set(mask).await.unwrap();
+        self.last_mask = mask;
     }
 
     async fn data(&mut self, data: u8) {
@@ -62,14 +52,16 @@ impl<B: I2c> lcd::Hardware for LcdHardware<B> {
         self.last_mask = new_mask;
     }
 
-    // fn wait_address(&mut self) {}
+    async fn wait_address(&mut self) {
+        Timer::after_nanos(100).await
+    }
 
-    // async fn mode(&self) -> lcd::FunctionMode {
-    //     // lcd::FunctionMode::Bit8
-    // }
+    async fn mode(&self) -> lcd::FunctionMode {
+        lcd::FunctionMode::Bit4
+    }
 
-    // fn can_read(&self) -> bool {
-    //     false
+    // async fn can_read(&self) -> bool {
+    //     true
     // }
 
     // fn rw(&mut self, _bit: bool) {
@@ -91,14 +83,10 @@ impl<B: I2c> lcd::Delay for LcdHardware<B> {
 
 impl<B: I2c> lcd::Backlight for LcdHardware<B> {
     async fn set_backlight(&mut self, enabled: bool) {
-        if enabled {
-            let mask = self.last_mask | 0b0000_1000;
-            self.driver.set(mask).await.unwrap();
-            self.last_mask = mask;
-        } else {
-            let mask = self.last_mask & !0b0000_1000;
-            self.driver.set(mask).await.unwrap();
-            self.last_mask = mask;
-        }
+        let enable_bit = u8::from(enabled);
+        // Clear the 3rd bit, then OR enable bit
+        let mask = (self.last_mask & !(1 << 3)) | enable_bit << 3;
+        self.driver.set(mask).await.unwrap();
+        self.last_mask = mask;
     }
 }
