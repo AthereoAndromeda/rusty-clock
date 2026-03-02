@@ -15,7 +15,7 @@ mod volume;
 // TODO: Dynamically generate help message
 // Attribute macro? #[help_msg = "message"]
 async fn get_help() -> &'static str {
-    r"Hello from ESP32! This is the web server for rusty clock
+    "Hello from ESP32! This is the web server for rusty clock
 
 All paths use GET unless otherwise specified
 

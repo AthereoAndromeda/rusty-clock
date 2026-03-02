@@ -81,7 +81,7 @@ async fn get_time(Query(query): Query<TimeQueryParams>) -> impl IntoResponse {
     let res = if is_utc {
         Ch::A(time)
     } else {
-        let offset = FixedOffset::east_opt(i32::from(TZ_OFFSET) * 3600).unwrap();
+        let offset = FixedOffset::east_opt(i32::from(TZ_OFFSET).saturating_mul(3600)).unwrap();
         let a = time.to_utc().with_timezone(&offset);
         Ch::B(a.into())
     };

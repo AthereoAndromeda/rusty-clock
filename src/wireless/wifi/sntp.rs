@@ -30,6 +30,7 @@ struct SntpTimestamp(u64);
 impl sntpc::NtpTimestampGenerator for SntpTimestamp {
     fn init(&mut self) {}
 
+    #[expect(clippy::integer_division, reason = "Some precision loss okay here")]
     fn timestamp_sec(&self) -> u64 {
         self.0 / 1_000_000
     }

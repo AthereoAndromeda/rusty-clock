@@ -21,6 +21,7 @@ const MONTH_BY_INDEX: [&str; 12] = [
     "December",
 ];
 
+#[expect(clippy::string_slice, reason = "Guaranteed to be CP437/ASCII")]
 #[inline]
 const fn get_shorthand(month: &str) -> &str {
     &month[..3]
@@ -99,7 +100,7 @@ impl RtcDateTime<Utc> {
     #[inline]
     /// Converts itself to `Local` variant.
     pub fn local(self) -> RtcDateTime<FixedOffset> {
-        let offset = FixedOffset::east_opt(i32::from(TZ_OFFSET) * 3600).unwrap();
+        let offset = FixedOffset::east_opt(i32::from(TZ_OFFSET).saturating_mul(3600)).unwrap();
         let time = self.0.with_timezone(&offset);
         RtcDateTime(time)
     }

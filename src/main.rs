@@ -59,10 +59,18 @@
 #![deny(clippy::fn_to_numeric_cast)]
 #![deny(clippy::fn_to_numeric_cast_with_truncation)]
 #![deny(clippy::ptr_as_ptr)]
+#![warn(clippy::arithmetic_side_effects)]
+#![deny(
+    clippy::integer_division,
+    reason = "Integer divison discards the remainder"
+)]
+#![deny(clippy::string_slice)]
 // CLIPPY: Use pedantic
 #![warn(clippy::pedantic)]
 #![warn(clippy::doc_paragraphs_missing_punctuation)]
 #![warn(clippy::unused_trait_names)]
+#![warn(clippy::semicolon_if_nothing_returned)]
+#![warn(clippy::needless_raw_strings)]
 #![warn(clippy::allow_attributes, reason = "Prefer `expect` macros")]
 #![warn(
     clippy::allow_attributes_without_reason,

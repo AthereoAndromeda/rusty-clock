@@ -172,6 +172,10 @@ async fn run(rtc_mutex: &'static RtcMutex) -> ! {
         LOCAL_TIMESTAMP.store(ts, core::sync::atomic::Ordering::Release);
 
         #[cfg(debug_assertions)]
+        #[expect(
+            clippy::arithmetic_side_effects,
+            reason = "Not expected to overflow in debug builds"
+        )]
         {
             // Only print time every 10 seconds instead of every second
             if count >= 10 {

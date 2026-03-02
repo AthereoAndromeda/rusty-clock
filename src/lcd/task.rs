@@ -15,6 +15,7 @@ pub async fn runner_task(
 
         let s = time.local().to_human_short();
         let s = s.split_at(9);
+        #[expect(clippy::string_slice, reason = "ASCII/CP437")]
         print_lines(&mut display, s.0, &s.1[2..]).await.unwrap();
     }
 }

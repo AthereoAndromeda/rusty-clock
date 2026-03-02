@@ -40,9 +40,7 @@ pub async fn init(spawner: Spawner, i2c: I2cBus) {
         )
         .await;
 
-    let display_mutex: &'static LcdDisplayMutex =
-        mk_static!(Mutex<CriticalSectionRawMutex, LcdDisplay<I2cBus>>; Mutex::new(display));
-
+    let display_mutex: &'static LcdDisplayMutex = mk_static!(LcdDisplayMutex; Mutex::new(display));
     spawner.must_spawn(task::runner_task(display_mutex));
 }
 

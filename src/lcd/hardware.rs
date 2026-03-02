@@ -53,7 +53,7 @@ impl<B: I2c> lcd::Hardware for LcdHardware<B> {
     }
 
     async fn wait_address(&mut self) {
-        Timer::after_nanos(100).await
+        Timer::after_nanos(50).await;
     }
 
     async fn mode(&self) -> lcd::FunctionMode {
