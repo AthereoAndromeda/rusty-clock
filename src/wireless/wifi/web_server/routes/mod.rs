@@ -12,6 +12,14 @@ mod time;
 mod timer;
 mod volume;
 
+macro_rules! add_routes {
+    ($router:ident; $($name:ident),* $(,)?) => {{
+        let router = $router;
+        $(let router = $name::add_routes(router);)*
+        router
+    }};
+}
+
 // TODO: Dynamically generate help message
 // Attribute macro? #[help_msg = "message"]
 async fn get_help() -> &'static str {
@@ -36,11 +44,14 @@ Paths:
 }
 
 pub(super) fn add_all_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
-    let router = alarm::add_routes(router);
-    let router = buzzer::add_routes(router);
-    let router = time::add_routes(router);
-    let router = timer::add_routes(router);
-    let router = volume::add_routes(router);
+    let router = add_routes!(
+        router;
+        alarm,
+        buzzer,
+        time,
+        timer,
+        volume,
+    );
 
     router.route("/help", get(get_help))
 }
