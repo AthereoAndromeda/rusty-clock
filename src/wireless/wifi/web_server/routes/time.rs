@@ -1,4 +1,3 @@
-use chrono::{FixedOffset, Utc};
 use embassy_time::Timer;
 use picoserve::{
     Router,
@@ -7,11 +6,7 @@ use picoserve::{
     routing::{PathRouter, get},
 };
 
-use crate::{
-    BOOT_TIME, TZ_OFFSET,
-    rtc_ds3231::{TIME_WATCH, rtc_time::RtcDateTime},
-    wireless::wifi::sntp::NTP_SYNC,
-};
+use crate::{BOOT_TIME, rtc_ds3231::TIME_WATCH, wireless::wifi::sntp::NTP_SYNC};
 
 #[derive(Debug, serde::Deserialize)]
 struct TimeQueryParams {
@@ -70,25 +65,22 @@ async fn get_epoch() -> impl IntoResponse {
 }
 
 async fn get_time(Query(query): Query<TimeQueryParams>) -> impl IntoResponse {
-    enum Ch {
-        A(RtcDateTime<Utc>),
-        B(RtcDateTime<FixedOffset>),
-    }
-
+    use embassy_futures::select::Either;
     let is_utc = query.utc.is_some_and(|p| p);
     let time = TIME_WATCH.receiver().expect("Maximum reached").get().await;
 
     let res = if is_utc {
-        Ch::A(time)
+        Either::First(time)
     } else {
-        let offset = FixedOffset::east_opt(i32::from(TZ_OFFSET).saturating_mul(3600)).unwrap();
-        let a = time.to_utc().with_timezone(&offset);
-        Ch::B(a.into())
+        // let datetime: RtcDateTime<chrono::FixedOffset> =
+        //     time.to_utc().with_timezone(&FIXED_OFFSET).into();
+        let datetime = time.local();
+        Either::Second(datetime)
     };
 
     match res {
-        Ch::A(rtc) => DebugValue(rtc.to_human()),
-        Ch::B(rtc) => DebugValue(rtc.to_human()),
+        Either::First(rtc) => DebugValue(rtc.to_human()),
+        Either::Second(rtc) => DebugValue(rtc.to_human()),
     }
 }
 
