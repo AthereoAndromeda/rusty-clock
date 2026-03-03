@@ -32,10 +32,7 @@ pub(super) fn init(
     spawner.must_spawn(connect_to_wifi(wifi_controller));
     spawner.must_spawn(sntp::fetch_sntp(net_stack));
 
-    let (app, conf) = web_server::init();
-    for task_id in 0..web_server::WEB_TASK_POOL_SIZE {
-        spawner.must_spawn(web_server::web_task(task_id, net_stack, app, conf));
-    }
+    web_server::init(spawner, net_stack);
 }
 
 // 3 web tasks + 1 sntp + ? + ?

@@ -6,12 +6,10 @@
 
 mod routes;
 use defmt::info;
+use embassy_executor::Spawner;
 use embassy_time::Duration;
 use picoserve::{AppBuilder, AppRouter, Router, make_static, response::File, routing::get_service};
 use static_cell::ConstStaticCell;
-
-/// The number of web tasks to be ran.
-pub(super) const WEB_TASK_POOL_SIZE: usize = 3;
 
 /// Our Web server App.
 pub(super) struct App;
@@ -73,7 +71,7 @@ const PORT: u16 = {
 
 #[embassy_executor::task(pool_size = WEB_TASK_POOL_SIZE)]
 /// Serves the control panel via web
-pub(super) async fn web_task(
+async fn web_task(
     task_id: usize,
     stack: embassy_net::Stack<'static>,
     app: &'static AppRouter<App>,
@@ -104,11 +102,11 @@ pub(super) async fn web_task(
     }
 }
 
-/// Initializes [`picoserve`] and the web app.
-pub(super) fn init() -> (
-    &'static mut Router<<App as AppBuilder>::PathRouter>,
-    &'static mut picoserve::Config,
-) {
+/// The number of web tasks to be ran.
+pub(super) const WEB_TASK_POOL_SIZE: usize = 3;
+
+/// Initializes [`picoserve`] and serves the web app.
+pub(super) fn init(spawner: Spawner, stack: embassy_net::Stack<'static>) {
     let app = make_static!(AppRouter<App>, App.build_app());
     let config = make_static!(
         picoserve::Config,
@@ -121,5 +119,7 @@ pub(super) fn init() -> (
         .keep_connection_alive()
     );
 
-    (app, config)
+    for task_id in 0..WEB_TASK_POOL_SIZE {
+        spawner.must_spawn(web_task(task_id, stack, app, config));
+    }
 }
