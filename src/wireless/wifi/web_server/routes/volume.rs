@@ -2,11 +2,11 @@ use embassy_time::Timer;
 use picoserve::{
     Router,
     extract::Form,
-    response::IntoResponse,
+    response::{IntoResponse, StatusCode},
     routing::{PathRouter, post},
 };
 
-use crate::buzzer::{BUZZER_ACTION_SIGNAL, VOLUME_SIGNAL};
+use crate::buzzer::BUZZER_ACTION_SIGNAL;
 
 #[derive(serde::Deserialize)]
 struct VolumeForm {
@@ -18,7 +18,19 @@ pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRou
 }
 
 async fn post_volume(Form(form): Form<VolumeForm>) -> impl IntoResponse {
-    VOLUME_SIGNAL.signal(form.volume);
-    Timer::after_secs(1).await;
-    BUZZER_ACTION_SIGNAL.signal(crate::buzzer::BuzzerAction::On);
+    use crate::buzzer::BuzzerAction;
+
+    if form.volume > 100 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    BUZZER_ACTION_SIGNAL.signal(BuzzerAction::SetVolume(form.volume));
+    #[cfg(debug_assertions)]
+    {
+        // To see effect of volume while debugging.
+        // Should not automatically turn on buzzer at production
+        Timer::after_millis(300).await;
+        BUZZER_ACTION_SIGNAL.signal(BuzzerAction::On);
+    }
+    Ok(())
 }

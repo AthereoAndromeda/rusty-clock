@@ -1,8 +1,7 @@
-use crate::buzzer::{Buzzer, VOLUME_SIGNAL};
+use crate::buzzer::Buzzer;
 
 use super::{BUZZER_ACTION_SIGNAL, BuzzerAction, IS_BUZZER_ON, TIMER_SIGNAL};
 use defmt::{debug, info};
-use embassy_futures::select;
 use embassy_time::Timer;
 use esp_hal::{
     gpio::{Input, InputConfig, Pull},
@@ -10,40 +9,35 @@ use esp_hal::{
 };
 
 #[embassy_executor::task]
-/// This task handles two functions:
-///
-/// - Listens for [`BUZZER_ACTION_SIGNAL`] and sets buzzer to
+/// This task listens for [`BUZZER_ACTION_SIGNAL`] and sets buzzer to
 /// the appropriate action.
 ///
-/// - Listens to [`VOLUME_SIGNAL`] and sets the appropriate duty cycle.
-///
-/// These functions are combined so that we can take ownership of [`Buzzer`] as opposed
+/// This task takes ownership of [`Buzzer`] as opposed
 /// to wrapping it in a [`Mutex`](`embassy_sync::mutex::Mutex`) to share it between tasks.
-pub(super) async fn listen_for_action_and_volume(mut output: Buzzer) -> ! {
+///
+/// # Issues
+/// - An action may be skipped if its corresponding signal is
+/// written to again before the task is completed.
+/// - A [`embassy_sync::Channel`] could be used to queue up
+/// actions at the cost of higher RAM usage.
+pub(super) async fn listen_for_action(mut output: Buzzer) -> ! {
     loop {
-        let task = select::select(BUZZER_ACTION_SIGNAL.wait(), VOLUME_SIGNAL.wait()).await;
+        let action = BUZZER_ACTION_SIGNAL.wait().await;
 
-        match task {
-            select::Either::First(action) => handle_buzzer_action(&mut output, action),
-            select::Either::Second(volume) => output.set_volume(volume),
-        }
-    }
-}
-
-#[inline]
-fn handle_buzzer_action(output: &mut Buzzer, action: BuzzerAction) {
-    match action {
-        BuzzerAction::On => {
-            output.activate();
-            IS_BUZZER_ON.store(true, core::sync::atomic::Ordering::Relaxed);
-        }
-        BuzzerAction::Off => {
-            output.deactivate();
-            IS_BUZZER_ON.store(false, core::sync::atomic::Ordering::Relaxed);
-        }
-        BuzzerAction::Toggle => {
-            output.toggle();
-            IS_BUZZER_ON.fetch_not(core::sync::atomic::Ordering::Relaxed);
+        match action {
+            BuzzerAction::On => {
+                output.activate();
+                IS_BUZZER_ON.store(true, core::sync::atomic::Ordering::Release);
+            }
+            BuzzerAction::Off => {
+                output.deactivate();
+                IS_BUZZER_ON.store(false, core::sync::atomic::Ordering::Release);
+            }
+            BuzzerAction::Toggle => {
+                output.toggle();
+                IS_BUZZER_ON.fetch_not(core::sync::atomic::Ordering::AcqRel);
+            }
+            BuzzerAction::SetVolume(vol) => output.set_volume(vol),
         }
     }
 }

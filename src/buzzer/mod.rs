@@ -19,6 +19,7 @@ pub(crate) enum BuzzerAction {
     On,
     Off,
     Toggle,
+    SetVolume(u8),
 }
 
 impl From<bool> for BuzzerAction {
@@ -27,7 +28,7 @@ impl From<bool> for BuzzerAction {
     }
 }
 
-/// Use this to set the buzzer signal.
+/// Sets the buzzer signal and volume.
 pub(crate) static BUZZER_ACTION_SIGNAL: Signal<CriticalSectionRawMutex, BuzzerAction> =
     Signal::new();
 
@@ -39,9 +40,6 @@ pub(crate) static TIMER_SIGNAL: Signal<CriticalSectionRawMutex, u32> = Signal::n
 pub(crate) static IS_BUZZER_ON: portable_atomic::AtomicBool =
     portable_atomic::AtomicBool::new(false);
 
-/// Sets the volume of the buzzer.
-pub(crate) static VOLUME_SIGNAL: Signal<CriticalSectionRawMutex, u8> = Signal::new();
-
 /// Initialize the buzzer and beep to signal readiness.
 pub(super) async fn init(
     spawner: Spawner,
@@ -52,7 +50,7 @@ pub(super) async fn init(
     let mut buzzer = Buzzer::new(output_channel);
     buzzer.set_volume(100);
 
-    spawner.must_spawn(listener::listen_for_action_and_volume(buzzer));
+    spawner.must_spawn(listener::listen_for_action(buzzer));
     spawner.must_spawn(listener::listen_for_alarm(alarm_pin));
     spawner.must_spawn(listener::listen_for_button(button_pin));
     spawner.must_spawn(listener::listen_for_timer());
