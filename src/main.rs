@@ -200,10 +200,11 @@ async fn main(spawner: Spawner) {
         OutputConfig::default().with_drive_strength(esp_hal::gpio::DriveStrength::_5mA),
     );
 
-    let chan = pwm::init(peripherals.LEDC, output).channel0();
+    let mut channels = pwm::init(peripherals.LEDC);
+    let chan0 = channels.channel0(output);
 
     info!("Init Buzzer...");
-    buzzer::init(spawner, chan, peripherals.GPIO7, peripherals.GPIO6).await;
+    buzzer::init(spawner, chan0, peripherals.GPIO7, peripherals.GPIO6).await;
 
     info!("Init Wireless...");
     wireless::init(

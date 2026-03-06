@@ -1,8 +1,7 @@
 use esp_hal::{
-    gpio::Output,
     ledc::{
         LSGlobalClkSource, Ledc, LowSpeed,
-        channel::{self, Channel, ChannelIFace},
+        channel::Channel,
         timer::{self, Timer, TimerIFace},
     },
     peripherals,
@@ -13,48 +12,53 @@ use crate::utils::mk_static;
 pub(crate) struct ChannelBuilder {
     lstimer0: &'static Timer<'static, LowSpeed>,
     ledc: Ledc<'static>,
-    out: Output<'static>,
 }
 
-impl ChannelBuilder {
-    pub fn channel0(self) -> Channel<'static, LowSpeed> {
-        let mut channel0 = self
-            .ledc
-            .channel(esp_hal::ledc::channel::Number::Channel0, self.out);
+// TODO: Use singleton pattern
+macro_rules! add_channels {
+    ($($n:expr), *$(,)?) =>{
+        ::paste::paste! {
+            impl ChannelBuilder {
+                $(
+                    pub fn [<channel $n>](&mut self, output: ::esp_hal::gpio::Output<'static>) -> Channel<'static, LowSpeed> {
+                        let mut channel = self
+                            .ledc
+                            .channel(::esp_hal::ledc::channel::Number::[<Channel $n>], output);
 
-        ChannelIFace::configure(
-            &mut channel0,
-            channel::config::Config {
-                timer: self.lstimer0,
-                duty_pct: 0,
-                drive_mode: esp_hal::gpio::DriveMode::PushPull,
-            },
-        )
-        .unwrap();
+                            ::esp_hal::ledc::channel::ChannelIFace::configure(
+                                &mut channel,
+                                ::esp_hal::ledc::channel::config::Config {
+                                    timer: self.lstimer0,
+                                    duty_pct: 0,
+                                    drive_mode: ::esp_hal::gpio::DriveMode::PushPull,
+                                },
+                            )
+                            .expect(concat!("Failed to configure PWM Channel ", $n));
 
-        channel0
+                        channel
+                    }
+                )*
+            }
+        }
     }
 }
 
-pub(crate) fn init(ledc: peripherals::LEDC<'static>, out: Output<'static>) -> ChannelBuilder {
+add_channels!(0);
+
+pub(crate) fn init(ledc: peripherals::LEDC<'static>) -> ChannelBuilder {
     let mut ledc = Ledc::new(ledc);
     ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
 
     let lstimer0 = mk_static!(timer::Timer<'static, LowSpeed>; ledc.timer(timer::Number::Timer0));
-    // let mut lstimer0 = ledc.timer::<LowSpeed>(esp_hal::ledc::timer::Number::Timer0);
-    TimerIFace::configure(
-        lstimer0,
-        timer::config::Config {
+
+    defmt::expect!(
+        lstimer0.configure(timer::config::Config {
             duty: esp_hal::ledc::timer::config::Duty::Duty5Bit,
             clock_source: esp_hal::ledc::timer::LSClockSource::APBClk,
             frequency: esp_hal::time::Rate::from_khz(24),
-        },
-    )
-    .unwrap();
+        }),
+        "Failed to configure PWM Timer"
+    );
 
-    ChannelBuilder {
-        lstimer0,
-        ledc,
-        out,
-    }
+    ChannelBuilder { lstimer0, ledc }
 }

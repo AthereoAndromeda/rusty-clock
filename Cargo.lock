@@ -1916,6 +1916,7 @@ dependencies = [
  "html-minifier",
  "lcd",
  "panic-rtt-target",
+ "paste",
  "pcf857x",
  "picoserve",
  "portable-atomic",

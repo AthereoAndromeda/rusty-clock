@@ -5,10 +5,11 @@
 //! panel to remotely control and configure the device.
 
 mod routes;
+use crate::utils::mk_static;
 use defmt::info;
 use embassy_executor::Spawner;
 use embassy_time::Duration;
-use picoserve::{AppBuilder, AppRouter, Router, make_static, response::File, routing::get_service};
+use picoserve::{AppBuilder, AppRouter, Router, response::File, routing::get_service};
 use static_cell::ConstStaticCell;
 
 /// Our Web server App.
@@ -107,9 +108,9 @@ pub(super) const WEB_TASK_POOL_SIZE: usize = 3;
 
 /// Initializes [`picoserve`] and serves the web app.
 pub(super) fn init(spawner: Spawner, stack: embassy_net::Stack<'static>) {
-    let app = make_static!(AppRouter<App>, App.build_app());
-    let config = make_static!(
-        picoserve::Config,
+    let app = mk_static!(AppRouter<App>; App.build_app());
+    let config = mk_static!(
+        picoserve::Config;
         picoserve::Config::new(picoserve::Timeouts {
             start_read_request: Duration::from_secs(5),
             persistent_start_read_request: Duration::from_secs(2),
