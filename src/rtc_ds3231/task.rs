@@ -1,9 +1,69 @@
 //! # DS3231 RTC Tasks
 //! This module provides tasks related to our RTC module.
 
-use crate::rtc_ds3231::{ALARM_CONFIG_RWLOCK, SET_ALARM, reset_alarm_flags};
+use chrono::Utc;
+use embassy_time::Timer;
 
-use super::{CLEAR_FLAGS_SIGNAL, RtcMutex, SET_DATETIME_SIGNAL};
+use super::{
+    ALARM_CONFIG_RWLOCK, CLEAR_FLAGS_SIGNAL, LOCAL_TIMESTAMP, RtcMutex, SET_ALARM,
+    SET_DATETIME_SIGNAL, TIME_WATCH, reset_alarm_flags, rtc_time::RtcDateTime,
+};
+
+// TODO: Restructure such that it only gets time at init
+// and when requested. saves on cycles
+#[embassy_executor::task]
+/// Runner for DS3231.
+///
+/// Keeps the time.
+pub(super) async fn runner_task(rtc_mutex: &'static RtcMutex) -> ! {
+    let sender = TIME_WATCH.sender();
+
+    #[cfg(debug_assertions)]
+    let mut count = 0;
+
+    loop {
+        let datetime: RtcDateTime<Utc> = rtc_mutex
+            .lock()
+            .await
+            .datetime()
+            .await
+            .expect("Failed to retrieve RTC datetime data")
+            .and_utc()
+            .into();
+
+        let ts = datetime.timestamp();
+        sender.send(datetime);
+
+        assert!(
+            ts.is_positive(),
+            "The timestamp should never be negative, i.e. never set before January 1 1970"
+        );
+        let ts = ts.cast_unsigned();
+
+        LOCAL_TIMESTAMP.store(ts, core::sync::atomic::Ordering::Release);
+
+        #[cfg(debug_assertions)]
+        #[expect(
+            clippy::arithmetic_side_effects,
+            reason = "Not expected to overflow in debug builds"
+        )]
+        {
+            // Only print time every 10 seconds instead of every second
+            if count >= 10 {
+                defmt::debug!("Local: {=str}", datetime.local().to_iso8601());
+                defmt::debug!("Local: {=str}", datetime.local().to_human());
+                defmt::debug!("UTC  : {=str}", datetime.to_iso8601());
+                defmt::debug!("UTC  : {=str}", datetime.to_human());
+                defmt::debug!("TS   : {=u64}", ts);
+                count = 0;
+            }
+
+            count += 1;
+        }
+
+        Timer::after_secs(1).await;
+    }
+}
 
 #[embassy_executor::task]
 /// Sets the RTC module to the received datetime.

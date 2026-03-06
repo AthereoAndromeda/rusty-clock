@@ -9,6 +9,7 @@ pub mod alarm;
 pub mod error;
 pub mod rtc_time;
 use alarm::reset_alarm_flags;
+use rtc_time::RtcDateTime;
 
 mod task;
 
@@ -23,9 +24,8 @@ use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex, rwlock::RwLock, signal::Signal,
     watch::Watch,
 };
-use embassy_time::Timer;
 
-use crate::{i2c::I2cBus, rtc_ds3231::rtc_time::RtcDateTime, utils::mk_static};
+use crate::{i2c::I2cBus, utils::mk_static};
 
 /// The alarm time set through env.
 const ENV_TIME: Alarm1Config = {
@@ -85,7 +85,7 @@ pub(crate) static SET_DATETIME_SIGNAL: Signal<CriticalSectionRawMutex, RtcDateTi
 pub(crate) static LOCAL_TIMESTAMP: portable_atomic::AtomicU64 = portable_atomic::AtomicU64::new(0);
 
 type RtcDS3231 = DS3231<I2cBus>;
-pub(crate) type RtcMutex = Mutex<CriticalSectionRawMutex, RtcDS3231>;
+type RtcMutex = Mutex<CriticalSectionRawMutex, RtcDS3231>;
 
 pub(crate) const RTC_I2C_ADDR: u8 = {
     let addr = option_env!("RTC_I2C_ADDR").unwrap_or(/*0x*/ "68");
@@ -132,64 +132,8 @@ pub(crate) async fn init(spawner: Spawner, i2c: I2cBus) {
 
     // Cannot use RwLock since reading requires &mut self
     let rtc_mutex = mk_static!(RtcMutex; Mutex::new(rtc));
-    spawner.must_spawn(run(rtc_mutex));
+    spawner.must_spawn(task::runner_task(rtc_mutex));
     spawner.must_spawn(task::flag_task(rtc_mutex));
     spawner.must_spawn(task::datetime_task(rtc_mutex));
     spawner.must_spawn(task::alarm_task(rtc_mutex));
-}
-
-// TODO: Restructure such that it only gets time at init
-// and when requested. saves on cycles
-#[embassy_executor::task]
-/// Runner for DS3231.
-///
-/// Keeps the time.
-async fn run(rtc_mutex: &'static RtcMutex) -> ! {
-    let sender = TIME_WATCH.sender();
-
-    #[cfg(debug_assertions)]
-    let mut count = 0;
-
-    loop {
-        let datetime: RtcDateTime<Utc> = rtc_mutex
-            .lock()
-            .await
-            .datetime()
-            .await
-            .unwrap()
-            .and_utc()
-            .into();
-
-        let ts = datetime.timestamp();
-        sender.send(datetime);
-
-        assert!(
-            ts.is_positive(),
-            "The timestamp should never be negative, i.e. never set before January 1 1970"
-        );
-        let ts = ts.cast_unsigned();
-
-        LOCAL_TIMESTAMP.store(ts, core::sync::atomic::Ordering::Release);
-
-        #[cfg(debug_assertions)]
-        #[expect(
-            clippy::arithmetic_side_effects,
-            reason = "Not expected to overflow in debug builds"
-        )]
-        {
-            // Only print time every 10 seconds instead of every second
-            if count >= 10 {
-                defmt::debug!("Local: {=str}", datetime.local().to_iso8601());
-                defmt::debug!("Local: {=str}", datetime.local().to_human());
-                defmt::debug!("UTC  : {=str}", datetime.to_iso8601());
-                defmt::debug!("UTC  : {=str}", datetime.to_human());
-                defmt::debug!("TS   : {=u64}", ts);
-                count = 0;
-            }
-
-            count += 1;
-        }
-
-        Timer::after_secs(1).await;
-    }
 }
