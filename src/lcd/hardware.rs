@@ -4,12 +4,14 @@ use embedded_hal_async::i2c::I2c;
 use explicit_cast::Widen as _;
 use pcf857x::PcAsync;
 
+/// Our concrete implementation of [`lcd::Hardware`].
 pub(crate) struct LcdHardware<B: I2c> {
     driver: PcAsync<B>,
     last_mask: u8,
 }
 
 impl<B: I2c> LcdHardware<B> {
+    /// Create a new instance of [`LcdHardware`].
     pub fn new(driver: PcAsync<B>) -> Self {
         LcdHardware {
             driver,
