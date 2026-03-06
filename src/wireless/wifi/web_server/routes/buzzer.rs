@@ -14,7 +14,7 @@ impl picoserve::response::sse::EventSource for BuzzerEvent {
         mut writer: picoserve::response::sse::EventWriter<'_, W>,
     ) -> Result<(), W::Error> {
         loop {
-            let a = IS_BUZZER_ON.load(core::sync::atomic::Ordering::SeqCst);
+            let a = IS_BUZZER_ON.load(core::sync::atomic::Ordering::Acquire);
             let res = if a { "true" } else { "false" };
 
             writer.write_event("", res).await?;
@@ -36,7 +36,7 @@ pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRou
 }
 
 async fn get_buzzer() -> impl IntoResponse {
-    let state = IS_BUZZER_ON.load(core::sync::atomic::Ordering::SeqCst);
+    let state = IS_BUZZER_ON.load(core::sync::atomic::Ordering::Acquire);
     DebugValue(state)
 }
 
