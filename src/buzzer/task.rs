@@ -20,7 +20,7 @@ use esp_hal::{
 /// written to again before the task is completed.
 /// - A [`embassy_sync::Channel`] could be used to queue up
 /// actions at the cost of higher RAM usage.
-pub(super) async fn listen_for_action(mut output: Buzzer) -> ! {
+pub(super) async fn action_task(mut output: Buzzer) -> ! {
     loop {
         let action = BUZZER_ACTION_SIGNAL.wait().await;
 
@@ -44,7 +44,7 @@ pub(super) async fn listen_for_action(mut output: Buzzer) -> ! {
 
 #[embassy_executor::task]
 /// Listens for [`TIMER_SIGNAL`] and sets timer accordingly.
-pub(super) async fn listen_for_timer() -> ! {
+pub(super) async fn timer_task() -> ! {
     info!("[buzzer:listen_for_timer] Listening for timer");
 
     loop {
@@ -62,7 +62,7 @@ pub(super) async fn listen_for_timer() -> ! {
 
 #[embassy_executor::task]
 /// Listens for a button press which sets buzzer low.
-pub(super) async fn listen_for_button(input_pin: peripherals::GPIO7<'static>) -> ! {
+pub(super) async fn button_task(input_pin: peripherals::GPIO7<'static>) -> ! {
     let mut input = Input::new(input_pin, InputConfig::default().with_pull(Pull::Up));
 
     loop {
@@ -78,7 +78,7 @@ pub(super) async fn listen_for_button(input_pin: peripherals::GPIO7<'static>) ->
 
 #[embassy_executor::task]
 /// Listen for the alarm interrupt from DS3231 RTC.
-pub(super) async fn listen_for_alarm(alarm_pin: peripherals::GPIO6<'static>) -> ! {
+pub(super) async fn alarm_task(alarm_pin: peripherals::GPIO6<'static>) -> ! {
     info!("Initializing Alarm Listener...");
     let mut alarm_input = Input::new(alarm_pin, InputConfig::default().with_pull(Pull::Up));
 

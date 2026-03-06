@@ -2,7 +2,7 @@
 //! This module holds all the logic regarding the buzzer.
 
 mod buzzer_struct;
-mod listener;
+mod task;
 
 pub(crate) use buzzer_struct::*;
 
@@ -50,10 +50,10 @@ pub(super) async fn init(
     let mut buzzer = Buzzer::new(output_channel);
     buzzer.set_volume(100);
 
-    spawner.must_spawn(listener::listen_for_action(buzzer));
-    spawner.must_spawn(listener::listen_for_alarm(alarm_pin));
-    spawner.must_spawn(listener::listen_for_button(button_pin));
-    spawner.must_spawn(listener::listen_for_timer());
+    spawner.must_spawn(task::action_task(buzzer));
+    spawner.must_spawn(task::alarm_task(alarm_pin));
+    spawner.must_spawn(task::button_task(button_pin));
+    spawner.must_spawn(task::timer_task());
 
     // Beep 3 times
     for _ in 0..3 {

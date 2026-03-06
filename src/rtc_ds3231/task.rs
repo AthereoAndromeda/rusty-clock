@@ -1,13 +1,13 @@
-//! # DS3231 RTC Listeners
+//! # DS3231 RTC Tasks
 //! This module provides tasks related to our RTC module.
-//!
 
 use crate::rtc_ds3231::{ALARM_CONFIG_RWLOCK, SET_ALARM, reset_alarm_flags};
 
 use super::{CLEAR_FLAGS_SIGNAL, RtcMutex, SET_DATETIME_SIGNAL};
 
 #[embassy_executor::task]
-pub(super) async fn listen_for_datetime_set(rtc: &'static RtcMutex) -> ! {
+/// Sets the RTC module to the received datetime.
+pub(super) async fn datetime_task(rtc: &'static RtcMutex) -> ! {
     loop {
         let datetime = SET_DATETIME_SIGNAL.wait().await;
 
@@ -21,7 +21,8 @@ pub(super) async fn listen_for_datetime_set(rtc: &'static RtcMutex) -> ! {
 }
 
 #[embassy_executor::task]
-pub(super) async fn listen_for_clear_flag(rtc: &'static RtcMutex) -> ! {
+/// Clears RTC alarm flags.
+pub(super) async fn flag_task(rtc: &'static RtcMutex) -> ! {
     loop {
         CLEAR_FLAGS_SIGNAL.wait().await;
 
@@ -33,7 +34,8 @@ pub(super) async fn listen_for_clear_flag(rtc: &'static RtcMutex) -> ! {
 }
 
 #[embassy_executor::task]
-pub(super) async fn listen_for_alarm_set(rtc: &'static RtcMutex) -> ! {
+/// Sets the RTC to the received alarm.
+pub(super) async fn alarm_task(rtc: &'static RtcMutex) -> ! {
     loop {
         let config = SET_ALARM.wait().await;
         defmt::info!("New Alarm Set: {}", config);

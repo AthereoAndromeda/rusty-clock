@@ -10,7 +10,7 @@ pub mod error;
 pub mod rtc_time;
 use alarm::reset_alarm_flags;
 
-mod listener;
+mod task;
 
 use chrono::Utc;
 use defmt::debug;
@@ -133,9 +133,9 @@ pub(crate) async fn init(spawner: Spawner, i2c: I2cBus) {
     // Cannot use RwLock since reading requires &mut self
     let rtc_mutex = mk_static!(RtcMutex; Mutex::new(rtc));
     spawner.must_spawn(run(rtc_mutex));
-    spawner.must_spawn(listener::listen_for_clear_flag(rtc_mutex));
-    spawner.must_spawn(listener::listen_for_datetime_set(rtc_mutex));
-    spawner.must_spawn(listener::listen_for_alarm_set(rtc_mutex));
+    spawner.must_spawn(task::flag_task(rtc_mutex));
+    spawner.must_spawn(task::datetime_task(rtc_mutex));
+    spawner.must_spawn(task::alarm_task(rtc_mutex));
 }
 
 // TODO: Restructure such that it only gets time at init
