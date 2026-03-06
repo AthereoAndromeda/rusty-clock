@@ -20,6 +20,9 @@ pub(crate) struct Buzzer {
 }
 
 impl Buzzer {
+    /// Create a new [`Buzzer`] instance. Starts with:
+    /// - Volume at 0.
+    /// - State is off.
     pub fn new(output: esp_hal::ledc::channel::Channel<'static, LowSpeed>) -> Self {
         Self {
             output,
@@ -49,7 +52,12 @@ impl Buzzer {
         }
     }
 
+    /// Sets the duty cycle of the PWM signal.
+    ///
+    /// # Panics
+    /// Panics if `volume > 100`.
     pub fn set_volume(&mut self, volume: u8) {
+        defmt::assert!(volume <= 100);
         self.volume = volume;
     }
 }
