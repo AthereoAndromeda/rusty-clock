@@ -157,7 +157,7 @@ pub(crate) static BOOT_TIME: esp_hal::time::Instant = esp_hal::time::Instant::EP
 #[esp_rtos::main]
 async fn main(spawner: Spawner) {
     rtt_target::rtt_init_defmt!();
-    defmt::timestamp!("[{=u64}ms]", { BOOT_TIME.elapsed().as_millis() });
+    defmt::timestamp!("[{=u64}ms]", BOOT_TIME.elapsed().as_millis());
 
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
