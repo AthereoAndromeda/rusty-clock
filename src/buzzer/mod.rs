@@ -22,12 +22,6 @@ pub(crate) enum BuzzerAction {
     SetVolume(u8),
 }
 
-impl From<bool> for BuzzerAction {
-    fn from(value: bool) -> Self {
-        if value { Self::On } else { Self::Off }
-    }
-}
-
 /// Sets the buzzer signal and volume.
 pub(crate) static BUZZER_ACTION_SIGNAL: Signal<CriticalSectionRawMutex, BuzzerAction> =
     Signal::new();

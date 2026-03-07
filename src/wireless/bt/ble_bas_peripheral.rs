@@ -84,8 +84,13 @@ async fn gatt_events_task(
                         GattEvent::Write(event) => {
                             // server_write!(level, epoch, buzzer; event, server);
                             if event.handle() == buzzer.handle {
-                                let w = server.get(&buzzer).unwrap();
-                                BUZZER_ACTION_SIGNAL.signal(w.into());
+                                let buzzer_action = server.get(&buzzer).unwrap();
+
+                                BUZZER_ACTION_SIGNAL.signal(if buzzer_action {
+                                    crate::buzzer::BuzzerAction::On
+                                } else {
+                                    crate::buzzer::BuzzerAction::Off
+                                });
                             }
                         }
                         _ => {}
