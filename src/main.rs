@@ -180,12 +180,7 @@ async fn main(spawner: Spawner) {
     info!("ESP-RTOS Started!");
 
     info!("Init I2C...");
-    let mut i2c_buses: heapless::Vec<i2c::I2cBus, 2> =
-        i2c::init(peripherals.I2C0, peripherals.GPIO2, peripherals.GPIO3);
-    // SAFETY: Caller must ensure not to pop `i2c_buses` when empty
-    let i2c_rtc = unsafe { i2c_buses.pop_unchecked() };
-    // SAFETY: Caller must ensure not to pop `i2c_buses` when empty
-    let i2c_lcd = unsafe { i2c_buses.pop_unchecked() };
+    let [i2c_rtc, i2c_lcd] = i2c::init(peripherals.I2C0, peripherals.GPIO2, peripherals.GPIO3);
 
     info!("Init LCD Display...");
     lcd::init(spawner, i2c_lcd).await;
