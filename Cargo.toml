@@ -131,7 +131,7 @@ embedded-hal-async = { version = "1.0.0", features = ["defmt-03"] }
 paste = "1.0.15"
 
 [build-dependencies]
-brotli = { version = "8.0.2", features = ["simd"] }
+brotli = { version = "8.0.2" }
 html-minifier = "5.0.0"
 
 [profile.dev.package.esp-radio]
