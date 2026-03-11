@@ -36,6 +36,7 @@
               fenix-pkgs.rust-analyzer
             ]
             ++ (with pkgs; [
+              just
               bacon
               pkg-config
               espflash
