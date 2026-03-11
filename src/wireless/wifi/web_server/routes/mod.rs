@@ -8,6 +8,8 @@ use picoserve::{
 
 mod alarm;
 mod buzzer;
+#[cfg(debug_assertions)]
+mod debug;
 mod time;
 mod timer;
 mod volume;
@@ -53,5 +55,7 @@ pub(super) fn add_all_routes(router: Router<impl PathRouter>) -> Router<impl Pat
         volume,
     );
 
+    #[cfg(debug_assertions)]
+    let router = debug::add_routes(router);
     router.route("/help", get(get_help))
 }
