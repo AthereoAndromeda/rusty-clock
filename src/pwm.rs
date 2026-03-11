@@ -2,7 +2,7 @@ use esp_hal::{
     ledc::{
         LSGlobalClkSource, Ledc, LowSpeed,
         channel::Channel,
-        timer::{self, Timer, TimerIFace},
+        timer::{self, Timer, TimerIFace as _},
     },
     peripherals,
 };
