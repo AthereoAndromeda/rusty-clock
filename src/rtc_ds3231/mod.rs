@@ -14,7 +14,6 @@ use rtc_time::RtcDateTime;
 mod task;
 
 use chrono::Utc;
-use defmt::debug;
 use ds3231::{
     Alarm1Config, Config, DS3231, InterruptControl, Oscillator, SquareWaveFrequency,
     TimeRepresentation,
@@ -117,7 +116,7 @@ pub(crate) async fn init(spawner: Spawner, i2c: I2cBus) {
     let alarm1_config = ENV_TIME;
 
     #[cfg(debug_assertions)]
-    debug!("Alarm1 Config: {:?}", alarm1_config);
+    defmt::debug!("Alarm1 Config: {:?}", alarm1_config);
 
     #[cfg(debug_assertions)]
     // Only set alarm in debug builds. Uses previously set

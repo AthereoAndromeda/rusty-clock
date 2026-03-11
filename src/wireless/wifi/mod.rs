@@ -2,7 +2,7 @@ pub mod dns;
 pub mod sntp;
 pub mod web_server;
 
-use defmt::{debug, info, trace, warn};
+use defmt::{info, warn};
 use embassy_executor::Spawner;
 use embassy_net::{DhcpConfig, StackResources};
 use embassy_time::Timer;
@@ -46,7 +46,7 @@ fn get_stack(
     embassy_net::Runner<'_, WifiDevice<'_>>,
 ) {
     #[cfg(debug_assertions)]
-    debug!("Creating Network Stack...");
+    defmt::debug!("Creating Network Stack...");
 
     let wifi_interface_station = wifi_interface.sta;
     let rng = Rng::new();
@@ -75,6 +75,7 @@ async fn runner_task(mut runner: embassy_net::Runner<'static, WifiDevice<'static
 async fn connect_to_wifi(mut controller: WifiController<'static>) -> ! {
     #[cfg(debug_assertions)]
     {
+        use defmt::{debug, trace};
         trace!("[wifi:connect] start connection task");
         debug!(
             "[wifi:connect] Device capabilities: {:?}",
@@ -104,8 +105,9 @@ async fn connect_to_wifi(mut controller: WifiController<'static>) -> ! {
             controller.set_config(&station_config).unwrap();
             info!("[wifi:connect] Starting wifi and scan");
             controller.start_async().await.unwrap();
+
             #[cfg(debug_assertions)]
-            trace!("[wifi:connect] Wifi started! Scanning for available networks...");
+            defmt::trace!("[wifi:connect] Wifi started! Scanning for available networks...");
 
             let scan_config = esp_radio::wifi::ScanConfig::default().with_max(10);
 

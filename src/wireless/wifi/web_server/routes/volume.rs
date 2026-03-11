@@ -1,4 +1,3 @@
-use embassy_time::Timer;
 use picoserve::{
     Router,
     extract::Form,
@@ -29,7 +28,7 @@ async fn post_volume(Form(form): Form<VolumeForm>) -> impl IntoResponse {
     {
         // To see effect of volume while debugging.
         // Should not automatically turn on buzzer at production
-        Timer::after_millis(300).await;
+        embassy_time::Timer::after_millis(300).await;
         BUZZER_ACTION_SIGNAL.signal(BuzzerAction::On);
     }
     Ok(())

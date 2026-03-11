@@ -1,6 +1,6 @@
 use chrono::Utc;
 use core::net::SocketAddr;
-use defmt::{debug, info, warn};
+use defmt::{info, warn};
 use embassy_net::udp::{PacketMetadata, UdpSocket};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_time::{Duration, WithTimeout as _};
@@ -132,7 +132,7 @@ async fn fetch_sntp_inner(
     match result {
         Ok(time) => {
             #[cfg(debug_assertions)]
-            debug!("[sntp] Response: {}", time);
+            defmt::debug!("[sntp] Response: {}", time);
 
             info!("[sntp:update-timestamp] Setting RTC Datetime to NTP...");
             let datetime = RtcDateTime::<Utc>::from_timestamp(time.seconds.into());
