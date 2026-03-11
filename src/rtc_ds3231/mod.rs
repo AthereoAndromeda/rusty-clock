@@ -21,11 +21,10 @@ use ds3231::{
 };
 use embassy_executor::Spawner;
 use embassy_sync::{
-    blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex, rwlock::RwLock, signal::Signal,
-    watch::Watch,
+    blocking_mutex::raw::CriticalSectionRawMutex, rwlock::RwLock, signal::Signal, watch::Watch,
 };
 
-use crate::{i2c::I2cBus, utils::mk_static};
+use crate::i2c::I2cBus;
 
 /// The alarm time set through env.
 const ENV_TIME: Alarm1Config = {
@@ -85,7 +84,6 @@ pub(crate) static SET_DATETIME_SIGNAL: Signal<CriticalSectionRawMutex, RtcDateTi
 pub(crate) static LOCAL_TIMESTAMP: portable_atomic::AtomicU64 = portable_atomic::AtomicU64::new(0);
 
 type RtcDS3231 = DS3231<I2cBus>;
-type RtcMutex = Mutex<CriticalSectionRawMutex, RtcDS3231>;
 
 pub(crate) const RTC_I2C_ADDR: u8 = {
     let addr = option_env!("RTC_I2C_ADDR").unwrap_or(/*0x*/ "68");
@@ -111,15 +109,19 @@ pub(crate) async fn init(spawner: Spawner, i2c: I2cBus) {
 
     // Hardcoded values for now
     // NOTE: Time stored in RTC is in UTC, adjust to your timezone
-    let alarm1_config = if cfg!(debug_assertions) {
-        Alarm1Config::AtSeconds { seconds: 30 }
-    } else {
-        ENV_TIME
-    };
+    // let alarm1_config = if cfg!(debug_assertions) {
+    //     Alarm1Config::AtSeconds { seconds: 30 }
+    // } else {
+    //     ENV_TIME
+    // };
+    let alarm1_config = ENV_TIME;
 
     #[cfg(debug_assertions)]
     debug!("Alarm1 Config: {:?}", alarm1_config);
 
+    #[cfg(debug_assertions)]
+    // Only set alarm in debug builds. Uses previously set
+    // alarm in production.
     rtc.set_alarm1(&alarm1_config)
         .await
         .expect("[rtc] Failed to set alarm");
@@ -130,10 +132,5 @@ pub(crate) async fn init(spawner: Spawner, i2c: I2cBus) {
 
     *ALARM_CONFIG_RWLOCK.write().await = alarm1_config;
 
-    // Cannot use RwLock since reading requires &mut self
-    let rtc_mutex = mk_static!(RtcMutex; Mutex::new(rtc));
-    spawner.must_spawn(task::runner_task(rtc_mutex));
-    spawner.must_spawn(task::flag_task(rtc_mutex));
-    spawner.must_spawn(task::datetime_task(rtc_mutex));
-    spawner.must_spawn(task::alarm_task(rtc_mutex));
+    spawner.must_spawn(task::runner(rtc));
 }
