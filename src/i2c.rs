@@ -5,6 +5,7 @@
 use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use esp_hal::{
+    gpio,
     i2c::master::{Config, I2c},
     peripherals,
 };
@@ -21,8 +22,8 @@ pub(crate) type I2cBus = I2cDevice<'static, CriticalSectionRawMutex, I2cAsync>;
 /// Panics if I2C bus fails to initialize.
 pub(crate) fn init<const N: usize>(
     i2c_peripheral: peripherals::I2C0<'static>,
-    sda_pin: peripherals::GPIO2<'static>,
-    scl_pin: peripherals::GPIO3<'static>,
+    sda_pin: gpio::AnyPin<'static>,
+    scl_pin: gpio::AnyPin<'static>,
 ) -> [I2cBus; N] {
     let i2c = I2c::new(i2c_peripheral, Config::default())
         .expect("I2C Failed to Initialize")

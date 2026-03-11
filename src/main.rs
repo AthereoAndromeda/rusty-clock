@@ -109,7 +109,7 @@ use embassy_executor::Spawner;
 use esp_hal::interrupt::software::SoftwareInterruptControl;
 use esp_hal::{
     clock::CpuClock,
-    gpio::{Output, OutputConfig},
+    gpio::{Output, OutputConfig, Pin as _},
     timer::timg::TimerGroup,
 };
 
@@ -180,7 +180,11 @@ async fn main(spawner: Spawner) {
     info!("ESP-RTOS Started!");
 
     info!("Init I2C...");
-    let [i2c_rtc, i2c_lcd] = i2c::init(peripherals.I2C0, peripherals.GPIO2, peripherals.GPIO3);
+    let [i2c_rtc, i2c_lcd] = i2c::init(
+        peripherals.I2C0,
+        peripherals.GPIO2.degrade(),
+        peripherals.GPIO3.degrade(),
+    );
 
     info!("Init LCD Display...");
     lcd::init(spawner, i2c_lcd).await;
