@@ -186,7 +186,4 @@ impl<TZ: TimeZone + Copy> picoserve::response::sse::EventData for RtcDateTime<TZ
     }
 }
 
-impl<TZ: TimeZone + Copy> Copy for RtcDateTime<TZ> where
-    <TZ as TimeZone>::Offset: Copy // NaiveDateTime: Copy,
-{
-}
+impl<TZ: TimeZone + Copy> Copy for RtcDateTime<TZ> where <TZ as TimeZone>::Offset: Copy {}
