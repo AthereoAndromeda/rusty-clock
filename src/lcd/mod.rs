@@ -1,47 +1,19 @@
-use embassy_executor::Spawner;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
-use embedded_hal_async::i2c::I2c;
-
 pub(crate) mod error;
 mod hardware;
 mod task;
+use embassy_executor::Spawner;
 use hardware::LcdHardware;
-use lcd::Backlight as _;
 use pcf857x::{PcAsync, SlaveAddr};
 
-use crate::{i2c::I2cBus, utils::mk_static};
+use crate::i2c::I2cBus;
 // use error::LcdDisplayError;
 
-type LcdDisplay<B> = lcd::Display<LcdHardware<B>>;
-type LcdDisplayMutex = Mutex<CriticalSectionRawMutex, LcdDisplay<I2cBus>>;
+type LcdDisplay = lcd::Display<LcdHardware<I2cBus>>;
 
 pub async fn init(spawner: Spawner, i2c: I2cBus) {
     let hw = LcdHardware::new(PcAsync::new(i2c, SlaveAddr::Alternative(true, true, true)));
-    let mut display: LcdDisplay<I2cBus> = lcd::Display::new(hw);
-    display.clear().await;
-
-    display
-        .init(lcd::FunctionLine::Line2, lcd::FunctionDots::Dots5x10)
-        .await;
-    display.set_backlight(true).await;
-
-    display
-        .display(
-            lcd::DisplayMode::DisplayOn,
-            lcd::DisplayCursor::CursorOff,
-            lcd::DisplayBlink::BlinkOff,
-        )
-        .await;
-
-    display
-        .entry_mode(
-            lcd::EntryModeDirection::EntryRight,
-            lcd::EntryModeShift::NoShift,
-        )
-        .await;
-
-    let display_mutex: &'static LcdDisplayMutex = mk_static!(LcdDisplayMutex; Mutex::new(display));
-    spawner.must_spawn(task::runner_task(display_mutex));
+    let display: LcdDisplay = lcd::Display::new(hw);
+    spawner.must_spawn(task::runner_task(display));
 }
 
 /// Prints the two given inputs as two lines.
@@ -53,7 +25,7 @@ pub async fn init(spawner: Spawner, i2c: I2cBus) {
 ///
 /// # Errors
 /// This will return an error if `s1.len() > 40`.
-async fn print_lines(display: &mut LcdDisplay<impl I2c>, s1: &str, s2: &str) {
+async fn print_lines(display: &mut LcdDisplay, s1: &str, s2: &str) {
     defmt::assert!(s1.len() <= 40, "String in LCD must be less than 40");
     display.clear().await;
     display.print(s1).await;
