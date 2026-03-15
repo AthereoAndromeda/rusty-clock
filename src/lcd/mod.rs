@@ -10,7 +10,7 @@ use crate::i2c::I2cBus;
 
 type LcdDisplay = lcd::Display<LcdHardware<I2cBus>>;
 
-pub async fn init(spawner: Spawner, i2c: I2cBus) {
+pub fn init(spawner: Spawner, i2c: I2cBus) {
     let hw = LcdHardware::new(PcAsync::new(i2c, SlaveAddr::Alternative(true, true, true)));
     let display: LcdDisplay = lcd::Display::new(hw);
     spawner.must_spawn(task::runner_task(display));

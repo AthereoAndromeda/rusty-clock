@@ -189,7 +189,7 @@ async fn main(spawner: Spawner) {
     );
 
     info!("Init LCD Display...");
-    lcd::init(spawner, i2c_lcd).await;
+    lcd::init(spawner, i2c_lcd);
 
     info!("Init RTC...");
     rtc_ds3231::init(spawner, i2c_rtc).await;
