@@ -113,6 +113,8 @@ use esp_hal::{
     timer::timg::TimerGroup,
 };
 
+use crate::pwm::Channels;
+
 #[cfg(feature = "ble")]
 // Found via `espflash`
 // pub const MAC_ADDR: &'static str = "10:20:ba:91:bb:b4";
@@ -199,8 +201,8 @@ async fn main(spawner: Spawner) {
         OutputConfig::default().with_drive_strength(esp_hal::gpio::DriveStrength::_5mA),
     );
 
-    let mut channels = pwm::init(peripherals.LEDC);
-    let chan0 = channels.channel0(output);
+    let Channels { channel0 } = pwm::init(peripherals.LEDC);
+    let chan0 = channel0.with_output(output);
 
     info!("Init Buzzer...");
     buzzer::init(spawner, chan0, peripherals.GPIO7, peripherals.GPIO6).await;
