@@ -90,7 +90,8 @@ async fn web_task(
         let http_buffer = HTTP_BUFFERS[task_id].take();
 
         stack.wait_config_up().await;
-        let addr = stack.config_v4().unwrap().address;
+        // SAFETY: Just waited for config to be up.
+        let addr = unsafe { stack.config_v4().unwrap_unchecked().address };
 
         info!(
             "[task-id:{}] Serving and listening at {}:{}",
