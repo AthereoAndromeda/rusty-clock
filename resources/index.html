@@ -70,6 +70,10 @@
     <button hx-get="/alarm/clear" hx-swap="none">
       Clear Alarm Flags
     </button>
+    
+    <button hx-get="/lcd/toggle" hx-swap="none">
+      Toggle LCD Backlight
+    </button>
 
     <div class="volume" x-data="{volume: 50}">
       <form hx-post="/volume" hx-target="#volume-response">

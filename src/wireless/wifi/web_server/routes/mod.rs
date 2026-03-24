@@ -10,6 +10,7 @@ mod alarm;
 mod buzzer;
 #[cfg(debug_assertions)]
 mod debug;
+mod lcd;
 mod time;
 mod timer;
 mod volume;
@@ -53,6 +54,7 @@ pub(super) fn add_all_routes(router: Router<impl PathRouter>) -> Router<impl Pat
         time,
         timer,
         volume,
+        lcd,
     );
 
     #[cfg(debug_assertions)]
