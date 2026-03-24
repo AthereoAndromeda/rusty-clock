@@ -2,11 +2,28 @@ pub(crate) mod error;
 mod hardware;
 mod task;
 use embassy_executor::Spawner;
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use hardware::LcdHardware;
 use pcf857x::{PcAsync, SlaveAddr};
 
 use crate::i2c::I2cBus;
 // use error::LcdDisplayError;
+
+const MAX_STRING_LENGTH: usize = 40;
+
+pub(crate) enum LcdAction {
+    BacklightOn,
+    BacklightOff,
+    BacklightToggle,
+    Display(heapless::String<MAX_STRING_LENGTH>),
+    DisplayLines(
+        heapless::String<MAX_STRING_LENGTH>,
+        heapless::String<MAX_STRING_LENGTH>,
+    ),
+}
+
+/// Controls the LCD Backlight.
+pub(crate) static BACKLIGHT_SIGNAL: Signal<CriticalSectionRawMutex, LcdAction> = Signal::new();
 
 type LcdDisplay = lcd::Display<LcdHardware<I2cBus>>;
 
