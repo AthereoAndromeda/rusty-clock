@@ -28,7 +28,7 @@ pub(super) async fn runner(mut rtc: RtcDS3231) -> ! {
                     #[cfg(debug_assertions)]
                     &mut count,
                 )
-                .await
+                .await;
             }
             RtcCommand::SetDateTime(datetime) => set_datetime_handle(rtc, datetime).await,
             RtcCommand::SetAlarm(config) => alarm_handle(rtc, config).await,
@@ -42,7 +42,7 @@ pub(super) async fn heartbeat_task() -> ! {
     let sender = RTC_COMMANDS.sender();
     loop {
         sender.send(RtcCommand::Tick).await;
-        Timer::after_secs(1).await
+        Timer::after_secs(1).await;
     }
 }
 

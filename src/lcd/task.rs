@@ -32,8 +32,9 @@ pub(super) async fn runner_task(mut display: LcdDisplay) -> ! {
 
 async fn time_handle(display: &mut LcdDisplay, time: RtcDateTime<Utc>) {
     let s = time.local().to_human_short();
-    debug_assert!(s.is_ascii());
-    let s = s.split_at(9);
+    defmt::debug_assert!(s.is_ascii(), "Must be ASCII or CP437 to slice properly");
+
+    let s = s.split_at(9); // This is the time part of our datetime. 
     #[expect(clippy::string_slice, reason = "ASCII/CP437")]
     print_lines(display, s.0, &s.1[2..]).await;
 }
