@@ -7,6 +7,14 @@ use chrono::Utc;
 use embassy_futures::select::{Either, select};
 use lcd::Backlight as _;
 
+const LCD_INITIAL: bool = {
+    1 == u8::from_str_radix(env!("ENABLE_LCD"), 10)
+        .ok()
+        .expect("Invalid `ENABLE_LCD`")
+};
+pub(crate) static BACKLIGHT_STATUS: portable_atomic::AtomicBool =
+    portable_atomic::AtomicBool::new(LCD_INITIAL);
+
 #[embassy_executor::task]
 pub(super) async fn runner_task(mut display: LcdDisplay) -> ! {
     init_display(&mut display).await;
@@ -24,16 +32,13 @@ pub(super) async fn runner_task(mut display: LcdDisplay) -> ! {
 
 async fn time_handle(display: &mut LcdDisplay, time: RtcDateTime<Utc>) {
     let s = time.local().to_human_short();
+    debug_assert!(s.is_ascii());
     let s = s.split_at(9);
     #[expect(clippy::string_slice, reason = "ASCII/CP437")]
     print_lines(display, s.0, &s.1[2..]).await;
 }
 
 async fn action_handle(display: &mut LcdDisplay, action: LcdAction) {
-    const LCD_INITIAL: bool = const_str::parse!(env!("ENABLE_LCD"), u8) == 1;
-    static BACKLIGHT_STATUS: portable_atomic::AtomicBool =
-        portable_atomic::AtomicBool::new(LCD_INITIAL);
-
     match action {
         LcdAction::BacklightOn => display.set_backlight(true).await,
         LcdAction::BacklightOff => display.set_backlight(false).await,
