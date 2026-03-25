@@ -6,6 +6,7 @@ use picoserve::{
 
 use crate::buzzer::TIMER_SIGNAL;
 
+#[inline]
 pub(super) fn add_routes(
     router: picoserve::Router<impl picoserve::routing::PathRouter>,
 ) -> picoserve::Router<impl picoserve::routing::PathRouter> {
@@ -19,10 +20,12 @@ struct TimerForm {
     timer: u32,
 }
 
+#[inline]
 async fn timer_form(Form(form): Form<TimerForm>) -> impl IntoResponse {
     TIMER_SIGNAL.signal(form.timer);
 }
 
+#[inline]
 async fn set_timer(sec: u32) -> impl IntoResponse {
     TIMER_SIGNAL.signal(sec);
 }

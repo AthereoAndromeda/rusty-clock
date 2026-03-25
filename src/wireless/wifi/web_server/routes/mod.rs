@@ -23,6 +23,7 @@ macro_rules! add_routes {
     }};
 }
 
+#[inline]
 // TODO: Dynamically generate help message
 // Attribute macro? #[help_msg = "message"]
 async fn get_help() -> &'static str {
@@ -46,6 +47,7 @@ Paths:
 "
 }
 
+#[inline]
 pub(super) fn add_all_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
     let router = add_routes!(
         router;

@@ -12,10 +12,12 @@ struct VolumeForm {
     volume: u8,
 }
 
+#[inline]
 pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
     router.route("/volume", post(post_volume))
 }
 
+#[inline]
 async fn post_volume(Form(form): Form<VolumeForm>) -> impl IntoResponse {
     use crate::buzzer::BuzzerAction;
 

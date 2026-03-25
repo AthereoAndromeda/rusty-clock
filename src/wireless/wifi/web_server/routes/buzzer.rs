@@ -23,6 +23,7 @@ impl picoserve::response::sse::EventSource for BuzzerEvent {
     }
 }
 
+#[inline]
 pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
     router
         .route("/buzzer", get(get_buzzer))
@@ -35,17 +36,21 @@ pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRou
         )
 }
 
+#[inline]
 async fn get_buzzer() -> impl IntoResponse {
     let state = IS_BUZZER_ON.load(core::sync::atomic::Ordering::Acquire);
     DebugValue(state)
 }
 
+#[inline]
 async fn toggle_buzzer() -> impl IntoResponse {
     BUZZER_ACTION_SIGNAL.signal(BuzzerAction::Toggle);
 }
+#[inline]
 async fn toggle_buzzer_on() -> impl IntoResponse {
     BUZZER_ACTION_SIGNAL.signal(BuzzerAction::On);
 }
+#[inline]
 async fn toggle_buzzer_off() -> impl IntoResponse {
     BUZZER_ACTION_SIGNAL.signal(BuzzerAction::Off);
 }

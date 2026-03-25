@@ -14,6 +14,7 @@ use crate::{
     rtc_ds3231::{ALARM_CONFIG_RWLOCK, CLEAR_FLAGS_SIGNAL, SET_ALARM},
 };
 
+#[inline]
 pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
     router
         .route("/alarm", get(get_alarm))
@@ -36,11 +37,13 @@ struct AlarmQueryParams {
     pub utc: Option<bool>,
 }
 
+#[inline]
 async fn get_alarm() -> impl IntoResponse {
     let response = ALARM_CONFIG_RWLOCK.read().await;
     DebugValue(response)
 }
 
+#[inline]
 fn set_alarm_inner(hour: u8, min: u8, sec: u8, is_utc: bool) {
     let base_time =
         chrono::NaiveTime::from_hms_opt(u32::from(hour), u32::from(min), u32::from(sec)).unwrap();
@@ -71,6 +74,7 @@ fn set_alarm_inner(hour: u8, min: u8, sec: u8, is_utc: bool) {
     SET_ALARM.signal(conf);
 }
 
+#[inline]
 async fn set_alarm(
     (hour, min, sec): (u8, u8, u8),
     Query(query): Query<AlarmQueryParams>,
@@ -99,6 +103,7 @@ enum FormCheckbox {
 impl TryFrom<heapless::String<3>> for FormCheckbox {
     type Error = ();
 
+#[inline]
     fn try_from(value: heapless::String<3>) -> Result<Self, Self::Error> {
         if value == "on" {
             Ok(Self::On)
@@ -110,6 +115,7 @@ impl TryFrom<heapless::String<3>> for FormCheckbox {
     }
 }
 
+#[inline]
 async fn set_alarm_form(Form(form): Form<AlarmForm>) -> Result<StatusCode, StatusCode> {
     #[cfg(debug_assertions)]
     defmt::debug!("{}", &form);
@@ -195,6 +201,7 @@ enum MyAlarm1Config {
 }
 
 impl From<MyAlarm1Config> for Alarm1Config {
+#[inline]
     fn from(value: MyAlarm1Config) -> Self {
         match value {
             MyAlarm1Config::EverySecond => Alarm1Config::EverySecond,
@@ -243,10 +250,12 @@ impl From<MyAlarm1Config> for Alarm1Config {
     }
 }
 
+#[inline]
 async fn set_alarm_json(Json(json): Json<MyAlarm1Config>) -> impl IntoResponse {
     SET_ALARM.signal(json.into());
 }
 
+#[inline]
 async fn get_clear_flags() -> impl IntoResponse {
     CLEAR_FLAGS_SIGNAL.signal(());
 }

@@ -42,6 +42,7 @@ impl picoserve::response::sse::EventSource for TimeEvent {
     }
 }
 
+#[inline]
 pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
     router
         .route("/time", get(get_time))
@@ -54,16 +55,19 @@ pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRou
         )
 }
 
+#[inline]
 async fn get_uptime() -> impl IntoResponse {
     DebugValue(BOOT_TIME.elapsed().as_minutes())
 }
 
+#[inline]
 async fn get_epoch() -> impl IntoResponse {
     let rtc_time = TIME_WATCH.receiver().expect("Maximum reached").get().await;
     let epoch = rtc_time.to_utc().timestamp();
     DebugValue(epoch)
 }
 
+#[inline]
 async fn get_time(Query(query): Query<TimeQueryParams>) -> impl IntoResponse {
     use embassy_futures::select::Either;
     let is_utc = query.utc.is_some_and(|p| p);
@@ -84,6 +88,7 @@ async fn get_time(Query(query): Query<TimeQueryParams>) -> impl IntoResponse {
     }
 }
 
+#[inline]
 async fn get_sync() -> impl IntoResponse {
     NTP_SYNC.signal(());
 }
