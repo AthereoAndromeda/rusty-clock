@@ -7,49 +7,53 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, watch::Sender};
 use embassy_time::Timer;
 
 use super::{
-    ALARM_CONFIG_RWLOCK, CLEAR_FLAGS_SIGNAL, LOCAL_TIMESTAMP, RtcDS3231, SET_ALARM,
-    SET_DATETIME_SIGNAL, TIME_WATCH, reset_alarm_flags, rtc_time::RtcDateTime,
+    ALARM_CONFIG_RWLOCK, LOCAL_TIMESTAMP, RTC_COMMANDS, RtcCommand, RtcDS3231, TIME_WATCH,
+    reset_alarm_flags, rtc_time::RtcDateTime,
 };
 
 #[embassy_executor::task]
 pub(super) async fn runner(mut rtc: RtcDS3231) -> ! {
-    use embassy_futures::select::{Either4, select4};
-    let sender = TIME_WATCH.sender();
+    let time_sender = TIME_WATCH.sender();
+    let cmd_rx = RTC_COMMANDS.receiver();
     #[cfg(debug_assertions)]
     let mut count = 0;
 
     loop {
-        let task = select4(
-            Timer::after_secs(1),
-            SET_DATETIME_SIGNAL.wait(),
-            SET_ALARM.wait(),
-            CLEAR_FLAGS_SIGNAL.wait(),
-        )
-        .await;
-
-        match task {
-            Either4::First(()) => {
+        let rtc = &mut rtc;
+        match cmd_rx.receive().await {
+            RtcCommand::Tick => {
                 time_handle(
-                    &sender,
-                    &mut rtc,
+                    &time_sender,
+                    rtc,
                     #[cfg(debug_assertions)]
                     &mut count,
                 )
-                .await;
+                .await
             }
-            Either4::Second(datetime) => set_datetime_handle(&mut rtc, datetime).await,
-            Either4::Third(alarm) => alarm_handle(&mut rtc, alarm).await,
-            Either4::Fourth(()) => clear_flags_handle(&mut rtc).await,
+            RtcCommand::SetDateTime(datetime) => set_datetime_handle(rtc, datetime).await,
+            RtcCommand::SetAlarm(config) => alarm_handle(rtc, config).await,
+            RtcCommand::ClearFlags => clear_flags_handle(rtc).await,
         }
     }
 }
 
+#[embassy_executor::task]
+pub(super) async fn heartbeat_task() -> ! {
+    let sender = RTC_COMMANDS.sender();
+    loop {
+        sender.send(RtcCommand::Tick).await;
+        Timer::after_secs(1).await
+    }
+}
+
+#[inline]
 async fn clear_flags_handle(rtc: &mut RtcDS3231) {
     if let Err(err) = reset_alarm_flags(rtc).await {
         defmt::error!("[rtc] Failed to reset flags: {}", defmt::Debug2Format(&err));
     }
 }
 
+#[inline]
 async fn alarm_handle(rtc: &mut RtcDS3231, config: Alarm1Config) {
     defmt::info!("New Alarm Set: {}", config);
 
@@ -66,6 +70,7 @@ async fn alarm_handle(rtc: &mut RtcDS3231, config: Alarm1Config) {
     *ALARM_CONFIG_RWLOCK.write().await = config;
 }
 
+#[inline]
 async fn set_datetime_handle(rtc: &mut RtcDS3231, datetime: RtcDateTime<Utc>) {
     if let Err(err) = rtc.set_datetime(&datetime.naive_utc()).await {
         defmt::error!(
@@ -75,6 +80,7 @@ async fn set_datetime_handle(rtc: &mut RtcDS3231, datetime: RtcDateTime<Utc>) {
     }
 }
 
+#[inline]
 // TODO: Restructure such that it only gets time at init
 // and when requested. saves on cycles
 async fn time_handle(

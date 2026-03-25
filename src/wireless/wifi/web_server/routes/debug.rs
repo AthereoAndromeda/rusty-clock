@@ -7,7 +7,7 @@ use picoserve::{
     routing::{PathRouter, get},
 };
 
-use crate::rtc_ds3231::SET_ALARM;
+use crate::rtc_ds3231::{RTC_COMMANDS, RtcCommand};
 
 #[inline]
 pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
@@ -17,5 +17,5 @@ pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRou
 #[inline]
 async fn debug_alarm() {
     let alarm_config = Alarm1Config::AtSeconds { seconds: 30 };
-    SET_ALARM.signal(alarm_config);
+    RTC_COMMANDS.send(RtcCommand::SetAlarm(alarm_config)).await;
 }

@@ -11,7 +11,7 @@ use serde::Deserialize;
 
 use crate::{
     TZ_OFFSET,
-    rtc_ds3231::{ALARM_CONFIG_RWLOCK, CLEAR_FLAGS_SIGNAL, SET_ALARM},
+    rtc_ds3231::{ALARM_CONFIG_RWLOCK, RTC_COMMANDS, RtcCommand},
 };
 
 #[inline]
@@ -44,7 +44,7 @@ async fn get_alarm() -> impl IntoResponse {
 }
 
 #[inline]
-fn set_alarm_inner(hour: u8, min: u8, sec: u8, is_utc: bool) {
+async fn set_alarm_inner(hour: u8, min: u8, sec: u8, is_utc: bool) {
     let base_time =
         chrono::NaiveTime::from_hms_opt(u32::from(hour), u32::from(min), u32::from(sec)).unwrap();
 
@@ -71,7 +71,7 @@ fn set_alarm_inner(hour: u8, min: u8, sec: u8, is_utc: bool) {
         is_pm: None,
     };
 
-    SET_ALARM.signal(conf);
+    RTC_COMMANDS.send(RtcCommand::SetAlarm(conf)).await;
 }
 
 #[inline]
@@ -79,7 +79,7 @@ async fn set_alarm(
     (hour, min, sec): (u8, u8, u8),
     Query(query): Query<AlarmQueryParams>,
 ) -> impl IntoResponse {
-    set_alarm_inner(hour, min, sec, query.utc.is_some_and(|x| x));
+    set_alarm_inner(hour, min, sec, query.utc.is_some_and(|x| x)).await;
     "Alarm Set!"
 }
 
@@ -103,7 +103,7 @@ enum FormCheckbox {
 impl TryFrom<heapless::String<3>> for FormCheckbox {
     type Error = ();
 
-#[inline]
+    #[inline]
     fn try_from(value: heapless::String<3>) -> Result<Self, Self::Error> {
         if value == "on" {
             Ok(Self::On)
@@ -129,10 +129,10 @@ async fn set_alarm_form(Form(form): Form<AlarmForm>) -> Result<StatusCode, Statu
 
     if let Some(utc) = is_utc {
         let input: FormCheckbox = utc.try_into().map_err(|()| StatusCode::BAD_REQUEST)?;
-        set_alarm_inner(hour, min, sec, matches!(input, FormCheckbox::On));
+        set_alarm_inner(hour, min, sec, matches!(input, FormCheckbox::On)).await;
         Ok(StatusCode::OK)
     } else {
-        set_alarm_inner(hour, min, sec, false);
+        set_alarm_inner(hour, min, sec, false).await;
         Ok(StatusCode::OK)
     }
 }
@@ -201,7 +201,7 @@ enum MyAlarm1Config {
 }
 
 impl From<MyAlarm1Config> for Alarm1Config {
-#[inline]
+    #[inline]
     fn from(value: MyAlarm1Config) -> Self {
         match value {
             MyAlarm1Config::EverySecond => Alarm1Config::EverySecond,
@@ -252,10 +252,10 @@ impl From<MyAlarm1Config> for Alarm1Config {
 
 #[inline]
 async fn set_alarm_json(Json(json): Json<MyAlarm1Config>) -> impl IntoResponse {
-    SET_ALARM.signal(json.into());
+    RTC_COMMANDS.send(RtcCommand::SetAlarm(json.into())).await;
 }
 
 #[inline]
 async fn get_clear_flags() -> impl IntoResponse {
-    CLEAR_FLAGS_SIGNAL.signal(());
+    RTC_COMMANDS.send(RtcCommand::ClearFlags).await;
 }

@@ -9,7 +9,7 @@ use sntpc::NtpContext;
 use sntpc_net_embassy::UdpSocketWrapper;
 use static_cell::ConstStaticCell;
 
-use crate::rtc_ds3231::{SET_DATETIME_SIGNAL, TIME_WATCH, rtc_time::RtcDateTime};
+use crate::rtc_ds3231::{RTC_COMMANDS, RtcCommand, TIME_WATCH, rtc_time::RtcDateTime};
 
 pub(crate) static NTP_SYNC: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 
@@ -136,7 +136,7 @@ async fn fetch_sntp_inner(
 
             info!("[sntp:update-timestamp] Setting RTC Datetime to NTP...");
             let datetime = RtcDateTime::<Utc>::from_timestamp(time.seconds.into());
-            SET_DATETIME_SIGNAL.signal(datetime);
+            RTC_COMMANDS.send(RtcCommand::SetDateTime(datetime)).await;
 
             #[cfg(debug_assertions)]
             {

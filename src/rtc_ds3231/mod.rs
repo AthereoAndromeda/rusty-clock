@@ -20,7 +20,7 @@ use ds3231::{
 };
 use embassy_executor::Spawner;
 use embassy_sync::{
-    blocking_mutex::raw::CriticalSectionRawMutex, rwlock::RwLock, signal::Signal, watch::Watch,
+    blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel, rwlock::RwLock, watch::Watch,
 };
 
 use crate::i2c::I2cBus;
@@ -61,20 +61,25 @@ const ENV_TIME: Alarm1Config = {
 /// Contains the time from RTC module.
 pub(crate) static TIME_WATCH: Watch<CriticalSectionRawMutex, RtcDateTime<Utc>, 3> = Watch::new();
 
-/// Clears the alarm flags for RTC.
-pub(crate) static CLEAR_FLAGS_SIGNAL: Signal<CriticalSectionRawMutex, ()> = Signal::new();
-
-/// Sets the RTC module alarm.
-pub(crate) static SET_ALARM: Signal<CriticalSectionRawMutex, Alarm1Config> = Signal::new();
-
 /// Globally accessible [`Alarm1Config`].\
 /// Mostly for Reading the current config. For setting, use [`SET_ALARM`] instead.
 pub(crate) static ALARM_CONFIG_RWLOCK: RwLock<CriticalSectionRawMutex, Alarm1Config> =
     RwLock::new(ENV_TIME);
 
-/// Sets datetime for RTC.
-pub(crate) static SET_DATETIME_SIGNAL: Signal<CriticalSectionRawMutex, RtcDateTime<Utc>> =
-    Signal::new();
+/// RTC Command.
+pub(crate) enum RtcCommand {
+    /// Gets the datetime and updates [`TIME_WATCH`].
+    Tick,
+    /// Sets datetime for RTC.
+    SetDateTime(RtcDateTime<Utc>),
+    /// Sets the RTC module alarm.
+    SetAlarm(ds3231::Alarm1Config),
+    /// Clears the alarm flags for RTC.
+    ClearFlags,
+}
+
+/// The inbox for all RTC Commands.
+pub(crate) static RTC_COMMANDS: Channel<CriticalSectionRawMutex, RtcCommand, 4> = Channel::new();
 
 /// This is the timestamp held in-memory.
 /// This is used instead of pinging the RTC module every second.
@@ -132,4 +137,5 @@ pub(crate) async fn init(spawner: Spawner, i2c: I2cBus) {
     *ALARM_CONFIG_RWLOCK.write().await = alarm1_config;
 
     spawner.must_spawn(task::runner(rtc));
+    spawner.must_spawn(task::heartbeat_task());
 }
