@@ -23,7 +23,7 @@ pub(crate) enum LcdAction {
 }
 
 /// Controls the LCD Backlight.
-pub(crate) static BACKLIGHT_SIGNAL: Signal<CriticalSectionRawMutex, LcdAction> = Signal::new();
+pub(crate) static LCD_COMMANDS: Signal<CriticalSectionRawMutex, LcdAction> = Signal::new();
 
 type LcdDisplay = lcd::Display<LcdHardware<I2cBus>>;
 

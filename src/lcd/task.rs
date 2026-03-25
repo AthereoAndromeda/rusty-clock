@@ -1,4 +1,4 @@
-use super::{BACKLIGHT_SIGNAL, print_lines};
+use super::{LCD_COMMANDS, print_lines};
 use crate::{
     lcd::{LcdAction, LcdDisplay},
     rtc_ds3231::{TIME_WATCH, rtc_time::RtcDateTime},
@@ -21,7 +21,7 @@ pub(super) async fn runner_task(mut display: LcdDisplay) -> ! {
     let mut rx = TIME_WATCH.receiver().unwrap();
 
     loop {
-        let action = select(rx.changed(), BACKLIGHT_SIGNAL.wait()).await;
+        let action = select(rx.changed(), LCD_COMMANDS.wait()).await;
 
         match action {
             Either::First(time) => time_handle(&mut display, time).await,

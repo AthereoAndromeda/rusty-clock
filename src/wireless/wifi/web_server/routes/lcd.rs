@@ -4,7 +4,7 @@ use picoserve::{
     routing::{PathRouter, get},
 };
 
-use crate::lcd::{BACKLIGHT_SIGNAL, LcdAction};
+use crate::lcd::{LCD_COMMANDS, LcdAction};
 
 #[inline]
 pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
@@ -15,13 +15,13 @@ pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRou
 
 #[inline]
 async fn backlight_control_on() -> impl IntoResponse {
-    BACKLIGHT_SIGNAL.signal(LcdAction::BacklightOn);
+    LCD_COMMANDS.signal(LcdAction::BacklightOn);
 }
 #[inline]
 async fn backlight_control_off() -> impl IntoResponse {
-    BACKLIGHT_SIGNAL.signal(LcdAction::BacklightOff);
+    LCD_COMMANDS.signal(LcdAction::BacklightOff);
 }
 #[inline]
 async fn backlight_control_toggle() -> impl IntoResponse {
-    BACKLIGHT_SIGNAL.signal(LcdAction::BacklightToggle);
+    LCD_COMMANDS.signal(LcdAction::BacklightToggle);
 }
