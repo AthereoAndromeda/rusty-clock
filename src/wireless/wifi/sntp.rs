@@ -42,6 +42,13 @@ impl sntpc::NtpTimestampGenerator for SntpTimestamp {
 #[embassy_executor::task]
 // Task should only be spawned once
 pub(crate) async fn fetch_sntp(net_stack: embassy_net::Stack<'static>) -> ! {
+    const IS_SYNC_NTP_ON_BOOT: bool = {
+        let s = env!("SYNC_NTP_ON_BOOT");
+        1 == u8::from_str_radix(s, 10)
+            .ok()
+            .expect("Failed to parse env: `SYNC_NTP_ON_BOOT`")
+    };
+
     // NOTE: Using `ConstStaticCell` means these buffers are stored in .bss, thus does
     // not take up any flash space.
     static UDP_RX_META: ConstStaticCell<[PacketMetadata; 16]> =
@@ -67,9 +74,14 @@ pub(crate) async fn fetch_sntp(net_stack: embassy_net::Stack<'static>) -> ! {
     udp_socket.bind(NTP_SERVER_PORT).unwrap();
     let wrapper = UdpSocketWrapper::new(udp_socket);
 
+    if IS_SYNC_NTP_ON_BOOT {
+        NTP_SYNC.signal(());
+    }
+
     loop {
-        fetch_sntp_inner(net_stack, &wrapper).await;
         NTP_SYNC.wait().await;
+        defmt::info!("[sntp] Syncing RTC with NTP");
+        fetch_sntp_inner(net_stack, &wrapper).await;
     }
 }
 
