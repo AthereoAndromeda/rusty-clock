@@ -9,17 +9,25 @@ use pcf857x::{PcAsync, SlaveAddr};
 use crate::i2c::I2cBus;
 // use error::LcdDisplayError;
 
-const MAX_STRING_LENGTH: usize = 40;
+/// The max length of a string that can be displayed in an LCD.
+///
+/// The length should always be <=40 since the display
+/// will overflow to the second line if surpassed.
+pub(crate) const MAX_LCD_STRING_LENGTH: usize = 20;
+
+// TEST: Ensure that the maximum is less than 40 to avoid
+// accidentally overflowing into the second line
+static_assertions::const_assert!(MAX_LCD_STRING_LENGTH <= 40);
+
+/// Simply an alias [`heapless::String`] with a predetermined size.
+pub(crate) type LcdDisplayString = heapless::String<MAX_LCD_STRING_LENGTH>;
 
 pub(crate) enum LcdAction {
     BacklightOn,
     BacklightOff,
     BacklightToggle,
-    Display(heapless::String<MAX_STRING_LENGTH>),
-    DisplayLines(
-        heapless::String<MAX_STRING_LENGTH>,
-        heapless::String<MAX_STRING_LENGTH>,
-    ),
+    Display(LcdDisplayString),
+    DisplayLines(LcdDisplayString, LcdDisplayString),
 }
 
 /// Controls the LCD Backlight.
@@ -35,15 +43,12 @@ pub fn init(spawner: Spawner, i2c: I2cBus) {
 
 /// Prints the two given inputs as two lines.
 ///
-/// The way `HD44780` determines which line to print on is based on
-/// how many bytes we printed.
+/// # Overflow
 /// If more than 40 characters are printed,
 /// it will "overflow" to the bottom line.
 ///
-/// # Errors
-/// This will return an error if `s1.len() > 40`.
+/// This should be handled by the user.
 async fn print_lines(display: &mut LcdDisplay, s1: &str, s2: &str) {
-    defmt::assert!(s1.len() <= 40, "String in LCD must be less than 40");
     display.clear().await;
     display.print(s1).await;
     display.position(0, 1).await;

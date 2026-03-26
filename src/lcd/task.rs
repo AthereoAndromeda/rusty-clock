@@ -1,8 +1,5 @@
-use super::{LCD_COMMANDS, print_lines};
-use crate::{
-    lcd::{LcdAction, LcdDisplay},
-    rtc_ds3231::{TIME_WATCH, rtc_time::RtcDateTime},
-};
+use super::{LCD_COMMANDS, LcdAction, LcdDisplay, print_lines};
+use crate::rtc_ds3231::{TIME_WATCH, rtc_time::RtcDateTime};
 use chrono::Utc;
 use embassy_futures::select::{Either, select};
 use lcd::Backlight as _;
@@ -41,8 +38,14 @@ async fn time_handle(display: &mut LcdDisplay, time: RtcDateTime<Utc>) {
 
 async fn action_handle(display: &mut LcdDisplay, action: LcdAction) {
     match action {
-        LcdAction::BacklightOn => display.set_backlight(true).await,
-        LcdAction::BacklightOff => display.set_backlight(false).await,
+        LcdAction::BacklightOn => {
+            BACKLIGHT_STATUS.store(true, core::sync::atomic::Ordering::Release);
+            display.set_backlight(true).await;
+        }
+        LcdAction::BacklightOff => {
+            BACKLIGHT_STATUS.store(false, core::sync::atomic::Ordering::Release);
+            display.set_backlight(false).await;
+        }
         LcdAction::BacklightToggle => {
             let status = BACKLIGHT_STATUS.fetch_not(core::sync::atomic::Ordering::AcqRel);
             display.set_backlight(!status).await;
