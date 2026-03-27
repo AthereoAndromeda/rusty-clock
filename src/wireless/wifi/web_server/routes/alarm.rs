@@ -3,7 +3,7 @@ use ds3231::Alarm1Config;
 use explicit_cast::prelude::*;
 use picoserve::{
     Router,
-    extract::{Form, Json, Query},
+    extract::{Form, Query},
     response::{DebugValue, IntoResponse, StatusCode},
     routing::{PathRouter, get, parse_path_segment, post},
 };
@@ -20,7 +20,7 @@ pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRou
         .route("/alarm", get(get_alarm))
         .route("/alarm/clear", get(get_clear_flags))
         .route("/alarm/submit", post(set_alarm_form))
-        .route("/alarm/json", post(set_alarm_json))
+        // .route("/alarm/json", post(set_alarm_json))
         .route(
             (
                 "/alarm",
@@ -139,7 +139,7 @@ async fn set_alarm_form(Form(form): Form<AlarmForm>) -> Result<StatusCode, Statu
 
 /// Alarm 1 specific configurations.
 /// 1-to-1 mapping to [`Alarm1Config`], but with serde.
-#[derive(Debug, Clone, PartialEq, Deserialize, defmt::Format)]
+#[derive(Debug, PartialEq, Deserialize, defmt::Format)]
 enum MyAlarm1Config {
     /// Trigger every second (all mask bits set).
     EverySecond,
@@ -250,10 +250,10 @@ impl From<MyAlarm1Config> for Alarm1Config {
     }
 }
 
-#[inline]
-async fn set_alarm_json(Json(json): Json<MyAlarm1Config>) -> impl IntoResponse {
-    RTC_COMMANDS.send(RtcCommand::SetAlarm(json.into())).await;
-}
+// #[inline]
+// async fn set_alarm_json(Json(json): Json<MyAlarm1Config>) -> impl IntoResponse {
+//     RTC_COMMANDS.send(RtcCommand::SetAlarm(json.into())).await;
+// }
 
 #[inline]
 async fn get_clear_flags() -> impl IntoResponse {
