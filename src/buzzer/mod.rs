@@ -14,7 +14,6 @@ use esp_hal::{
     peripherals::{self},
 };
 
-#[derive(Debug, Clone, Copy)]
 pub(crate) enum BuzzerAction {
     On,
     Off,
@@ -42,7 +41,7 @@ pub(super) async fn init(
     alarm_pin: peripherals::GPIO6<'static>,
 ) {
     let mut buzzer = Buzzer::new(output_channel);
-    buzzer.set_volume(100);
+    buzzer.set_volume(80);
 
     spawner.must_spawn(task::action_task(buzzer));
     spawner.must_spawn(task::alarm_task(alarm_pin));
