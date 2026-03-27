@@ -2,7 +2,7 @@ use picoserve::{
     Router,
     extract::Form,
     response::IntoResponse,
-    routing::{PathRouter, get},
+    routing::{PathRouter, get, post},
 };
 use serde::Deserialize;
 
@@ -13,8 +13,8 @@ pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRou
     router
         .route("/lcd/on", get(backlight_control_on))
         .route("/lcd/off", get(backlight_control_off))
-        .route("/lcd/display", get(lcd_display))
         .route("/lcd/toggle", get(backlight_control_toggle))
+        .route("/lcd/display", post(lcd_display))
 }
 
 #[derive(Deserialize)]
