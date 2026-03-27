@@ -2,9 +2,15 @@ use crate::buzzer::{BUZZER_ACTION_SIGNAL, BuzzerAction, IS_BUZZER_ON};
 use embassy_time::Timer;
 use picoserve::{
     Router,
-    response::{DebugValue, IntoResponse},
-    routing::{PathRouter, get},
+    extract::Form,
+    response::{DebugValue, IntoResponse, StatusCode},
+    routing::{PathRouter, get, post},
 };
+
+#[derive(serde::Deserialize)]
+struct VolumeForm {
+    volume: u8,
+}
 
 struct BuzzerEvent;
 
@@ -34,6 +40,7 @@ pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRou
             "/buzzer/stream",
             get(async || picoserve::response::EventStream(BuzzerEvent)),
         )
+        .route("/volume", post(post_volume))
 }
 
 #[inline]
@@ -53,4 +60,23 @@ async fn toggle_buzzer_on() -> impl IntoResponse {
 #[inline]
 async fn toggle_buzzer_off() -> impl IntoResponse {
     BUZZER_ACTION_SIGNAL.signal(BuzzerAction::Off);
+}
+
+#[inline]
+async fn post_volume(Form(form): Form<VolumeForm>) -> impl IntoResponse {
+    use crate::buzzer::BuzzerAction;
+
+    if form.volume > 100 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    BUZZER_ACTION_SIGNAL.signal(BuzzerAction::SetVolume(form.volume));
+    #[cfg(debug_assertions)]
+    {
+        // To see effect of volume while debugging.
+        // Should not automatically turn on buzzer at production
+        embassy_time::Timer::after_millis(300).await;
+        BUZZER_ACTION_SIGNAL.signal(BuzzerAction::On);
+    }
+    Ok(())
 }

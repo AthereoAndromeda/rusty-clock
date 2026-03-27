@@ -13,7 +13,6 @@ mod debug;
 mod lcd;
 mod time;
 mod timer;
-mod volume;
 
 macro_rules! add_routes {
     ($router:ident; $($name:ident),* $(,)?) => {{
@@ -21,6 +20,22 @@ macro_rules! add_routes {
         $(let router = $name::add_routes(router);)*
         router
     }};
+}
+
+#[inline]
+pub(super) fn add_all_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
+    let router = add_routes!(
+        router;
+        alarm,
+        buzzer,
+        time,
+        timer,
+        lcd,
+    );
+
+    #[cfg(debug_assertions)]
+    let router = debug::add_routes(router);
+    router.route("/help", get(get_help))
 }
 
 #[inline]
@@ -45,21 +60,4 @@ Paths:
 
 /timer                    - Set a timer to buzz
 "
-}
-
-#[inline]
-pub(super) fn add_all_routes(router: Router<impl PathRouter>) -> Router<impl PathRouter> {
-    let router = add_routes!(
-        router;
-        alarm,
-        buzzer,
-        time,
-        timer,
-        volume,
-        lcd,
-    );
-
-    #[cfg(debug_assertions)]
-    let router = debug::add_routes(router);
-    router.route("/help", get(get_help))
 }
