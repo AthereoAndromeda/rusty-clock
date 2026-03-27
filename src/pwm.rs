@@ -70,9 +70,9 @@ pub(crate) fn init(ledc: peripherals::LEDC<'static>) -> Channels {
 
     defmt::expect!(
         lstimer0.configure(timer::config::Config {
-            duty: esp_hal::ledc::timer::config::Duty::Duty5Bit,
+            duty: esp_hal::ledc::timer::config::Duty::Duty12Bit,
             clock_source: esp_hal::ledc::timer::LSClockSource::APBClk,
-            frequency: esp_hal::time::Rate::from_khz(24),
+            frequency: esp_hal::time::Rate::from_hz(1000),
         }),
         "Failed to configure PWM Timer"
     );
