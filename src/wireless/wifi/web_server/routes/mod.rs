@@ -44,20 +44,37 @@ pub(super) fn add_all_routes(router: Router<impl PathRouter>) -> Router<impl Pat
 async fn get_help() -> &'static str {
     "Hello from ESP32! This is the web server for rusty clock
 
-All paths use GET unless otherwise specified
-
 Paths:
-/                         - Gets Control Panel webpage
-/help                     - Prints this help message.
-/time                     - Gets current time
-/epoch                    - Gets current time as UNIX_EPOCH
+GET /                         - Gets Control Panel webpage
+GET /help                     - Prints this help message.
 
-/alarm                    - Gets alarm settings
-/alarm/:hour/:minute      - Sets alarm
-/alarm/off                - Turns off alarm if active
-/alarm/on
-/alarm/toggle                
+GET /time                     - Gets current time
+GET /epoch                    - Gets current time as UNIX_EPOCH
+GET /uptime                   - Gets uptime of MCU
+GET /sync                     - Syncs RTC time with NTP
+SSE /time/stream
 
-/timer                    - Set a timer to buzz
+GET /alarm                    - Gets alarm settings
+GET /alarm/clear              - Clear RTC Flags
+GET /alarm/:hour/:min/:sec    - Sets alarm
+GET /alarm/off                - Turns off alarm if active
+GET /alarm/on
+GET /alarm/toggle
+POST /alarm/submit 
+
+GET /buzzer                   - Gets current buzzer volume
+GET /buzzer/toggle
+GET /buzzer/on
+GET /buzzer/off
+POST /volume
+SSE /buzzer/stream
+
+GET /lcd/on
+GET /lcd/off
+GET /lcd/toggle
+POST /lcd/display
+
+GET /timer/:sec               - Set timer in seconds
+POST /timer
 "
 }
