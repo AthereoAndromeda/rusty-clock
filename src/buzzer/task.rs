@@ -18,7 +18,7 @@ use esp_hal::{
 /// # Issues
 /// - An action may be skipped if its corresponding signal is
 /// written to again before the task is completed.
-/// - A [`embassy_sync::Channel`] could be used to queue up
+/// - An [`::embassy_sync::channel::Channel`] could be used to queue up
 /// actions at the cost of higher RAM usage.
 pub(super) async fn action_task(mut output: Buzzer) -> ! {
     loop {

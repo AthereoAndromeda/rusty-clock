@@ -30,7 +30,7 @@ pub(crate) enum LcdAction {
     DisplayLines(LcdDisplayString, LcdDisplayString),
 }
 
-/// Controls the LCD Backlight.
+/// The inbox for any LCD Display actions.
 pub(crate) static LCD_COMMANDS: Signal<CriticalSectionRawMutex, LcdAction> = Signal::new();
 
 type LcdDisplay = lcd::Display<LcdHardware<I2cBus>>;

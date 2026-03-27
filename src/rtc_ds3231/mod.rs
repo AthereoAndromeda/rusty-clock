@@ -61,8 +61,7 @@ const ENV_TIME: Alarm1Config = {
 /// Contains the time from RTC module.
 pub(crate) static TIME_WATCH: Watch<CriticalSectionRawMutex, RtcDateTime<Utc>, 3> = Watch::new();
 
-/// Globally accessible [`Alarm1Config`].\
-/// Mostly for Reading the current config. For setting, use [`SET_ALARM`] instead.
+/// Globally accessible [`Alarm1Config`].
 pub(crate) static ALARM_CONFIG_RWLOCK: RwLock<CriticalSectionRawMutex, Alarm1Config> =
     RwLock::new(ENV_TIME);
 
