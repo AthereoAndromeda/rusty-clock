@@ -8,7 +8,6 @@ pub(crate) use buzzer_struct::*;
 
 use embassy_executor::Spawner;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
-use embassy_time::Timer;
 use esp_hal::{
     ledc::LowSpeed,
     peripherals::{self},
@@ -37,7 +36,7 @@ pub(crate) static IS_BUZZER_ON: portable_atomic::AtomicBool =
 pub(crate) static BUZZER_VOLUME: portable_atomic::AtomicU8 = portable_atomic::AtomicU8::new(0);
 
 /// Initialize the buzzer and beep to signal readiness.
-pub(super) async fn init(
+pub(super) fn init(
     spawner: Spawner,
     output_channel: esp_hal::ledc::channel::Channel<'static, LowSpeed>,
     button_pin: peripherals::GPIO7<'static>,
@@ -50,12 +49,4 @@ pub(super) async fn init(
     spawner.must_spawn(task::alarm_task(alarm_pin));
     spawner.must_spawn(task::button_task(button_pin));
     spawner.must_spawn(task::timer_task());
-
-    // Beep 3 times
-    for _ in 0..3 {
-        Timer::after_millis(500).await;
-        BUZZER_ACTION_SIGNAL.signal(BuzzerAction::Toggle);
-    }
-
-    BUZZER_ACTION_SIGNAL.signal(BuzzerAction::Off);
 }

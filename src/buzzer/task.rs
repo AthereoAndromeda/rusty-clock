@@ -21,6 +21,11 @@ use esp_hal::{
 /// - An [`::embassy_sync::channel::Channel`] could be used to queue up
 /// actions at the cost of higher RAM usage.
 pub(super) async fn action_task(mut output: Buzzer) -> ! {
+    // Test the buzzer.
+    output.activate();
+    Timer::after_millis(500).await;
+    output.deactivate();
+
     loop {
         let action = BUZZER_ACTION_SIGNAL.wait().await;
 
