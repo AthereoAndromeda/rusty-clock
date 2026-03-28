@@ -3,6 +3,7 @@ mod hardware;
 mod task;
 use embassy_executor::Spawner;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
+use hardware::LcdDisplay;
 use hardware::LcdHardware;
 use pcf857x::{PcAsync, SlaveAddr};
 
@@ -32,8 +33,6 @@ pub(crate) enum LcdAction {
 
 /// The inbox for any LCD Display actions.
 pub(crate) static LCD_COMMANDS: Signal<CriticalSectionRawMutex, LcdAction> = Signal::new();
-
-type LcdDisplay = lcd::Display<LcdHardware<I2cBus>>;
 
 pub fn init(spawner: Spawner, i2c: I2cBus) {
     let hw = LcdHardware::new(PcAsync::new(i2c, SlaveAddr::Alternative(true, true, true)));
