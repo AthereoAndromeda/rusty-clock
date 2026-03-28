@@ -1,4 +1,4 @@
-use crate::buzzer::{BUZZER_ACTION_SIGNAL, BuzzerAction, IS_BUZZER_ON};
+use crate::buzzer::{BUZZER_ACTION_SIGNAL, BUZZER_VOLUME, BuzzerAction, IS_BUZZER_ON};
 use embassy_time::Timer;
 use picoserve::{
     Router,
@@ -45,7 +45,7 @@ pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRou
 
 #[inline]
 async fn get_buzzer() -> impl IntoResponse {
-    let state = IS_BUZZER_ON.load(core::sync::atomic::Ordering::Acquire);
+    let state = BUZZER_VOLUME.load(core::sync::atomic::Ordering::Acquire);
     DebugValue(state)
 }
 

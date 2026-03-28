@@ -4,6 +4,8 @@
 
 use esp_hal::ledc::{LowSpeed, channel::ChannelIFace as _};
 
+use crate::buzzer::BUZZER_VOLUME;
+
 /// The [`Buzzer`] can only be `On` or `Off`.
 ///
 /// Volume levels are handled differently.
@@ -58,6 +60,7 @@ impl Buzzer {
     /// Panics if `volume > 100`.
     pub fn set_volume(&mut self, volume: u8) {
         defmt::assert!(volume <= 100);
+        BUZZER_VOLUME.store(volume, core::sync::atomic::Ordering::Release);
         self.volume = volume;
     }
 }
