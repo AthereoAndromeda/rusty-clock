@@ -8,23 +8,17 @@
 #![no_std]
 #![no_main]
 #![recursion_limit = "256"]
-// #![feature(allocator_api)]
-#![feature(decl_macro)]
-// NIGHTLY: Required by Picoserve
-#![feature(impl_trait_in_assoc_type)]
-// NIGHTLY: Required by `static_cell::make_static!`
-// #![feature(type_alias_impl_trait)]
-// NIGHTLY: Allows env vars to be parsed at compile time
-#![feature(const_option_ops)]
-#![feature(const_trait_impl)]
-#![feature(const_result_trait_fn)]
-#![feature(const_index)]
-#![feature(const_convert)]
-#![feature(const_cmp)]
-// NIGHTLY: Enum-based typestate pattern
-// #![feature(adt_const_params)]
-//
-//
+#![feature(
+    decl_macro,
+    // NIGHTLY: Required by Picoserve
+    impl_trait_in_assoc_type,
+    // NIGHTLY: Allows env vars to be parsed at compile time
+    const_result_trait_fn,
+    const_trait_impl,
+    const_option_ops,
+    const_index,
+    const_convert
+)]
 // Clippy Lints
 #![deny(
     clippy::mem_forget,
