@@ -110,15 +110,6 @@ use esp_hal::{
 
 use crate::pwm::Channels;
 
-#[cfg(feature = "ble")]
-// Found via `espflash`
-// pub const MAC_ADDR: &'static str = "10:20:ba:91:bb:b4";
-pub(crate) const MAC_ADDR: [u8; 6] = [0x10, 0x20, 0xba, 0x91, 0xbb, 0xb4];
-
-// TIP: Set these in .env if using direnv
-pub(crate) const SSID: &str = env!("SSID");
-pub(crate) const PASSWORD: &str = env!("PASSWORD");
-
 // NOTE: Using TZ_OFFSET since IANA Timezones adds unnecessary weight
 // PERF: Faster and leaner than LazyLock if you're
 // okay with using nightly features

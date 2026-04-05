@@ -11,7 +11,11 @@ use esp_radio::wifi::{
     ClientConfig, ModeConfig, WifiController, WifiDevice, WifiEvent, WifiStaState,
 };
 
-use crate::{PASSWORD, SSID, utils::mk_static};
+use crate::utils::mk_static;
+
+// TIP: Set these in .env if using direnv
+const SSID: &str = env!("SSID");
+const PASSWORD: &str = env!("PASSWORD");
 
 /// Initialize Wifi Stack and attempt to connect to a network.
 ///

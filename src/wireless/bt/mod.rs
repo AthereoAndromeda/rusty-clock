@@ -16,7 +16,11 @@ use trouble_host::{
     prelude::DefaultPacketPool,
 };
 
-use crate::{MAC_ADDR, utils::mk_static};
+use crate::utils::mk_static;
+
+// Found via `espflash`
+// pub const MAC_ADDR: &'static str = "10:20:ba:91:bb:b4";
+const MAC_ADDR: [u8; 6] = [0x10, 0x20, 0xba, 0x91, 0xbb, 0xb4];
 
 /// Max number of connections for Bluetooth
 const BLE_CONNECTIONS_MAX: usize = 2;
