@@ -8,7 +8,7 @@
 pub mod alarm;
 pub mod error;
 pub mod rtc_time;
-use alarm::reset_alarm_flags;
+use alarm::reset_alarm1_flags;
 use rtc_time::RtcDateTime;
 
 mod task;
@@ -119,7 +119,7 @@ pub(crate) async fn init(spawner: Spawner, i2c: I2cBus) {
             .expect("[rtc] Failed to set alarm");
     }
 
-    reset_alarm_flags(&mut rtc)
+    reset_alarm1_flags(&mut rtc)
         .await
         .expect("[rtc] Failed to reset flags");
 

@@ -8,7 +8,7 @@ use embassy_time::Timer;
 
 use super::{
     ALARM_CONFIG_RWLOCK, LOCAL_TIMESTAMP, RTC_COMMANDS, RtcCommand, RtcDS3231, TIME_WATCH,
-    reset_alarm_flags, rtc_time::RtcDateTime,
+    reset_alarm1_flags, rtc_time::RtcDateTime,
 };
 
 #[embassy_executor::task]
@@ -37,7 +37,7 @@ pub(super) async fn heartbeat_task() -> ! {
 
 #[inline]
 async fn clear_flags_handle(rtc: &mut RtcDS3231) {
-    if let Err(err) = reset_alarm_flags(rtc).await {
+    if let Err(err) = reset_alarm1_flags(rtc).await {
         defmt::error!("[rtc] Failed to reset flags: {}", defmt::Debug2Format(&err));
     }
 }
@@ -51,7 +51,7 @@ async fn alarm_handle(rtc: &mut RtcDS3231, config: Alarm1Config) {
         return;
     }
 
-    if let Err(err) = reset_alarm_flags(rtc).await {
+    if let Err(err) = reset_alarm1_flags(rtc).await {
         defmt::error!("[rtc] Failed to reset flags: {}", defmt::Debug2Format(&err));
         return;
     }
