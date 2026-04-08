@@ -15,33 +15,22 @@ use super::{
 pub(super) async fn runner(mut rtc: RtcDS3231) -> ! {
     let time_sender = TIME_WATCH.sender();
     let cmd_rx = RTC_COMMANDS.receiver();
-    #[cfg(debug_assertions)]
     let mut count = 0;
 
     loop {
-        let rtc = &mut rtc;
         match cmd_rx.receive().await {
-            RtcCommand::Tick => {
-                time_handle(
-                    &time_sender,
-                    rtc,
-                    #[cfg(debug_assertions)]
-                    &mut count,
-                )
-                .await;
-            }
-            RtcCommand::SetDateTime(datetime) => set_datetime_handle(rtc, datetime).await,
-            RtcCommand::SetAlarm(config) => alarm_handle(rtc, config).await,
-            RtcCommand::ClearFlags => clear_flags_handle(rtc).await,
+            RtcCommand::Tick => time_handle(&time_sender, &mut rtc, &mut count).await,
+            RtcCommand::SetDateTime(datetime) => set_datetime_handle(&mut rtc, datetime).await,
+            RtcCommand::SetAlarm(config) => alarm_handle(&mut rtc, config).await,
+            RtcCommand::ClearFlags => clear_flags_handle(&mut rtc).await,
         }
     }
 }
 
 #[embassy_executor::task]
 pub(super) async fn heartbeat_task() -> ! {
-    let sender = RTC_COMMANDS.sender();
     loop {
-        sender.send(RtcCommand::Tick).await;
+        RTC_COMMANDS.send(RtcCommand::Tick).await;
         Timer::after_secs(1).await;
     }
 }
@@ -86,7 +75,7 @@ async fn set_datetime_handle(rtc: &mut RtcDS3231, datetime: RtcDateTime<Utc>) {
 async fn time_handle(
     sender: &Sender<'_, CriticalSectionRawMutex, RtcDateTime<Utc>, 3>,
     rtc: &mut RtcDS3231,
-    #[cfg(debug_assertions)] count: &mut usize,
+    count: &mut usize,
 ) {
     let datetime: RtcDateTime<Utc> = rtc.datetime().await.unwrap().and_utc().into();
     sender.send(datetime);

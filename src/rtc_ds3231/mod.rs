@@ -26,6 +26,7 @@ use embassy_sync::{
 use crate::i2c::I2cBus;
 
 /// The alarm time set through env.
+/// NOTE: Time stored in RTC is in UTC, adjust to your timezone
 const ENV_TIME: Alarm1Config = {
     const HOUR: &str = option_env!("ALARM_HOUR").unwrap_or("0");
     const MIN: &str = option_env!("ALARM_MINUTES").unwrap_or("0");
@@ -82,8 +83,6 @@ pub(crate) static RTC_COMMANDS: Channel<CriticalSectionRawMutex, RtcCommand, 4> 
 
 /// This is the timestamp held in-memory.
 /// This is used instead of pinging the RTC module every second.
-///
-/// NOTE: [`portable_atomic`] crate is used since native does not support 64 bit atomics.
 pub(crate) static LOCAL_TIMESTAMP: portable_atomic::AtomicU64 = portable_atomic::AtomicU64::new(0);
 
 type RtcDS3231 = DS3231<I2cBus>;
@@ -110,13 +109,6 @@ pub(crate) async fn init(spawner: Spawner, i2c: I2cBus) {
         .await
         .expect("[rtc] Failed to configure");
 
-    // Hardcoded values for now
-    // NOTE: Time stored in RTC is in UTC, adjust to your timezone
-    // let alarm1_config = if cfg!(debug_assertions) {
-    //     Alarm1Config::AtSeconds { seconds: 30 }
-    // } else {
-    //     ENV_TIME
-    // };
     let alarm1_config = ENV_TIME;
 
     #[cfg(debug_assertions)]
