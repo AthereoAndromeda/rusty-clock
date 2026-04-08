@@ -192,9 +192,6 @@ async fn main(spawner: Spawner) {
     info!("Init LCD Display...");
     lcd::init(spawner, i2c_lcd);
 
-    info!("Init RTC...");
-    rtc_ds3231::init(spawner, i2c_rtc).await;
-
     info!("Init PWM/LEDC...");
     let output = Output::new(
         peripherals.GPIO5,
@@ -215,6 +212,10 @@ async fn main(spawner: Spawner) {
         #[cfg(feature = "ble")]
         peripherals.BT,
     );
+
+    // Keep RTC Init last to avoid blocking other inits
+    info!("Init RTC...");
+    rtc_ds3231::init(spawner, i2c_rtc).await;
 
     info!("All System Tasks Spawned!");
 }
