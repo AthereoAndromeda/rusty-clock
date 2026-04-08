@@ -109,23 +109,19 @@ pub(crate) async fn init(spawner: Spawner, i2c: I2cBus) {
         .await
         .expect("[rtc] Failed to configure");
 
-    let alarm1_config = ENV_TIME;
-
     #[cfg(debug_assertions)]
-    defmt::debug!("Alarm1 Config: {:?}", alarm1_config);
-
-    #[cfg(debug_assertions)]
-    // Only set alarm in debug builds. Uses previously set
-    // alarm in production.
-    rtc.set_alarm1(&alarm1_config)
-        .await
-        .expect("[rtc] Failed to set alarm");
+    {
+        // Only set alarm in debug builds. Uses previously set alarm in production.
+        defmt::debug!("Alarm1 Config: {:?}", ENV_TIME);
+        *ALARM_CONFIG_RWLOCK.write().await = ENV_TIME;
+        rtc.set_alarm1(&ENV_TIME)
+            .await
+            .expect("[rtc] Failed to set alarm");
+    }
 
     reset_alarm_flags(&mut rtc)
         .await
         .expect("[rtc] Failed to reset flags");
-
-    *ALARM_CONFIG_RWLOCK.write().await = alarm1_config;
 
     spawner.must_spawn(task::runner(rtc));
     spawner.must_spawn(task::heartbeat_task());
