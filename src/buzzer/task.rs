@@ -3,10 +3,7 @@ use crate::buzzer::Buzzer;
 use super::{BUZZER_ACTION_SIGNAL, BuzzerAction, IS_BUZZER_ON, TIMER_SIGNAL};
 use defmt::{debug, info};
 use embassy_time::Timer;
-use esp_hal::{
-    gpio::{Input, InputConfig, Pull},
-    peripherals,
-};
+use esp_hal::gpio::{AnyPin, Input, InputConfig, Pull};
 
 #[embassy_executor::task]
 /// This task listens for [`BUZZER_ACTION_SIGNAL`] and sets buzzer to
@@ -67,7 +64,7 @@ pub(super) async fn timer_task() -> ! {
 
 #[embassy_executor::task]
 /// Listens for a button press which sets buzzer low.
-pub(super) async fn button_task(input_pin: peripherals::GPIO7<'static>) -> ! {
+pub(super) async fn button_task(input_pin: AnyPin<'static>) -> ! {
     let mut input = Input::new(input_pin, InputConfig::default().with_pull(Pull::Up));
 
     loop {
@@ -83,7 +80,7 @@ pub(super) async fn button_task(input_pin: peripherals::GPIO7<'static>) -> ! {
 
 #[embassy_executor::task]
 /// Listen for the alarm interrupt from DS3231 RTC.
-pub(super) async fn alarm_task(alarm_pin: peripherals::GPIO6<'static>) -> ! {
+pub(super) async fn alarm_task(alarm_pin: AnyPin<'static>) -> ! {
     info!("Initializing Alarm Listener...");
     let mut alarm_input = Input::new(alarm_pin, InputConfig::default().with_pull(Pull::Up));
 

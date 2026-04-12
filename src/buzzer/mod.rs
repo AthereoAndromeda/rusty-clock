@@ -8,10 +8,7 @@ pub(crate) use buzzer_struct::*;
 
 use embassy_executor::Spawner;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
-use esp_hal::{
-    ledc::LowSpeed,
-    peripherals::{self},
-};
+use esp_hal::{gpio, ledc::LowSpeed};
 
 pub(crate) enum BuzzerAction {
     On,
@@ -39,8 +36,8 @@ pub(crate) static BUZZER_VOLUME: portable_atomic::AtomicU8 = portable_atomic::At
 pub(super) fn init(
     spawner: Spawner,
     output_channel: esp_hal::ledc::channel::Channel<'static, LowSpeed>,
-    button_pin: peripherals::GPIO7<'static>,
-    alarm_pin: peripherals::GPIO6<'static>,
+    button_pin: gpio::AnyPin<'static>,
+    alarm_pin: gpio::AnyPin<'static>,
 ) {
     let mut buzzer = Buzzer::new(output_channel);
     buzzer.set_volume(80);

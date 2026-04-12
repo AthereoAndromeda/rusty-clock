@@ -203,7 +203,12 @@ async fn main(spawner: Spawner) {
     let chan0 = channel0.with_output(output);
 
     info!("Init Buzzer...");
-    buzzer::init(spawner, chan0, peripherals.GPIO7, peripherals.GPIO6);
+    buzzer::init(
+        spawner,
+        chan0,
+        peripherals.GPIO7.degrade(),
+        peripherals.GPIO6.degrade(),
+    );
 
     info!("Init Wireless...");
     wireless::init(
