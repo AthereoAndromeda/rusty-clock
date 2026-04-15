@@ -7,8 +7,8 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, watch::Sender};
 use embassy_time::Timer;
 
 use super::{
-    ALARM_CONFIG_RWLOCK, LOCAL_TIMESTAMP, RTC_COMMANDS, RtcCommand, RtcDS3231, TIME_WATCH,
-    reset_alarm1_flags, rtc_time::RtcDateTime,
+    ALARM_CONFIG_RWLOCK, RTC_COMMANDS, RtcCommand, RtcDS3231, TIME_WATCH, reset_alarm1_flags,
+    rtc_time::RtcDateTime,
 };
 
 #[embassy_executor::task]
@@ -70,8 +70,6 @@ async fn set_datetime_handle(rtc: &mut RtcDS3231, datetime: RtcDateTime<Utc>) {
 }
 
 #[inline]
-// TODO: Restructure such that it only gets time at init
-// and when requested. saves on cycles
 async fn time_handle(
     sender: &Sender<'_, CriticalSectionRawMutex, RtcDateTime<Utc>, 3>,
     rtc: &mut RtcDS3231,
@@ -86,8 +84,6 @@ async fn time_handle(
         "The timestamp should never be negative, i.e. never set before January 1 1970"
     );
     let ts = ts.cast_unsigned();
-
-    LOCAL_TIMESTAMP.store(ts, core::sync::atomic::Ordering::Release);
 
     #[cfg(debug_assertions)]
     #[expect(

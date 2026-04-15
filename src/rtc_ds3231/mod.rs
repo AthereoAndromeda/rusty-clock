@@ -6,12 +6,13 @@
 //! that interface with the RTC module.
 
 pub mod alarm;
+pub(crate) mod command;
 pub mod error;
 pub mod rtc_time;
-use alarm::reset_alarm1_flags;
-use rtc_time::RtcDateTime;
-
 mod task;
+use alarm::reset_alarm1_flags;
+pub(crate) use command::RtcCommand;
+use rtc_time::RtcDateTime;
 
 use chrono::Utc;
 use ds3231::{
@@ -20,7 +21,10 @@ use ds3231::{
 };
 use embassy_executor::Spawner;
 use embassy_sync::{
-    blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel, rwlock::RwLock, watch::Watch,
+    blocking_mutex::raw::CriticalSectionRawMutex,
+    priority_channel::{Min, PriorityChannel},
+    rwlock::RwLock,
+    watch::Watch,
 };
 
 use crate::i2c::I2cBus;
@@ -66,24 +70,9 @@ pub(crate) static TIME_WATCH: Watch<CriticalSectionRawMutex, RtcDateTime<Utc>, 3
 pub(crate) static ALARM_CONFIG_RWLOCK: RwLock<CriticalSectionRawMutex, Alarm1Config> =
     RwLock::new(ENV_TIME);
 
-/// RTC Command.
-pub(crate) enum RtcCommand {
-    /// Gets the datetime and updates [`TIME_WATCH`].
-    Tick,
-    /// Sets datetime for RTC.
-    SetDateTime(RtcDateTime<Utc>),
-    /// Sets the RTC module alarm.
-    SetAlarm(ds3231::Alarm1Config),
-    /// Clears the alarm flags for RTC.
-    ClearFlags,
-}
-
 /// The inbox for all RTC Commands.
-pub(crate) static RTC_COMMANDS: Channel<CriticalSectionRawMutex, RtcCommand, 4> = Channel::new();
-
-/// This is the timestamp held in-memory.
-/// This is used instead of pinging the RTC module every second.
-pub(crate) static LOCAL_TIMESTAMP: portable_atomic::AtomicU64 = portable_atomic::AtomicU64::new(0);
+pub(crate) static RTC_COMMANDS: PriorityChannel<CriticalSectionRawMutex, RtcCommand, Min, 4> =
+    PriorityChannel::new();
 
 type RtcDS3231 = DS3231<I2cBus>;
 
