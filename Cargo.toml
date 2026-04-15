@@ -72,16 +72,18 @@ bt-hci = { version = "0.6.0", optional = true }
 
 embassy-executor = { version = "0.9.1", features = ["defmt"] }
 embassy-time = { version = "0.5.0", features = ["defmt"] }
-embassy-sync = "0.7.2"
+embassy-sync = "~0.7.2"
 embassy-embedded-hal = { version = "0.5.0", features = ["defmt"] }
-embassy-net = { version = "0.8.0", features = [
+embassy-net = { version = "0.9.0", features = [
   "defmt",
   "dhcpv4",
   # "medium-ethernet",
   # "tcp",
-  # "udp",
+  "udp",
   "mdns"
 ] }
+
+smoltcp = {version = "0.12", default-features = false, features = ["proto-ipv4"]}
 
 defmt = "1.0.1"
 # defmt-rtt = "1.1.0"
@@ -97,8 +99,8 @@ chrono = { version = "0.4.43", default-features = false, features = ["defmt"] }
 heapless = { version = "0.9.1", features = ["defmt", "nightly", "serde"] }
 thiserror = { version = "2.0.18", default-features = false }
 embassy-futures = { version = "0.1.2", features = ["defmt"] }
-sntpc = { version = "0.8", default-features = false, features = ["defmt"] }
-sntpc-net-embassy = "0.8"
+sntpc = { version = "0.9", default-features = false, features = ["defmt"] }
+sntpc-net-embassy = "0.9"
 # futures = { version = "0.3.31", default-features = false }
 picoserve = { version = "0.18", features = ["defmt", "embassy"] }
 serde = { version = "1.0.228", features = ["derive"], default-features = false }
