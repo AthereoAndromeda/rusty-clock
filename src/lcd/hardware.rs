@@ -5,6 +5,19 @@ use pcf857x::PcAsync;
 
 use crate::i2c::I2cBus;
 
+/// The concrete [`lcd::Display`] using our [`LcdHardware`] implementation.
+pub(super) type LcdDisplay = lcd::Display<LcdHardware>;
+
+#[bilge::bitsize(8)]
+#[derive(FromBits, Clone, Copy)]
+struct LcdRegister {
+    pin_0: bool,
+    pin_1: bool,
+    pin_2: bool,
+    pin_3: bool,
+    data: u4,
+}
+
 /// Our concrete implementation of [`lcd::Hardware`].
 pub(crate) struct LcdHardware {
     driver: PcAsync<I2cBus>,
@@ -19,18 +32,6 @@ impl LcdHardware {
             register: LcdRegister::from(0),
         }
     }
-}
-
-pub(super) type LcdDisplay = lcd::Display<LcdHardware>;
-
-#[bilge::bitsize(8)]
-#[derive(FromBits, Clone, Copy)]
-struct LcdRegister {
-    pin_0: bool,
-    pin_1: bool,
-    pin_2: bool,
-    pin_3: bool,
-    data: u4,
 }
 
 impl lcd::Hardware for LcdHardware {
