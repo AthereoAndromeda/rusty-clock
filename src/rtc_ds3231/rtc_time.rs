@@ -6,6 +6,14 @@ use core::{fmt::Debug, hint::assert_unchecked, ops::Deref};
 
 use crate::TZ_OFFSET;
 
+/// A [`chrono::FixedOffset`] generated from [`TZ_OFFSET`].
+///
+/// This is used to convert between local and UTC time.
+const FIXED_OFFSET: chrono::FixedOffset = {
+    chrono::FixedOffset::east_opt(i32::from(TZ_OFFSET).saturating_mul(3600))
+        .expect("Failed to convert `TZ_OFFSET` to `chrono::FixedOffset`.")
+};
+
 const MONTH_BY_INDEX: [&str; 12] = [
     "January",
     "February",
@@ -27,14 +35,16 @@ const fn get_shorthand(month: &str) -> &str {
     &month[..3]
 }
 
+#[repr(transparent)]
 #[derive(Debug, Clone)]
 /// A wrapper around [`chrono::NaiveDateTime`].
 ///
 /// This wrapper implements `Deref`. This wrapper also provides
 /// convenience methods, impls, and interfaces wih our web server.
-pub(crate) struct RtcDateTime<TZ: TimeZone + Copy>(pub DateTime<TZ>);
+pub(crate) struct RtcDateTime<TZ: TimeZone>(pub DateTime<TZ>);
+impl<TZ: TimeZone> Copy for RtcDateTime<TZ> where <TZ as TimeZone>::Offset: Copy {}
 
-impl<TZ: TimeZone + Copy> RtcDateTime<TZ> {
+impl<TZ: TimeZone> RtcDateTime<TZ> {
     #[expect(clippy::indexing_slicing, reason = "Guaranteed to be < 12")]
     fn to_human_inner<const N: usize>(
         dt: &(impl Datelike + Timelike),
@@ -96,14 +106,6 @@ impl<TZ: TimeZone + Copy> RtcDateTime<TZ> {
     }
 }
 
-/// A [`chrono::FixedOffset`] generated from [`TZ_OFFSET`].
-///
-/// This is used to convert between local and UTC time.
-const FIXED_OFFSET: chrono::FixedOffset = {
-    chrono::FixedOffset::east_opt(i32::from(TZ_OFFSET).saturating_mul(3600))
-        .expect("Failed to convert `TZ_OFFSET` to `chrono::FixedOffset`.")
-};
-
 impl RtcDateTime<Utc> {
     #[inline]
     /// Converts itself to `Local` variant.
@@ -156,7 +158,7 @@ impl RtcDateTime<FixedOffset> {
     }
 }
 
-impl<TZ: TimeZone + Copy> Deref for RtcDateTime<TZ> {
+impl<TZ: TimeZone> Deref for RtcDateTime<TZ> {
     type Target = DateTime<TZ>;
 
     #[inline]
@@ -165,25 +167,23 @@ impl<TZ: TimeZone + Copy> Deref for RtcDateTime<TZ> {
     }
 }
 
-impl<TZ: TimeZone + Copy> From<DateTime<TZ>> for RtcDateTime<TZ> {
+impl<TZ: TimeZone> From<DateTime<TZ>> for RtcDateTime<TZ> {
     #[inline]
     fn from(value: DateTime<TZ>) -> Self {
         Self(value)
     }
 }
 
-impl<TZ: TimeZone + Copy> From<RtcDateTime<TZ>> for DateTime<TZ> {
+impl<TZ: TimeZone> From<RtcDateTime<TZ>> for DateTime<TZ> {
     #[inline]
     fn from(value: RtcDateTime<TZ>) -> Self {
         value.0
     }
 }
 
-impl<TZ: TimeZone + Copy> picoserve::response::sse::EventData for RtcDateTime<TZ> {
+impl<TZ: TimeZone> picoserve::response::sse::EventData for RtcDateTime<TZ> {
     async fn write_to<W: picoserve::io::Write>(self, writer: &mut W) -> Result<(), W::Error> {
         writer.write_all(self.to_human_short().as_bytes()).await?;
         Ok(())
     }
 }
-
-impl<TZ: TimeZone + Copy> Copy for RtcDateTime<TZ> where <TZ as TimeZone>::Offset: Copy {}
