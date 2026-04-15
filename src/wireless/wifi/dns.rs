@@ -37,7 +37,7 @@ pub(crate) async fn resolve(
     net_stack: embassy_net::Stack<'_>,
 ) -> Result<IpAddr, DnsError> {
     let ntp_addrs_response = net_stack
-        .dns_query(server_name, smoltcp::wire::DnsQueryType::A)
+        .dns_query(server_name, embassy_net::dns::DnsQueryType::A)
         .with_timeout(Duration::from_secs(180))
         .await
         .map_err(DnsError::from)?; // Timeout Error

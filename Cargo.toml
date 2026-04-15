@@ -71,21 +71,6 @@ esp-radio = { version = "0.17.0", features = [
   "wifi",
 ] }
 
-smoltcp = { version = "0.12.0", default-features = false, features = [
-  # "defmt",
-  # "multicast",
-  # "medium-ethernet",
-  # "proto-dhcpv4",
-  # "proto-dns",
-  # "proto-ipv4",
-  # "socket-dns",
-  # "socket-icmp",
-  # "socket-raw",
-  # "socket-tcp",
-  # "socket-udp",
-  # "socket-mdns",
-] }
-
 bt-hci = "0.6.0"
 trouble-host = { version = "0.5.0", features = ["gatt"] }
 embassy-executor = { version = "0.9.1", features = ["defmt"] }
@@ -117,7 +102,7 @@ heapless = { version = "0.9.1", features = ["defmt", "nightly", "serde"] }
 thiserror = { version = "2.0.18", default-features = false }
 embassy-futures = { version = "0.1.2", features = ["defmt"] }
 sntpc = { version = "0.8", default-features = false, features = ["defmt"] }
-sntpc-net-embassy = "*"
+sntpc-net-embassy = "0.8"
 futures = { version = "0.3.31", default-features = false }
 picoserve = { version = "0.18", features = ["defmt", "embassy", "json"] }
 serde = { version = "1.0.228", features = ["derive"], default-features = false }

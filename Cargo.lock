@@ -1920,7 +1920,6 @@ dependencies = [
  "portable-atomic",
  "rtt-target",
  "serde",
- "smoltcp",
  "sntpc",
  "sntpc-net-embassy",
  "static_assertions",
