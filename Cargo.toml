@@ -14,8 +14,12 @@ path = "./src/main.rs"
 harness = false
 
 [features]
-ble = []
-
+ble = [
+  "dep:trouble-host",
+  "dep:bt-hci",
+  "esp-radio/coex",
+  "esp-radio/ble",
+]
 
 [dependencies.pcf857x]
 git = "https://github.com/AthereoAndromeda/pcf857x-rs"
@@ -30,8 +34,6 @@ features = ["async"]
 
 [dependencies]
 # rusty-clock-macros = { path = "./rusty-clock-macros" }
-#
-
 
 esp-hal = { version = "~1.0", features = [
   "defmt",
@@ -53,16 +55,10 @@ esp-bootloader-esp-idf = { version = "0.4.0", features = [
 ] }
 
 esp-alloc = { version = "0.9.0", features = ["defmt", "nightly"] }
-# esp-backtrace = { version = "0.18.0", features = [
-#   "defmt",
-#   "esp32c3",
-#   "panic-handler",
-# ] }
-# esp-println = { version = "0.16.0", features = ["defmt-espflash", "esp32c3"] }
 # for more networking protocol support see https://crates.io/crates/edge-net
 esp-radio = { version = "0.17.0", features = [
-  "ble",
-  "coex",
+  # "ble",
+  # "coex",
   "defmt",
   "esp-alloc",
   "esp32c3",
@@ -71,19 +67,19 @@ esp-radio = { version = "0.17.0", features = [
   "wifi",
 ] }
 
-bt-hci = "0.6.0"
-trouble-host = { version = "0.5.0", features = ["gatt"] }
+trouble-host = { version = "0.5.0", features = ["gatt"], optional = true }
+bt-hci = { version = "0.6.0", optional = true }
+
 embassy-executor = { version = "0.9.1", features = ["defmt"] }
 embassy-time = { version = "0.5.0", features = ["defmt"] }
 embassy-sync = "0.7.2"
-# embedded-hal-async = "1.0.0"
 embassy-embedded-hal = { version = "0.5.0", features = ["defmt"] }
 embassy-net = { version = "0.8.0", features = [
   "defmt",
   "dhcpv4",
-  "medium-ethernet",
-  "tcp",
-  "udp",
+  # "medium-ethernet",
+  # "tcp",
+  # "udp",
   "mdns"
 ] }
 
@@ -103,13 +99,13 @@ thiserror = { version = "2.0.18", default-features = false }
 embassy-futures = { version = "0.1.2", features = ["defmt"] }
 sntpc = { version = "0.8", default-features = false, features = ["defmt"] }
 sntpc-net-embassy = "0.8"
-futures = { version = "0.3.31", default-features = false }
-picoserve = { version = "0.18", features = ["defmt", "embassy", "json"] }
+# futures = { version = "0.3.31", default-features = false }
+picoserve = { version = "0.18", features = ["defmt", "embassy"] }
 serde = { version = "1.0.228", features = ["derive"], default-features = false }
 bilge = "0.3.0"
 # bumpalo = { version = "3.19.1", features = ["collections", "boxed", "allocator_api"] }
 static_assertions = { version = "1.1.0", features = ["nightly"] }
-portable-atomic = { version = "1.13.0", default-features = false, features = ["serde", "fallback", "unsafe-assume-single-core"] }
+portable-atomic = { version = "1.13.0", default-features = false, features = ["fallback", "unsafe-assume-single-core"] }
 explicit_cast = "1.0.0"
 embedded-hal-async = { version = "1.0.0", features = ["defmt-03"] }
 paste = "1.0.15"
@@ -132,7 +128,7 @@ lto = 'thin'
 
 [profile.release]
 codegen-units    = 1     # LLVM can perform better optimizations using a single thread
-debug            = 0     # defmt cannot find location if debug < 2
+debug            = 0     # WARN: defmt cannot find location if debug < 2
 debug-assertions = false
 incremental      = false
 lto              = 'fat'
