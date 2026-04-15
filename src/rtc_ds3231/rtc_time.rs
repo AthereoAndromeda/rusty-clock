@@ -68,7 +68,6 @@ impl<TZ: TimeZone> RtcDateTime<TZ> {
             get_shorthand(MONTH_BY_INDEX[month_idx])
         };
 
-        // TODO: Shorten Months and add Day of the week
         heapless::format!(
             "{:02}:{:02}:{:02} | {:02} {} {}",
             dt.hour(),
@@ -141,7 +140,7 @@ impl RtcDateTime<FixedOffset> {
     #[inline]
     /// Converts [`RtcDateTime`] to ISO8601-conformant string.
     pub fn to_iso8601(self) -> heapless::String<25> {
-        let sign = if TZ_OFFSET.is_positive() { "+" } else { "-" };
+        let sign = const { if TZ_OFFSET.is_positive() { "+" } else { "-" } };
 
         heapless::format!(
             "{}-{:02}-{:02}T{:02}:{:02}:{:02}{}{:02}:00",
