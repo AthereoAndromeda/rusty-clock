@@ -148,7 +148,9 @@ async fn fetch_sntp_inner(
 
             info!("[sntp:update-timestamp] Setting RTC Datetime to NTP...");
             let datetime = RtcDateTime::<Utc>::from_timestamp(time.seconds.into());
-            RTC_COMMANDS.send(RtcCommand::SetDateTime(datetime)).await;
+            RTC_COMMANDS
+                .send(RtcCommand::SetDateTime(datetime).into())
+                .await;
 
             #[cfg(debug_assertions)]
             {

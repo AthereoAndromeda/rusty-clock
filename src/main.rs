@@ -92,6 +92,7 @@
 #![warn(clippy::renamed_function_params)]
 #![warn(clippy::rest_pat_in_fully_bound_structs)]
 #![warn(clippy::string_lit_chars_any)]
+#![allow(clippy::inline_always, reason = "Lessen bloat")]
 #![allow(clippy::similar_names, reason = "Using TX/RX naming convention")]
 #![allow(clippy::large_futures, reason = "Cannot use heap or `Box::pin`")]
 #![allow(
@@ -105,6 +106,7 @@ extern crate alloc;
 mod buzzer;
 mod i2c;
 mod lcd;
+mod priority_command;
 mod pwm;
 mod rtc_ds3231;
 mod utils;

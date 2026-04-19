@@ -10,6 +10,7 @@ pub(crate) mod command;
 pub mod error;
 pub mod rtc_time;
 mod task;
+use crate::priority_command::Priority;
 use alarm::reset_alarm1_flags;
 pub(crate) use command::RtcCommand;
 use rtc_time::RtcDateTime;
@@ -30,7 +31,7 @@ use embassy_sync::{
 use crate::i2c::I2cBus;
 
 /// The alarm time set through env.
-/// NOTE: Time stored in RTC is in UTC, adjust to your timezone
+/// NOTE: Time stored in RTC is in UTC, adjust to your timezone.
 const ENV_TIME: Alarm1Config = {
     const HOUR: &str = option_env!("ALARM_HOUR").unwrap_or("0");
     const MIN: &str = option_env!("ALARM_MINUTES").unwrap_or("0");
@@ -71,12 +72,16 @@ pub(crate) static ALARM_CONFIG_RWLOCK: RwLock<CriticalSectionRawMutex, Alarm1Con
     RwLock::new(ENV_TIME);
 
 /// The inbox for all RTC Commands.
-pub(crate) static RTC_COMMANDS: PriorityChannel<CriticalSectionRawMutex, RtcCommand, Min, 4> =
-    PriorityChannel::new();
+pub(crate) static RTC_COMMANDS: PriorityChannel<
+    CriticalSectionRawMutex,
+    Priority<RtcCommand>,
+    Min,
+    4,
+> = PriorityChannel::new();
 
 type RtcDS3231 = DS3231<I2cBus>;
 
-pub(crate) const RTC_I2C_ADDR: u8 = {
+const RTC_I2C_ADDR: u8 = {
     let addr = option_env!("RTC_I2C_ADDR").unwrap_or(/*0x*/ "68");
     u8::from_str_radix(addr, 16)
         .ok()
@@ -92,7 +97,6 @@ pub(crate) async fn init(spawner: Spawner, i2c: I2cBus) {
         battery_backed_square_wave: false,
         oscillator_enable: Oscillator::Enabled,
     };
-
     let mut rtc = DS3231::new(i2c, RTC_I2C_ADDR);
     rtc.configure(&config)
         .await

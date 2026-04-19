@@ -18,7 +18,7 @@ pub(super) async fn runner(mut rtc: RtcDS3231) -> ! {
     let mut count = 0;
 
     loop {
-        match cmd_rx.receive().await {
+        match cmd_rx.receive().await.into_inner() {
             RtcCommand::Tick => time_handle(&time_sender, &mut rtc, &mut count).await,
             RtcCommand::SetDateTime(datetime) => set_datetime_handle(&mut rtc, datetime).await,
             RtcCommand::SetAlarm(config) => alarm_handle(&mut rtc, config).await,
@@ -30,7 +30,7 @@ pub(super) async fn runner(mut rtc: RtcDS3231) -> ! {
 #[embassy_executor::task]
 pub(super) async fn heartbeat_task() -> ! {
     loop {
-        RTC_COMMANDS.send(RtcCommand::Tick).await;
+        RTC_COMMANDS.send(RtcCommand::Tick.into()).await;
         Timer::after_secs(1).await;
     }
 }

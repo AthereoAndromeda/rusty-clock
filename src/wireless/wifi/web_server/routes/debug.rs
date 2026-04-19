@@ -17,5 +17,7 @@ pub(super) fn add_routes(router: Router<impl PathRouter>) -> Router<impl PathRou
 #[inline]
 async fn debug_alarm() {
     let alarm_config = Alarm1Config::AtSeconds { seconds: 30 };
-    RTC_COMMANDS.send(RtcCommand::SetAlarm(alarm_config)).await;
+    RTC_COMMANDS
+        .send(RtcCommand::SetAlarm(alarm_config).into())
+        .await;
 }

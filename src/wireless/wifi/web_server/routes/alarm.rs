@@ -71,7 +71,7 @@ async fn set_alarm_inner(hour: u8, min: u8, sec: u8, is_utc: bool) {
         is_pm: None,
     };
 
-    RTC_COMMANDS.send(RtcCommand::SetAlarm(conf)).await;
+    RTC_COMMANDS.send(RtcCommand::SetAlarm(conf).into()).await;
 }
 
 #[inline]
@@ -257,5 +257,5 @@ impl From<MyAlarm1Config> for Alarm1Config {
 
 #[inline]
 async fn get_clear_flags() -> impl IntoResponse {
-    RTC_COMMANDS.send(RtcCommand::ClearFlags).await;
+    RTC_COMMANDS.send(RtcCommand::ClearFlags.into()).await;
 }
