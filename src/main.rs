@@ -10,6 +10,7 @@
 #![recursion_limit = "256"]
 #![feature(
     decl_macro,
+    strict_provenance_lints,
     // NIGHTLY: Required by Picoserve
     impl_trait_in_assoc_type,
     // NIGHTLY: Allows env vars to be parsed at compile time
@@ -19,6 +20,7 @@
     const_index,
     const_convert
 )]
+#![warn(fuzzy_provenance_casts, lossy_provenance_casts)]
 // Clippy Lints
 #![deny(
     clippy::mem_forget,
