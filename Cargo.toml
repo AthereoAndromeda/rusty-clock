@@ -21,6 +21,23 @@ ble = [
   "esp-radio/ble",
 ]
 
+# # Uncomment in case internet fails
+# [source.crates-io]
+# replace-with = "vendored-sources"
+
+# [source."git+https://github.com/AthereoAndromeda/lcd?branch=async"]
+# git = "https://github.com/AthereoAndromeda/lcd"
+# branch = "async"
+# replace-with = "vendored-sources"
+
+# [source."git+https://github.com/AthereoAndromeda/pcf857x-rs?branch=refcell"]
+# git = "https://github.com/AthereoAndromeda/pcf857x-rs"
+# branch = "refcell"
+# replace-with = "vendored-sources"
+
+# [source.vendored-sources]
+# directory = "vendor"
+
 [dependencies.pcf857x]
 git = "https://github.com/AthereoAndromeda/pcf857x-rs"
 branch = "refcell"
