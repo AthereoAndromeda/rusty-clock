@@ -18,28 +18,21 @@
     const_trait_impl,
     const_option_ops,
     const_index,
-    const_convert
+    const_convert,
 )]
-#![warn(fuzzy_provenance_casts, lossy_provenance_casts)]
 // Clippy Lints
+#![forbid(
+    clippy::infinite_loop,
+    reason = "Force usage of ! to denote infinite loops."
+)]
+#![forbid(
+    clippy::undocumented_unsafe_blocks,
+    reason = "All unsafe blocks must be documented."
+)]
 #![deny(
     clippy::mem_forget,
     reason = "mem::forget is generally not safe to do with esp_hal types, especially those \
     holding buffers for the duration of a data transfer."
-)]
-#![deny(clippy::map_with_unused_argument_over_ranges)]
-#![deny(clippy::empty_enum_variants_with_brackets)]
-#![deny(clippy::empty_structs_with_brackets)]
-#![deny(clippy::get_unwrap)]
-#![deny(clippy::large_stack_frames)]
-#![deny(clippy::lossy_float_literal)]
-#![deny(
-    clippy::infinite_loop,
-    reason = "Force usage of ! to denote infinite loops."
-)]
-#![deny(
-    clippy::undocumented_unsafe_blocks,
-    reason = "All unsafe blocks must be documented."
 )]
 #![deny(
     clippy::indexing_slicing,
@@ -49,49 +42,61 @@
     clippy::as_conversions,
     reason = "`as` conversions are not explicit enough."
 )]
-#![deny(clippy::cast_lossless)]
-#![deny(clippy::cast_possible_truncation)]
-#![deny(clippy::cast_possible_wrap)]
-#![deny(clippy::cast_precision_loss)]
-#![deny(clippy::cast_sign_loss)]
-#![deny(clippy::char_lit_as_u8)]
-#![deny(clippy::fn_to_numeric_cast)]
-#![deny(clippy::fn_to_numeric_cast_with_truncation)]
-#![deny(clippy::ptr_as_ptr)]
-#![warn(clippy::arithmetic_side_effects)]
 #![deny(
     clippy::integer_division,
     reason = "Integer divison discards the remainder"
 )]
-#![deny(clippy::string_slice)]
-#![deny(clippy::as_pointer_underscore)]
-#![deny(clippy::assertions_on_result_states)]
-#![deny(clippy::big_endian_bytes)]
-#![deny(clippy::cfg_not_test)]
-#![deny(clippy::empty_drop)]
-#![deny(clippy::fn_to_numeric_cast_any)]
-#![deny(clippy::multiple_inherent_impl)]
-#![deny(clippy::ref_patterns)]
+#![deny(
+    clippy::map_with_unused_argument_over_ranges,
+    clippy::empty_enum_variants_with_brackets,
+    clippy::empty_structs_with_brackets,
+    clippy::get_unwrap,
+    clippy::large_stack_frames,
+    clippy::lossy_float_literal,
+    clippy::cast_lossless,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::char_lit_as_u8,
+    clippy::fn_to_numeric_cast,
+    clippy::fn_to_numeric_cast_with_truncation,
+    clippy::ptr_as_ptr,
+    clippy::arithmetic_side_effects,
+    clippy::string_slice,
+    clippy::as_pointer_underscore,
+    clippy::assertions_on_result_states,
+    clippy::big_endian_bytes,
+    clippy::cfg_not_test,
+    clippy::empty_drop,
+    clippy::fn_to_numeric_cast_any,
+    clippy::multiple_inherent_impl,
+    clippy::ref_patterns
+)]
 // CLIPPY: Use pedantic
-#![warn(clippy::pedantic)]
-#![warn(clippy::doc_paragraphs_missing_punctuation)]
-#![warn(clippy::unused_trait_names)]
-#![warn(clippy::semicolon_if_nothing_returned)]
-#![warn(clippy::needless_raw_strings)]
 #![warn(clippy::allow_attributes, reason = "Prefer `expect` macros")]
 #![warn(
     clippy::allow_attributes_without_reason,
     reason = "All `allow/expect` macros should be documented"
 )]
-#![warn(clippy::clone_on_ref_ptr)]
-#![warn(clippy::if_then_some_else_none)]
-#![warn(clippy::missing_assert_message)]
-#![warn(clippy::decimal_literal_representation)]
-#![warn(clippy::doc_include_without_cfg)]
-#![warn(clippy::module_name_repetitions)]
-#![warn(clippy::renamed_function_params)]
-#![warn(clippy::rest_pat_in_fully_bound_structs)]
-#![warn(clippy::string_lit_chars_any)]
+#![warn(
+    clippy::pedantic,
+    clippy::doc_paragraphs_missing_punctuation,
+    clippy::unused_trait_names,
+    clippy::semicolon_if_nothing_returned,
+    clippy::needless_raw_strings,
+    clippy::clone_on_ref_ptr,
+    clippy::if_then_some_else_none,
+    clippy::missing_assert_message,
+    clippy::decimal_literal_representation,
+    clippy::doc_include_without_cfg,
+    clippy::module_name_repetitions,
+    clippy::renamed_function_params,
+    clippy::rest_pat_in_fully_bound_structs,
+    clippy::string_lit_chars_any,
+    fuzzy_provenance_casts,
+    lossy_provenance_casts
+)]
 #![allow(clippy::inline_always, reason = "Lessen bloat")]
 #![allow(clippy::similar_names, reason = "Using TX/RX naming convention")]
 #![allow(clippy::large_futures, reason = "Cannot use heap or `Box::pin`")]
