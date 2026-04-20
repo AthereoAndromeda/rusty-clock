@@ -134,6 +134,15 @@ paste = "1.0.15"
 brotli = { version = "8.0.2" }
 html-minifier = "5.0.0"
 
+[profile.dev.package.brotli]
+opt-level = 3
+[profile.release.package.brotli]
+opt-level = 3
+[profile.dev.package.html-minifier]
+opt-level = 3
+[profile.release.package.html-minifier]
+opt-level = 3
+
 [profile.dev.package.esp-radio]
 opt-level = 3
 [profile.release.package.esp-radio]
@@ -142,17 +151,22 @@ opt-level = 3
 [profile.dev]
 # Rust debug is too slow.
 # For debug builds always builds with some optimization
-opt-level = "s"
-lto = 'thin'
+opt-level        = "s"
+lto              = "fat"
+incremental      = true
 
 [profile.release]
 codegen-units    = 1     # LLVM can perform better optimizations using a single thread
 debug            = 0     # WARN: defmt cannot find location if debug < 2
 debug-assertions = false
 incremental      = false
-lto              = 'fat'
-opt-level        = 's'
+lto              = "fat"
+opt-level        = "s"
 overflow-checks  = false
-panic            = 'abort'
-strip            = 'debuginfo' # Symbols required for defmt
+panic            = "abort"
+strip            = "debuginfo" # Symbols required for defmt
 
+# Same as `release` but enables location tracing for defmt
+[profile.release-location]
+inherits = "release"
+debug = 2
