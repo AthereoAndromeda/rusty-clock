@@ -91,18 +91,6 @@ impl<TZ: TimeZone> RtcDateTime<TZ> {
     pub fn to_human_short(&self) -> heapless::String<22> {
         Self::to_human_inner(&self.0, false)
     }
-
-    #[inline]
-    /// Returns seconds since Unix Epoch.
-    pub fn to_timestamp(&self) -> u64 {
-        self.0.timestamp().cast_unsigned()
-    }
-
-    #[inline]
-    /// Generate a [`RtcDateTime`] from seconds since Unix Epoch.
-    pub fn from_timestamp(ts: i64) -> RtcDateTime<Utc> {
-        chrono::Utc.timestamp_opt(ts, 0).unwrap().into()
-    }
 }
 
 impl RtcDateTime<Utc> {
@@ -111,6 +99,18 @@ impl RtcDateTime<Utc> {
     pub fn local(self) -> RtcDateTime<FixedOffset> {
         let time = self.0.with_timezone(&FIXED_OFFSET);
         RtcDateTime(time)
+    }
+
+    #[inline]
+    /// Generate a [`RtcDateTime`] from seconds since Unix Epoch.
+    pub fn from_timestamp(ts: i64) -> Self {
+        chrono::Utc.timestamp_opt(ts, 0).unwrap().into()
+    }
+
+    #[inline]
+    /// Returns seconds since Unix Epoch.
+    pub fn to_timestamp(&self) -> u64 {
+        self.0.timestamp().cast_unsigned()
     }
 
     #[inline]
