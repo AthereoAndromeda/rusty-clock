@@ -1,5 +1,5 @@
 #!/usr/bin/env nix-shell
-#!nix-shell -i nu -p brotli
+#!nix-shell -i nu -p brotli xh
 
 def main [input?: path, output?: path] {
   let input_path = ($input | default ./index.html)
