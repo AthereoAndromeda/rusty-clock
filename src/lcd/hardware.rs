@@ -1,6 +1,5 @@
 use bilge::prelude::*;
 use embassy_time::Timer;
-// use explicit_cast::Widen as _;
 use pcf857x::PcAsync;
 
 use crate::i2c::I2cBus;

@@ -2,7 +2,6 @@ use core::net::SocketAddr;
 use embassy_net::udp::{PacketMetadata, UdpSocket};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_time::{Duration, WithTimeout as _};
-// use explicit_cast::Truncate as _;
 use sntpc::NtpContext;
 use sntpc_net_embassy::UdpSocketWrapper;
 use static_cell::ConstStaticCell;
