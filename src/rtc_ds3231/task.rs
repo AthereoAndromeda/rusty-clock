@@ -75,15 +75,21 @@ async fn time_handle(
     rtc: &mut RtcDS3231,
     count: &mut usize,
 ) {
-    // let datetime: RtcDateTime<Utc> = rtc.datetime().await.unwrap().and_utc().into();
     let dt = rtc.datetime().await;
 
     let datetime = match dt {
         Ok(d) => d.and_utc().into(),
         Err(err) => match err {
-            ds3231::DS3231Error::I2c(_) => todo!(),
-            ds3231::DS3231Error::DateTime(_) => {
+            ds3231::DS3231Error::I2c(e) => {
+                defmt::error!("[rtc] I2c Error occured! Trying again");
+                defmt::error!("[rtc] {}", e);
+                return;
+            }
+            ds3231::DS3231Error::DateTime(e) => {
                 // If there is a date error, set time to 0
+                defmt::error!("[rtc] Datetime error occured! Resetting clock.");
+                defmt::error!("[rtc] {}", defmt::Debug2Format(&e));
+
                 let val = chrono::DateTime::from_timestamp(0, 0).unwrap().into();
                 sender.send(val);
                 return;
