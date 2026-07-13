@@ -96,7 +96,16 @@ async fn connect_to_wifi(mut controller: WifiController<'static>) -> ! {
 
         controller.set_config(&station_config).unwrap();
         defmt::info!("[wifi:connect] Starting wifi and scan");
-        controller.connect_async().await.unwrap();
+        match controller.connect_async().await {
+            Ok(sta) => {
+                defmt::info!("[wifi:connect] Connected to WiFi. {}", sta);
+            }
+            Err(e) => {
+                defmt::warn!("[wifi:connect] Failed to connect!");
+                defmt::warn!("[wifi:connect] {}", e);
+                Timer::after_millis(5000).await;
+            }
+        };
     }
 }
 
