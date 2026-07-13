@@ -42,8 +42,8 @@ pub(super) fn init(
     let mut buzzer = Buzzer::new(output_channel);
     buzzer.set_volume(80);
 
-    spawner.must_spawn(task::action_task(buzzer));
-    spawner.must_spawn(task::alarm_task(alarm_pin));
-    spawner.must_spawn(task::button_task(button_pin));
-    spawner.must_spawn(task::timer_task());
+    spawner.spawn(task::action_task(buzzer).unwrap());
+    spawner.spawn(task::alarm_task(alarm_pin).unwrap());
+    spawner.spawn(task::button_task(button_pin).unwrap());
+    spawner.spawn(task::timer_task().unwrap());
 }

@@ -37,7 +37,7 @@ pub(crate) static LCD_COMMANDS: Signal<CriticalSectionRawMutex, LcdAction> = Sig
 pub fn init(spawner: Spawner, i2c: I2cBus) {
     let hw = LcdHardware::new(PcAsync::new(i2c, SlaveAddr::Alternative(true, true, true)));
     let display: LcdDisplay = lcd::Display::new(hw);
-    spawner.must_spawn(task::runner_task(display));
+    spawner.spawn(task::runner_task(display).unwrap());
 }
 
 /// Prints the two given inputs as two lines.

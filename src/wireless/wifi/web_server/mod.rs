@@ -122,6 +122,6 @@ pub(super) fn init(spawner: Spawner, stack: embassy_net::Stack<'static>) {
     );
 
     for task_id in 0..WEB_TASK_POOL_SIZE {
-        spawner.must_spawn(web_task(task_id, stack, app, config));
+        spawner.spawn(web_task(task_id, stack, app, config).unwrap());
     }
 }

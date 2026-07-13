@@ -116,6 +116,6 @@ pub(crate) async fn init(spawner: Spawner, i2c: I2cBus) {
         .await
         .expect("[rtc] Failed to reset flags");
 
-    spawner.must_spawn(task::runner(rtc));
-    spawner.must_spawn(task::heartbeat_task());
+    spawner.spawn(task::runner(rtc).unwrap());
+    spawner.spawn(task::heartbeat_task().unwrap());
 }

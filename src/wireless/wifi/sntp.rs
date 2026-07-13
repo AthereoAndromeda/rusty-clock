@@ -2,7 +2,7 @@ use core::net::SocketAddr;
 use embassy_net::udp::{PacketMetadata, UdpSocket};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_time::{Duration, WithTimeout as _};
-use explicit_cast::Truncate as _;
+// use explicit_cast::Truncate as _;
 use sntpc::NtpContext;
 use sntpc_net_embassy::UdpSocketWrapper;
 use static_cell::ConstStaticCell;
@@ -145,7 +145,7 @@ async fn fetch_sntp_inner(
             defmt::debug!("[sntp] Response: {}", time);
 
             defmt::info!("[sntp] Setting RTC Datetime to NTP...");
-            let datetime = RtcDateTime::from_timestamp(time.seconds.into());
+            let datetime = RtcDateTime::from_timestamp(time.seconds.cast_signed());
 
             RTC_COMMANDS
                 .send(RtcCommand::SetDateTime(datetime).into())
@@ -154,7 +154,7 @@ async fn fetch_sntp_inner(
             #[cfg(debug_assertions)]
             {
                 let rtc_time = recv.get().await.to_timestamp();
-                defmt::debug!("[sntp] NTP: {=u32}", time.seconds);
+                defmt::debug!("[sntp] NTP: {=u64}", time.seconds);
                 defmt::debug!("[sntp] RTC: {=u64}", rtc_time);
 
                 let diff = u64::from(time.seconds).saturating_sub(rtc_time);

@@ -2,13 +2,14 @@ pub mod dns;
 pub mod sntp;
 pub mod web_server;
 
-use defmt::{info, warn};
 use embassy_executor::Spawner;
-use embassy_net::{DhcpConfig, StackResources};
+use embassy_net::{DhcpConfig, StackResources, driver::Driver};
 use embassy_time::Timer;
 use esp_hal::rng::Rng;
 use esp_radio::wifi::{
-    ClientConfig, ModeConfig, WifiController, WifiDevice, WifiEvent, WifiStaState,
+    // ClientConfig, ModeConfig, WifiController, WifiDevice, WifiEvent, WifiStationState,
+    WifiController,
+    // event::WifiEvent,
 };
 
 use crate::utils::mk_static;
@@ -21,20 +22,23 @@ const PASSWORD: &str = env!("PASSWORD");
 ///
 /// # Panics
 /// Panics to Wifi Controller fails to initialize.
-pub(super) fn init(
-    spawner: Spawner,
-    radio_init: &'static esp_radio::Controller<'static>,
-    wifi: esp_hal::peripherals::WIFI<'static>,
-) {
-    let (wifi_controller, interfaces) =
-        esp_radio::wifi::new(radio_init, wifi, esp_radio::wifi::Config::default())
-            .expect("Failed to initialize Wi-Fi controller");
+pub(super) fn init(spawner: Spawner, wifi: esp_hal::peripherals::WIFI<'static>) {
+    // let (wifi_controller, interfaces) =
+    //     esp_radio::wifi::new(radio_init, wifi, esp_radio::wifi::Config::default())
+    //         .expect("Failed to initialize Wi-Fi controller");
+    let (wifi_controller, interfaces) = esp_radio::wifi::new(wifi, Default::default())
+        .expect("Failed to initialize Wi-Fi controller");
+
+    defmt::debug!(
+        "[wifi:connect] Device capabilities: {:?}",
+        interfaces.station.capabilities()
+    );
 
     let (net_stack, net_runner) = get_stack(interfaces);
 
-    spawner.must_spawn(runner_task(net_runner));
-    spawner.must_spawn(connect_to_wifi(wifi_controller));
-    spawner.must_spawn(sntp::fetch_sntp(net_stack));
+    spawner.spawn(runner_task(net_runner).unwrap());
+    spawner.spawn(connect_to_wifi(wifi_controller).unwrap());
+    spawner.spawn(sntp::fetch_sntp(net_stack).unwrap());
 
     web_server::init(spawner, net_stack);
 }
@@ -47,19 +51,18 @@ fn get_stack(
     wifi_interface: esp_radio::wifi::Interfaces<'_>,
 ) -> (
     embassy_net::Stack<'static>,
-    embassy_net::Runner<'_, WifiDevice<'_>>,
+    embassy_net::Runner<'_, esp_radio::wifi::Interface<'_>>,
 ) {
     #[cfg(debug_assertions)]
     defmt::debug!("Creating Network Stack...");
 
-    let wifi_interface_station = wifi_interface.sta;
     let rng = Rng::new();
     let seed = u64::from(rng.random()) << 32 | u64::from(rng.random());
     let embassy_config = embassy_net::Config::dhcpv4(DhcpConfig::default());
 
     // Init network stack
     embassy_net::new(
-        wifi_interface_station,
+        wifi_interface.station,
         embassy_config,
         mk_static!(
             StackResources<MAX_NET_SOCKETS>;
@@ -70,72 +73,102 @@ fn get_stack(
 }
 
 #[embassy_executor::task]
-async fn runner_task(mut runner: embassy_net::Runner<'static, WifiDevice<'static>>) {
+async fn runner_task(
+    mut runner: embassy_net::Runner<'static, esp_radio::wifi::Interface<'static>>,
+) {
     runner.run().await;
 }
 
 #[embassy_executor::task]
-/// Connect to Wi-Fi
 async fn connect_to_wifi(mut controller: WifiController<'static>) -> ! {
-    #[cfg(debug_assertions)]
-    {
-        use defmt::{debug, trace};
-        trace!("[wifi:connect] start connection task");
-        debug!(
-            "[wifi:connect] Device capabilities: {:?}",
-            controller.capabilities()
-        );
-    }
-
     loop {
-        match esp_radio::wifi::sta_state() {
-            WifiStaState::Connected => {
-                // wait until we're no longer connected
-                controller.wait_for_event(WifiEvent::StaDisconnected).await;
-                Timer::after_millis(5000).await;
-            }
-            _ => {
-                info!("[wifi:connect] Wifi Not Connected!");
-            }
+        if controller.is_connected() {
+            // wait until we're no longer connected
+            match controller.wait_for_disconnect_async().await {
+                Ok(_) => {
+                    defmt::info!("Connected");
+                }
+                Err(_) => {
+                    defmt::info!("Not connected");
+                }
+            };
+            Timer::after_millis(5000).await;
         }
 
-        if !matches!(controller.is_started(), Ok(true)) {
-            let station_config = ModeConfig::Client(
-                ClientConfig::default()
-                    .with_ssid(SSID.into())
-                    .with_password(PASSWORD.into()),
-            );
+        let station_config = esp_radio::wifi::Config::Station(
+            esp_radio::wifi::sta::StationConfig::default()
+                .with_ssid(SSID)
+                .with_password(PASSWORD.into()),
+        );
 
-            controller.set_config(&station_config).unwrap();
-            info!("[wifi:connect] Starting wifi and scan");
-            controller.start_async().await.unwrap();
-
-            #[cfg(debug_assertions)]
-            defmt::trace!("[wifi:connect] Wifi started! Scanning for available networks...");
-
-            let scan_config = esp_radio::wifi::ScanConfig::default().with_max(10);
-
-            #[expect(clippy::used_underscore_binding, reason = "Used for debugging")]
-            let _scan_result = controller
-                .scan_with_config_async(scan_config)
-                .await
-                .unwrap();
-
-            #[cfg(debug_assertions)]
-            for ap in _scan_result {
-                defmt::debug!("{}", ap);
-            }
-        }
-
-        match controller.connect_async().await {
-            Ok(()) => info!("Wifi connected!"),
-            Err(e) => {
-                warn!("[wifi:connect] Failed to connect to wifi: {}", e);
-                Timer::after_millis(5000).await;
-            }
-        }
+        controller.set_config(&station_config).unwrap();
+        defmt::info!("[wifi:connect] Starting wifi and scan");
+        controller.connect_async().await.unwrap();
     }
 }
+
+// #[embassy_executor::task]
+// /// Connect to Wi-Fi
+// async fn connect_to_wifi(mut controller: WifiController<'static>) -> ! {
+//     #[cfg(debug_assertions)]
+//     {
+//         use defmt::{debug, trace};
+//         trace!("[wifi:connect] start connection task");
+//         debug!(
+//             "[wifi:connect] Device capabilities: {:?}",
+//             controller.capabilities()
+//         );
+//     }
+
+//     loop {
+//         match esp_radio::wifi::sta_state() {
+//             WifiStaState::Connected => {
+//                 // wait until we're no longer connected
+//                 controller.wait_for_event(WifiEvent::StaDisconnected).await;
+//                 Timer::after_millis(5000).await;
+//             }
+//             _ => {
+//                 info!("[wifi:connect] Wifi Not Connected!");
+//             }
+//         }
+
+//         if !matches!(controller.is_started(), Ok(true)) {
+//             let station_config = ModeConfig::Client(
+//                 ClientConfig::default()
+//                     .with_ssid(SSID.into())
+//                     .with_password(PASSWORD.into()),
+//             );
+
+//             controller.set_config(&station_config).unwrap();
+//             info!("[wifi:connect] Starting wifi and scan");
+//             controller.start_async().await.unwrap();
+
+//             #[cfg(debug_assertions)]
+//             defmt::trace!("[wifi:connect] Wifi started! Scanning for available networks...");
+
+//             let scan_config = esp_radio::wifi::ScanConfig::default().with_max(10);
+
+//             #[expect(clippy::used_underscore_binding, reason = "Used for debugging")]
+//             let _scan_result = controller
+//                 .scan_with_config_async(scan_config)
+//                 .await
+//                 .unwrap();
+
+//             #[cfg(debug_assertions)]
+//             for ap in _scan_result {
+//                 defmt::debug!("{}", ap);
+//             }
+//         }
+
+//         match controller.connect_async().await {
+//             Ok(()) => info!("Wifi connected!"),
+//             Err(e) => {
+//                 warn!("[wifi:connect] Failed to connect to wifi: {}", e);
+//                 Timer::after_millis(5000).await;
+//             }
+//         }
+//     }
+// }
 
 // #[embassy_executor::task]
 // async fn get_webpage() {
