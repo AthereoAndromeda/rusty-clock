@@ -1,8 +1,6 @@
 use embassy_executor::Spawner;
 use esp_hal::peripherals;
 
-// use crate::utils::mk_static;
-
 #[cfg(feature = "ble")]
 mod bt;
 mod wifi;
@@ -17,12 +15,6 @@ pub(crate) fn init(
     wifi: peripherals::WIFI<'static>,
     #[cfg(feature = "ble")] bt: peripherals::BT<'static>,
 ) {
-    // let radio_init: &'static esp_radio::wifi::WifiController<'static> = mk_static!(
-    //     esp_radio::wifi::WifiController<'static>;
-    //     esp_radio::init().expect("Failed to init WiFi/BLE Controller")
-    // );
-
-    // wifi::init(spawner, radio_init, wifi);
     wifi::init(spawner, wifi);
 
     #[cfg(feature = "ble")]

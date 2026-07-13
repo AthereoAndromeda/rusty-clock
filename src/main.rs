@@ -118,11 +118,6 @@ mod rtc_ds3231;
 mod utils;
 mod wireless;
 
-// use defmt_rtt as _;
-// use esp_backtrace as _;
-// use esp_println as _;
-use panic_rtt_target as _;
-
 use defmt::info;
 use embassy_executor::Spawner;
 #[cfg(target_arch = "riscv32")]
@@ -132,6 +127,7 @@ use esp_hal::{
     gpio::{Output, OutputConfig, Pin as _},
     timer::timg::TimerGroup,
 };
+use panic_rtt_target as _;
 
 use crate::pwm::Channels;
 

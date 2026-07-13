@@ -6,11 +6,7 @@ use embassy_executor::Spawner;
 use embassy_net::{DhcpConfig, StackResources, driver::Driver};
 use embassy_time::Timer;
 use esp_hal::rng::Rng;
-use esp_radio::wifi::{
-    // ClientConfig, ModeConfig, WifiController, WifiDevice, WifiEvent, WifiStationState,
-    WifiController,
-    // event::WifiEvent,
-};
+use esp_radio::wifi::WifiController;
 
 use crate::utils::mk_static;
 
@@ -23,9 +19,6 @@ const PASSWORD: &str = env!("PASSWORD");
 /// # Panics
 /// Panics to Wifi Controller fails to initialize.
 pub(super) fn init(spawner: Spawner, wifi: esp_hal::peripherals::WIFI<'static>) {
-    // let (wifi_controller, interfaces) =
-    //     esp_radio::wifi::new(radio_init, wifi, esp_radio::wifi::Config::default())
-    //         .expect("Failed to initialize Wi-Fi controller");
     let (wifi_controller, interfaces) = esp_radio::wifi::new(wifi, Default::default())
         .expect("Failed to initialize Wi-Fi controller");
 
@@ -168,46 +161,4 @@ async fn connect_to_wifi(mut controller: WifiController<'static>) -> ! {
 //             }
 //         }
 //     }
-// }
-
-// #[embassy_executor::task]
-// async fn get_webpage() {
-
-// let mut socket = TcpSocket::new(net_stack, &mut rx_buffer, &mut tx_buffer);
-
-// socket.set_timeout(Some(embassy_time::Duration::from_secs(10)));
-
-// let remote_endpoint = (Ipv4Addr::new(142, 250, 185, 115), 123);
-
-// println!("connecting...");
-// let r = socket.connect(remote_endpoint).await;
-// if let Err(e) = r {
-//     println!("connect error: {:?}", e);
-//     continue;
-// }
-// println!("connected!");
-// let mut buf = [0; 1024];
-// loop {
-//     // use embedded_io_async::Write;
-//     let r = socket
-//         .write/*_all*/(b"GET / HTTP/1.0\r\nHost: www.mobile-j.de\r\n\r\n")
-//         .await;
-//     if let Err(e) = r {
-//         println!("write error: {:?}", e);
-//         break;
-//     }
-//     let n = match socket.read(&mut buf).await {
-//         Ok(0) => {
-//             println!("read EOF");
-//             break;
-//         }
-//         Ok(n) => n,
-//         Err(e) => {
-//             println!("read error: {:?}", e);
-//             break;
-//         }
-//     };
-//     println!("{}", core::str::from_utf8(&buf[..n]).unwrap());
-// }
-// Timer::after_millis(3000).await;
 // }
