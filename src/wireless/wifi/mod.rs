@@ -78,11 +78,12 @@ async fn connect_to_wifi(mut controller: WifiController<'static>) -> ! {
         if controller.is_connected() {
             // wait until we're no longer connected
             match controller.wait_for_disconnect_async().await {
-                Ok(_) => {
-                    defmt::info!("Connected");
+                Ok(sta) => {
+                    defmt::info!("Disconnected: {}", sta);
                 }
-                Err(_) => {
-                    defmt::info!("Not connected");
+                Err(err) => {
+                    defmt::error!("Failed to disconnect");
+                    defmt::error!("{}", err);
                 }
             };
             Timer::after_millis(5000).await;
@@ -93,6 +94,16 @@ async fn connect_to_wifi(mut controller: WifiController<'static>) -> ! {
                 .with_ssid(SSID)
                 .with_password(PASSWORD.into()),
         );
+
+        #[cfg(debug_assertions)]
+        {
+            let scan_config = esp_radio::wifi::scan::ScanConfig::default().with_max(10);
+
+            let scan_result = controller.scan_async(&scan_config).await.unwrap();
+            for ap in scan_result {
+                defmt::debug!("{}", ap);
+            }
+        }
 
         controller.set_config(&station_config).unwrap();
         defmt::info!("[wifi:connect] Starting wifi and scan");
