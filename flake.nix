@@ -2,7 +2,7 @@
   description = "Development flake for Rusty-Clock";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-25.11";
+    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-26.05";
     flake-utils.url = "github:numtide/flake-utils";
 
     fenix.url = "github:nix-community/fenix";
