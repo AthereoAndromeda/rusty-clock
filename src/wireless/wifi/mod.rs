@@ -31,7 +31,7 @@ pub(super) fn init(spawner: Spawner, wifi: esp_hal::peripherals::WIFI<'static>) 
 
     spawner.spawn(runner_task(net_runner).unwrap());
     spawner.spawn(connect_to_wifi(wifi_controller).unwrap());
-    spawner.spawn(sntp::fetch_sntp(net_stack).unwrap());
+    spawner.spawn(sntp::init(net_stack).unwrap());
 
     web_server::init(spawner, net_stack);
 }

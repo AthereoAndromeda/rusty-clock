@@ -6,7 +6,7 @@ use picoserve::{
     routing::{PathRouter, get},
 };
 
-use crate::{BOOT_TIME, rtc_ds3231::TIME_WATCH, wireless::wifi::sntp::NTP_SYNC};
+use crate::{BOOT_TIME, rtc_ds3231::TIME_WATCH, wireless::wifi::sntp::NTP_SYNC_SIGNAL};
 
 #[derive(Debug, serde::Deserialize)]
 struct TimeQueryParams {
@@ -90,5 +90,5 @@ async fn get_time(Query(query): Query<TimeQueryParams>) -> impl IntoResponse {
 
 #[inline]
 async fn get_sync() -> impl IntoResponse {
-    NTP_SYNC.signal(());
+    NTP_SYNC_SIGNAL.signal(());
 }

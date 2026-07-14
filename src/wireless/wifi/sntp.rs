@@ -8,7 +8,7 @@ use static_cell::ConstStaticCell;
 
 use crate::rtc_ds3231::{RTC_COMMANDS, RtcCommand, TIME_WATCH, rtc_time::RtcDateTime};
 
-pub(crate) static NTP_SYNC: Signal<CriticalSectionRawMutex, ()> = Signal::new();
+pub(crate) static NTP_SYNC_SIGNAL: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 
 /// Default NTP server to ping.
 const NTP_SERVER_ADDR: &str = option_env!("NTP_SERVER_ADDR").unwrap_or("pool.ntp.org");
@@ -36,18 +36,18 @@ impl sntpc::NtpTimestampGenerator for SntpTimestamp {
     }
 }
 
+// NOTE: Using `ConstStaticCell` means these buffers are stored in .bss, thus does
+// not take up any flash space.
+static UDP_RX_META: ConstStaticCell<[PacketMetadata; 16]> =
+    ConstStaticCell::new([PacketMetadata::EMPTY; _]);
+static UDP_TX_META: ConstStaticCell<[PacketMetadata; 16]> =
+    ConstStaticCell::new([PacketMetadata::EMPTY; _]);
+static UDP_RX_BUFFER: ConstStaticCell<[u8; 1024]> = ConstStaticCell::new([0; _]);
+static UDP_TX_BUFFER: ConstStaticCell<[u8; 1024]> = ConstStaticCell::new([0; _]);
+
 #[embassy_executor::task]
 // Task should only be spawned once
-pub(crate) async fn fetch_sntp(net_stack: embassy_net::Stack<'static>) -> ! {
-    // NOTE: Using `ConstStaticCell` means these buffers are stored in .bss, thus does
-    // not take up any flash space.
-    static UDP_RX_META: ConstStaticCell<[PacketMetadata; 16]> =
-        ConstStaticCell::new([PacketMetadata::EMPTY; _]);
-    static UDP_TX_META: ConstStaticCell<[PacketMetadata; 16]> =
-        ConstStaticCell::new([PacketMetadata::EMPTY; _]);
-    static UDP_RX_BUFFER: ConstStaticCell<[u8; 1024]> = ConstStaticCell::new([0; _]);
-    static UDP_TX_BUFFER: ConstStaticCell<[u8; 1024]> = ConstStaticCell::new([0; _]);
-
+pub(crate) async fn init(net_stack: embassy_net::Stack<'static>) -> ! {
     let udp_rx_meta = UDP_RX_META.take();
     let udp_tx_meta = UDP_TX_META.take();
     let udp_tx_buffer = UDP_TX_BUFFER.take();
@@ -61,6 +61,7 @@ pub(crate) async fn fetch_sntp(net_stack: embassy_net::Stack<'static>) -> ! {
         udp_tx_buffer,
     );
 
+    // TODO: Check if needed
     udp_socket.bind(NTP_SERVER_PORT).unwrap();
     let wrapper = UdpSocketWrapper::new(udp_socket);
 
@@ -72,11 +73,11 @@ pub(crate) async fn fetch_sntp(net_stack: embassy_net::Stack<'static>) -> ! {
     };
 
     if SYNC_NTP_ON_BOOT {
-        NTP_SYNC.signal(());
+        NTP_SYNC_SIGNAL.signal(());
     }
 
     loop {
-        NTP_SYNC.wait().await;
+        NTP_SYNC_SIGNAL.wait().await;
         defmt::info!("[sntp] Syncing RTC with NTP");
         fetch_sntp_inner(net_stack, &wrapper).await;
     }
@@ -138,6 +139,8 @@ async fn fetch_sntp_inner(
     .await;
 
     defmt::info!("[sntp] Received a response!");
+
+    // Change RTC time to match NTP response
     match result {
         Ok(time) => {
             #[cfg(debug_assertions)]
