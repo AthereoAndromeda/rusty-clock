@@ -64,7 +64,12 @@ async fn init_display(display: &mut LcdDisplay) {
         .init(lcd::FunctionLine::Line2, lcd::FunctionDots::Dots5x10)
         .await;
 
-    let backlight = env!("ENABLE_LCD").trim() == "1";
+    let backlight = const {
+        1 == u8::from_str_radix(env!("ENABLE_LCD"), 10)
+            .ok()
+            .expect("Cannot parse `ENABLE_LCD` env var")
+    };
+
     display.set_backlight(backlight).await;
 
     display
