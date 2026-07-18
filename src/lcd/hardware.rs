@@ -71,7 +71,9 @@ impl lcd::Hardware for LcdHardware {
     // }
 
     async fn apply(&mut self) {
-        self.driver.set(self.register.into()).await.unwrap();
+        if let Err(err) = self.driver.set(self.register.into()).await {
+            defmt::error!("LCD Error!: {}", defmt::Debug2Format(&err));
+        };
     }
 }
 
