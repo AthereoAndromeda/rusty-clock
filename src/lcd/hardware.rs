@@ -10,9 +10,13 @@ pub(super) type LcdDisplay = lcd::Display<LcdHardware>;
 #[bilge::bitsize(8)]
 #[derive(FromBits, Clone, Copy)]
 struct LcdRegister {
+    /// RS pin
     pin_0: bool,
+    /// RW pin
     pin_1: bool,
+    /// EN pin
     pin_2: bool,
+    /// Backlight pin
     pin_3: bool,
     data: u4,
 }
@@ -36,18 +40,14 @@ impl LcdHardware {
 impl lcd::Hardware for LcdHardware {
     async fn rs(&mut self, bit: bool) {
         self.register.set_pin_0(bit);
-        self.driver.set(self.register.into()).await.unwrap();
     }
 
     async fn enable(&mut self, bit: bool) {
         self.register.set_pin_2(bit);
-        self.driver.set(self.register.into()).await.unwrap();
     }
 
     async fn data(&mut self, data: u8) {
-        let data = u4::from_u8(data);
-        self.register.set_data(data);
-        self.driver.set(self.register.into()).await.unwrap();
+        self.register.set_data(u4::from_u8(data));
     }
 
     async fn wait_address(&mut self) {
@@ -70,7 +70,9 @@ impl lcd::Hardware for LcdHardware {
     //     unimplemented!()
     // }
 
-    // async fn apply(&mut self) {}
+    async fn apply(&mut self) {
+        self.driver.set(self.register.into()).await.unwrap();
+    }
 }
 
 impl lcd::Delay for LcdHardware {
