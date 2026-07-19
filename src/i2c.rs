@@ -32,7 +32,7 @@ pub(crate) fn init<const N: usize>(
         .into_async();
 
     let i2c_mutex: &'static I2cMutex = mk_static!(I2cMutex; Mutex::new(i2c));
-    core::array::from_fn(|_| I2cDevice::new(i2c_mutex))
+    core::array::repeat(I2cDevice::new(i2c_mutex))
 }
 
 #[cfg(debug_assertions)]
