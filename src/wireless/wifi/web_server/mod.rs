@@ -78,7 +78,7 @@ async fn web_task(
     app: &'static AppRouter<App>,
     config: &'static picoserve::Config,
 ) -> ! {
-    assert!(
+    defmt::assert!(
         task_id < WEB_TASK_POOL_SIZE,
         "`task_id` greater than allocated pool_size"
     );
