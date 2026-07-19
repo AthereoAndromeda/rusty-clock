@@ -16,24 +16,41 @@ pub(crate) static BACKLIGHT_STATUS: portable_atomic::AtomicBool =
 pub(super) async fn runner_task(mut display: LcdDisplay) -> ! {
     init_display(&mut display).await;
     let mut rx = TIME_WATCH.receiver().unwrap();
+    let mut cached_date_str: heapless::String<11> = heapless::String::new();
 
     loop {
         let action = select(rx.changed(), LCD_COMMANDS.wait()).await;
 
         match action {
-            Either::First(time) => time_handle(&mut display, time).await,
+            Either::First(time) => time_handle(&mut display, time, &mut cached_date_str).await,
             Either::Second(action) => action_handle(&mut display, action).await,
         }
     }
 }
 
-async fn time_handle(display: &mut LcdDisplay, time: RtcDateTime<Utc>) {
-    let s = time.local().to_human_short();
+async fn time_handle(
+    display: &mut LcdDisplay,
+    datetime: RtcDateTime<Utc>,
+    cached_date_str: &mut heapless::String<11>,
+) {
+    let s = datetime.local().to_human_short();
     defmt::debug_assert!(s.is_ascii(), "Must be ASCII or CP437 to slice properly");
 
-    let s = s.split_at(9); // This is the time part of our datetime. 
+    let (time_str, date_str) = s.split_at(9);
+
     #[expect(clippy::string_slice, reason = "ASCII/CP437")]
-    print_lines(display, s.0, &s.1[2..]).await;
+    // Trims off the separator bar
+    let date_str = &date_str[2..];
+
+    // If date is same as cached, print only the time. This avoids stutter
+    if date_str == cached_date_str {
+        display.home().await;
+        display.print(time_str).await;
+    } else {
+        cached_date_str.clear();
+        cached_date_str.push_str(date_str).unwrap();
+        print_lines(display, time_str, date_str).await;
+    }
 }
 
 async fn action_handle(display: &mut LcdDisplay, action: LcdAction) {
