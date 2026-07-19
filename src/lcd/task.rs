@@ -61,7 +61,7 @@ async fn init_display(display: &mut LcdDisplay) {
     display.clear().await;
 
     display
-        .init(lcd::FunctionLine::Line2, lcd::FunctionDots::Dots5x10)
+        .init(lcd::FunctionLine::Line2, lcd::FunctionDots::Dots5x8)
         .await;
 
     let backlight = const {
